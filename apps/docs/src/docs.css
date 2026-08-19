@@ -1,0 +1,667 @@
+/*
+ * The docs skin. Colour, elevation and radius all come from
+ * `@tiny/ui/tokens.css` — the same file the chat app renders against — so the
+ * site and the app it documents can never drift apart. Everything defined here
+ * is layout: the tokens below are the ones tokens.css has no opinion about.
+ */
+
+:root {
+  --docs-font:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --docs-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --step-0: 15px;
+  --step-1: 17px;
+  --step-2: 21px;
+  --step-3: 27px;
+  --step-4: 36px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
+
+  --topbar-h: 56px;
+  --sidebar-w: 244px;
+  --toc-w: 216px;
+  --measure: 46rem;
+
+  --duration: 160ms;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Anchored headings must clear the sticky top bar. */
+  scroll-padding-top: calc(var(--topbar-h) + var(--space-4));
+}
+
+/* tokens.css already neutralises animation and transition durations here; this
+ * only adds the smooth-scroll opt-out, which it has no opinion about. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--docs-font);
+  font-size: var(--step-0);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: var(--space-3);
+  top: -60px;
+  z-index: 30;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control, 8px);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  transition: top var(--duration) var(--ease);
+}
+.skip:focus {
+  top: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- topbar - */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-h);
+  padding: 0 var(--space-5);
+  background: color-mix(in oklab, var(--page) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.brand:hover {
+  text-decoration: none;
+}
+.brand-dim {
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control, 8px);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--step-1);
+  cursor: pointer;
+}
+.nav-toggle:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.topbar-links a {
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-control, 8px);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.topbar-links a:hover {
+  background: var(--hover);
+  color: var(--ink);
+  text-decoration: none;
+}
+.topbar-links a:first-child {
+  background: var(--accent);
+  color: oklch(100% 0 0);
+}
+.topbar-links a:first-child:hover {
+  background: var(--accent-ink);
+  color: oklch(100% 0 0);
+}
+
+/* ---------------------------------------------------------------- search - */
+
+.search {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.search input {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-6) 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control, 8px);
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--ink-3);
+}
+.search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.search kbd {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip, 6px);
+  color: var(--ink-3);
+  font-family: var(--docs-mono);
+  font-size: 11px;
+  pointer-events: none;
+}
+.search input:focus + kbd {
+  opacity: 0;
+}
+
+.search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 25;
+  max-height: 60vh;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--radius-card, 10px);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+}
+.search-results[hidden] {
+  display: none;
+}
+.search-results a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-chip, 6px);
+  color: var(--ink);
+}
+.search-results a:hover,
+.search-results a:focus-visible {
+  background: var(--hover);
+  text-decoration: none;
+  outline: none;
+}
+.search-results strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.search-results span {
+  display: block;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-results .empty {
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- layout - */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--toc-w);
+  gap: var(--space-7);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-8);
+  align-items: start;
+}
+
+.sidebar,
+.toc {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--space-5));
+  max-height: calc(100vh - var(--topbar-h) - var(--space-7));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.nav-group + .nav-group {
+  margin-top: var(--space-5);
+}
+.nav-title {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sidebar ul,
+.toc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sidebar a {
+  display: block;
+  padding: 5px var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  border-radius: var(--radius-chip, 6px);
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.sidebar a:hover {
+  background: var(--hover);
+  color: var(--ink);
+  text-decoration: none;
+}
+.sidebar a[aria-current="page"] {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.toc a {
+  display: block;
+  padding: 3px 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.toc a:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+.toc .depth-3 a {
+  padding-left: var(--space-3);
+}
+
+/* ----------------------------------------------------------------- prose - */
+
+.content {
+  min-width: 0;
+}
+.prose {
+  max-width: var(--measure);
+}
+
+.prose > *:first-child {
+  margin-top: 0;
+}
+
+.prose h1 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--step-4);
+  font-weight: 640;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.prose h2 {
+  margin: var(--space-8) 0 var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--step-3);
+  font-weight: 620;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.prose h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--step-2);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.prose h4 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+.anchor {
+  margin-left: var(--space-2);
+  color: var(--ink-3);
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+h2:hover .anchor,
+h3:hover .anchor,
+.anchor:focus-visible {
+  opacity: 1;
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 0 0 var(--space-4);
+}
+.prose li {
+  margin-bottom: var(--space-1);
+}
+.prose ul,
+.prose ol {
+  padding-left: var(--space-5);
+}
+.prose li::marker {
+  color: var(--ink-3);
+}
+
+.prose strong {
+  font-weight: 620;
+  color: var(--ink);
+}
+
+.prose hr {
+  height: 1px;
+  margin: var(--space-7) 0;
+  border: 0;
+  background: var(--line);
+}
+
+.prose blockquote {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-card, 10px) var(--radius-card, 10px) 0;
+  background: var(--accent-tint);
+  color: var(--ink);
+}
+.prose blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+.prose :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: var(--radius-chip, 6px);
+  background: var(--inset);
+  box-shadow: var(--shadow-hairline);
+  color: var(--ink);
+  font-family: var(--docs-mono);
+  font-size: 0.875em;
+  word-break: break-word;
+}
+
+.prose table {
+  width: 100%;
+  margin: 0 0 var(--space-5);
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose thead th {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.prose tbody td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.prose tbody tr:last-child td {
+  border-bottom: 0;
+}
+/* Tables carry API signatures and outgrow narrow screens; the page itself must
+ * never scroll sideways, so the table does it instead. */
+.table-scroll {
+  margin: 0 0 var(--space-5);
+  overflow-x: auto;
+}
+.table-scroll table {
+  margin: 0;
+  min-width: 34rem;
+}
+
+/* ------------------------------------------------------------------ code - */
+
+figure.code {
+  position: relative;
+  margin: 0 0 var(--space-5);
+  border-radius: var(--radius-card, 10px);
+  background: var(--inset);
+  box-shadow: var(--shadow-hairline);
+  overflow: hidden;
+}
+.code-lang {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  color: var(--ink-3);
+  font-family: var(--docs-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  user-select: none;
+}
+figure.code pre {
+  margin: 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  background: transparent;
+}
+figure.code code {
+  display: block;
+  font-family: var(--docs-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+/* Shiki emits both themes as custom properties; pick one per colour scheme so
+ * there is no flash and no client-side re-highlighting. */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+  background-color: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark);
+  }
+}
+
+/* ----------------------------------------------------------------- pager - */
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  max-width: var(--measure);
+  margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+.pager-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card, 10px);
+  box-shadow: var(--shadow-hairline);
+  background: var(--surface);
+  transition: box-shadow var(--duration) var(--ease);
+}
+.pager-link:hover {
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+}
+.pager-link.next {
+  text-align: right;
+}
+.pager-dir {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pager-title {
+  color: var(--ink);
+  font-weight: 560;
+}
+
+/* ------------------------------------------------------------------ home - */
+
+.hero {
+  max-width: var(--measure);
+  margin-bottom: var(--space-7);
+}
+.hero p.lede {
+  color: var(--ink-2);
+  font-size: var(--step-1);
+  line-height: 1.6;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-4);
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+.cards li {
+  margin: 0;
+}
+.cards a {
+  display: block;
+  height: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-card, 10px);
+  background: var(--surface);
+  box-shadow: var(--shadow-hairline);
+  color: var(--ink);
+  transition: box-shadow var(--duration) var(--ease);
+}
+.cards a:hover {
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+}
+.cards strong {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.cards span {
+  color: var(--ink-3);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 1180px) {
+  .layout {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+  .toc {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+  }
+  .nav-toggle {
+    display: inline-flex;
+  }
+  .topbar-links a:not(:first-child) {
+    display: none;
+  }
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+  .sidebar {
+    display: none;
+    position: static;
+    max-height: none;
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar.open {
+    display: block;
+  }
+  .prose h1 {
+    font-size: var(--step-3);
+  }
+  .prose h2 {
+    margin-top: var(--space-7);
+  }
+  .pager {
+    grid-template-columns: 1fr;
+  }
+}

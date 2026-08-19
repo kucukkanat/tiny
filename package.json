@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "bun run --filter @tiny/chat dev",
     "build": "bun run --filter @tiny/chat build",
+    "build:site": "bun run scripts/build-site.ts",
+    "docs": "bun run --filter @tiny/docs dev",
     "test": "bun test packages apps",
     "lint": "biome check .",
     "format": "biome format --write .",

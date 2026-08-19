@@ -5,6 +5,14 @@ built on [Beautiful UI](https://www.beautifului.dev/) primitives. Everything run
 in the browser — you bring a base URL and an API key; nothing is proxied through
 a server.
 
+**[Documentation](https://kucukkanat.github.io/tiny/)** ·
+**[Live app](https://kucukkanat.github.io/tiny/app/)**
+
+Tiny is extended by **plugins**: commands, shortcuts, tools for the model and
+React rendered into named slots — shaped after pi's extension SDK. Plugins can
+ship in the build or be [installed at runtime](https://kucukkanat.github.io/tiny/runtime/)
+from a URL or pasted source, with no rebuild and no page reload.
+
 ## Packages
 
 | Package | What it is |
@@ -15,6 +23,7 @@ a server.
 | [`packages/plugin-fs`](packages/plugin-fs) (`@tiny/plugin-fs`) | Filesystem tools for the model (`fs_read`, `fs_write`, `fs_edit`, `fs_delete`, `fs_list`), backed by the browser's Origin Private File System. |
 | [`packages/plugin-manager`](packages/plugin-manager) (`@tiny/plugin-manager`) | Install plugins at runtime from a URL or pasted source — stored in OPFS, pinned by SHA-256, managed from a dialog in the app. |
 | [`packages/ui`](packages/ui) (`@tiny/ui`) | Beautiful UI primitives adapted for this app, plus their design tokens. |
+| [`apps/docs`](apps/docs) (`@tiny/docs`) | The plugin documentation site — markdown in, static site out, on the same Bun toolchain. |
 
 Plugin packages are named `@tiny/plugin-<name>` in this repo, and `tiny-plugin-<name>` (or
 `@<vendor>/tiny-plugin-<name>`) when published by someone else — so `tiny-plugin-` appears
@@ -27,6 +36,8 @@ in every plugin's name and nowhere else. See
 bun install
 bun run dev        # dev server with HMR
 bun run build      # static build → apps/chat/dist
+bun run docs       # build the docs site and serve it on :4321
+bun run build:site # docs at / and the app at /app/ → dist (what Pages serves)
 bun run test       # unit + integration tests
 bun run lint       # biome
 bun run typecheck  # tsc, strict

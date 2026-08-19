@@ -1,0 +1,14 @@
+{
+  "name": "@tiny/ai",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "^0.84.2"
+  }
+}

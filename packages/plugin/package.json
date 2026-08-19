@@ -1,0 +1,23 @@
+{
+  "name": "@tiny/plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@tiny/ai": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.11.2",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.1.0",
+    "react-dom": "^19.2.8"
+  }
+}

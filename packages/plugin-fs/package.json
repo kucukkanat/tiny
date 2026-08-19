@@ -1,0 +1,16 @@
+{
+  "name": "@tiny/plugin-fs",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./memory": "./src/memory.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@tiny/ai": "workspace:*",
+    "@tiny/plugin": "workspace:*"
+  }
+}

@@ -1,0 +1,200 @@
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { GlideMenu } from "./GlideMenu.tsx";
+
+function Icon({ children, size = 15 }: { children: ReactNode; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+/* The Beautiful UI composer, pared down to its essentials: an autosizing
+ * textarea, a model picker that opens upward, and a tactile send button that
+ * doubles as stop while a reply streams. Enter sends, Shift+Enter breaks. */
+export function PromptBar({
+  onSend,
+  busy,
+  onStop,
+  models,
+  model,
+  onModelChange,
+  placeholder = "Write a message…",
+  disabled = false,
+  actions,
+  text,
+}: {
+  onSend: (text: string) => void;
+  busy: boolean;
+  onStop: () => void;
+  models: readonly string[];
+  model: string;
+  onModelChange: (model: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  /** Rendered beside the model picker; the app fills this with a plugin slot. */
+  actions?: ReactNode;
+  /**
+   * Replaces the draft whenever it changes — an imperative push, not full
+   * control, so ordinary typing never leaves this component.
+   */
+  text?: string;
+}) {
+  const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    if (text !== undefined) setDraft(text);
+  }, [text]);
+  const [modelOpen, setModelOpen] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: draft drives scrollHeight, which the DOM owns
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (input === null) return;
+    input.style.height = "0px";
+    const height = Math.min(Math.max(input.scrollHeight, 28), 160);
+    input.style.height = `${height}px`;
+    input.style.overflowY = input.scrollHeight > 160 ? "auto" : "hidden";
+  }, [draft]);
+
+  useEffect(() => {
+    if (!modelOpen) return;
+    const close = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-promptbar]") === null)
+        setModelOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [modelOpen]);
+
+  const canSend = !disabled && !busy && draft.trim().length > 0;
+  const send = () => {
+    if (!canSend) return;
+    onSend(draft.trim());
+    setDraft("");
+  };
+
+  return (
+    <div data-promptbar className="relative">
+      {modelOpen && (
+        <div
+          className="absolute bottom-full left-0 z-10 mb-2 max-h-64 w-64 overflow-y-auto rounded-card bg-surface p-1 shadow-raised"
+          style={{
+            animation: "pop-in 180ms var(--ease-out-strong) both",
+            transformOrigin: "bottom left",
+          }}
+        >
+          <GlideMenu
+            className="flex flex-col gap-px"
+            highlightClassName="inset-x-0 rounded-[6px] bg-hover"
+          >
+            {models.map((m) => (
+              <button
+                key={m}
+                data-row
+                type="button"
+                onClick={() => {
+                  onModelChange(m);
+                  setModelOpen(false);
+                  inputRef.current?.focus();
+                }}
+                className="relative z-10 flex h-7.5 w-full items-center gap-2 rounded-[6px] px-2 text-left"
+              >
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                  {m}
+                </span>
+                <span className={`shrink-0 text-ink ${m === model ? "" : "invisible"}`}>
+                  <Icon size={13}>
+                    <path d="M20 6L9 17l-5-5" />
+                  </Icon>
+                </span>
+              </button>
+            ))}
+            {models.length === 0 && (
+              <div className="flex h-9 items-center px-2 text-[12px] text-ink-3">
+                No models — check settings
+              </div>
+            )}
+          </GlideMenu>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface p-1.5 shadow-card transition-[border-color] duration-150 focus-within:border-line-strong">
+        <textarea
+          ref={inputRef}
+          rows={1}
+          value={draft}
+          disabled={disabled}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              send();
+            }
+          }}
+          placeholder={placeholder}
+          aria-label="Prompt"
+          className="min-h-7 w-full resize-none bg-transparent px-1 py-[5px] text-[13px] leading-[18px] text-ink outline-none [overflow-wrap:anywhere] placeholder:text-ink-3"
+        />
+        <div className="flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-1">
+            <button
+              type="button"
+              aria-expanded={modelOpen}
+              aria-label="Choose model"
+              onClick={() => setModelOpen((current) => !current)}
+              className="flex h-7 items-center gap-1 rounded-control px-1.5 text-[12px] font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink"
+            >
+              {model || "Choose model"}
+              <span className="text-ink-3">
+                <Icon size={11}>
+                  <path d="M6 9l6 6 6-6" />
+                </Icon>
+              </span>
+            </button>
+            {actions}
+          </div>
+          {busy ? (
+            <button
+              type="button"
+              aria-label="Stop"
+              onClick={onStop}
+              className="flex size-7 items-center justify-center rounded-control bg-ink text-surface transition-transform duration-200 active:scale-[0.94]"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                <rect width="10" height="10" rx="2" fill="currentColor" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="Send"
+              disabled={!canSend}
+              onClick={send}
+              className="flex size-7 items-center justify-center rounded-control transition-[background-color,color,transform] duration-200 enabled:active:scale-[0.94]"
+              style={{
+                background: canSend ? "var(--ink)" : "var(--line-strong)",
+                color: canSend ? "var(--surface)" : "var(--ink-2)",
+              }}
+            >
+              <Icon size={16}>
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </Icon>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

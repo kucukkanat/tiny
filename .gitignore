@@ -1,0 +1,11 @@
+node_modules/
+
+# Build output: the chat app, the docs site, and the assembled Pages artifact.
+dist/
+
+.DS_Store
+*.log
+
+# Local editor and tool state.
+.vscode/
+.idea/

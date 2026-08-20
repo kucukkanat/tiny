@@ -1,3 +1,14 @@
+/**
+ * The `pi` object a plugin is handed, and everything it can be given back.
+ *
+ * This is the whole contract between a plugin and the host, in one file, so
+ * "what can a plugin do?" is one thing to read. `PluginAPI` at the bottom is
+ * what `pi` is; `PluginContext` is what handlers receive as `ctx`.
+ *
+ * Shaped after pi's extension SDK: a method here either has pi's exact signature
+ * or is marked as ours. The parts with their own implementation live beside it —
+ * key matching in keys.ts, slots in Slot.tsx, providers in providers.ts.
+ */
 import type { EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
 import type { ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";

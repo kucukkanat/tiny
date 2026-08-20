@@ -32,6 +32,22 @@ Everything pi's RPC mode no-ops is still **present**, returning pi's documented 
 so a pi extension degrades here exactly as it would over RPC instead of throwing on a
 missing method.
 
+## The files
+
+Read them in this order; each answers one question.
+
+| File | Answers |
+| --- | --- |
+| `src/pi.ts` | What can a plugin call, and what does it get back? The whole contract. |
+| `src/registry.ts` | `loadPlugins` — running every factory once and collecting what it registered. |
+| `src/PluginHost.tsx` | The React host: dialogs, toasts, widgets, statuses, and the live `ctx`. |
+| `src/hooks.ts` | What the app calls to reach the host — `usePluginContext`, `usePluginTools`, … |
+| `src/Slot.tsx` | Where contributed components render, and what happens when one throws. |
+| `src/Overlays.tsx` | How the four pi dialogs, a custom React overlay and toasts are painted. |
+| `src/providers.ts` | Endpoints a plugin adds to the model picker. |
+| `src/keys.ts`, `src/theme.ts` | Two small pi shapes: keybindings, and the no-op theme. |
+| `src/events.ts`, `src/externalStore.ts` | The plugin-to-plugin bus, and the state primitive plugins hold UI in. |
+
 ## A plugin is a factory
 
 The same shape `@tiny/ai` extensions already use, so a plugin that only subscribes to

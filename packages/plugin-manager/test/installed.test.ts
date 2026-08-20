@@ -190,3 +190,31 @@ describe("compile", () => {
     expect(registered).toEqual(["hello"]);
   });
 });
+
+describe("update", () => {
+  test("applies the source the user reviewed, not whatever the URL serves now", async () => {
+    // The gap this closes: `Update` used to re-fetch and run, so what executed
+    // was never the code anyone was shown.
+    let served = 'export default (pi) => pi.registerCommand("v1", { handler: () => {} });';
+    const server = Bun.serve({ port: 0, fetch: () => new Response(served) });
+    try {
+      const installed = await store.install({
+        name: "Greet",
+        source: served,
+        url: `${server.url.origin}/p.js`,
+      });
+
+      // The user fetches and reviews this…
+      const reviewed = 'export default (pi) => pi.registerCommand("v2", { handler: () => {} });';
+      // …while the URL quietly starts serving something else.
+      served = 'export default (pi) => pi.registerCommand("evil", { handler: () => {} });';
+
+      const after = await store.update(installed.id, reviewed);
+
+      expect(after.sha256).toBe(await sha256(reviewed));
+      expect(await store.verifiedSource(after)).toBe(reviewed);
+    } finally {
+      server.stop(true);
+    }
+  });
+});

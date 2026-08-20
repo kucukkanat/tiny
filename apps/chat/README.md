@@ -13,8 +13,9 @@ bun run build  # static PWA → dist/
 bun run test   # unit + integration tests (happy-dom, fake-indexeddb, real SSE server)
 ```
 
-Serve `dist/` from any static host. The service worker caches the app shell
-for offline start; API calls are never cached.
+Serve `dist/` from any static host. The service worker caches the app shell for
+offline start — network-first for the page, so a deploy is picked up rather than
+pinned — and never caches API calls.
 
 ## Use
 

@@ -1,4 +1,5 @@
 import type { Element, ElementContent, Root, RootContent } from "hast";
+import { memo } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { visit } from "unist-util-visit";
@@ -100,8 +101,21 @@ const components: Components = {
   td: ({ children }) => <td className="border border-line px-2 py-1 text-left">{children}</td>,
 };
 
-/** A streamed answer, rendered as markdown, word by word. */
-export function StreamText({ text, done }: { text: string; done: boolean }) {
+/**
+ * A streamed answer, rendered as markdown, word by word.
+ *
+ * Memoised because the host owns the composer's draft, so every keystroke
+ * re-renders the app — and re-parsing every message's markdown on each one is
+ * work nobody asked for. Its props are a string and a boolean, so the default
+ * comparison is exactly right.
+ */
+export const StreamText = memo(function StreamText({
+  text,
+  done,
+}: {
+  text: string;
+  done: boolean;
+}) {
   return (
     <div
       data-testid="stream-text"
@@ -121,4 +135,4 @@ export function StreamText({ text, done }: { text: string; done: boolean }) {
       </Markdown>
     </div>
   );
-}
+});

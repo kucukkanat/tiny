@@ -18,7 +18,13 @@ type AddMode = "url" | "paste";
 /** The list, or the review step for one candidate plugin. */
 type View =
   | { readonly kind: "list" }
-  | { readonly kind: "review"; readonly source: string; readonly url?: string | undefined };
+  | {
+      readonly kind: "review";
+      readonly source: string;
+      readonly url?: string | undefined;
+      /** Set when this reviews a new version of an already-installed plugin. */
+      readonly updating?: string | undefined;
+    };
 
 const statusNote: Record<InspectedPlugin["status"], string | undefined> = {
   ok: undefined,
@@ -89,9 +95,19 @@ export function ManagerDialog({
       setView({ kind: "review", source, ...(mode === "url" ? { url: draft.trim() } : {}) });
     });
 
-  const install = (source: string, url: string | undefined) =>
+  /** Fetch a new version and show it, rather than running it unseen. */
+  const reviewUpdate = (plugin: InspectedPlugin) =>
     run(async () => {
-      await store.install({ name, source, url });
+      if (plugin.url === undefined) return;
+      const source = await fetchSource(plugin.url);
+      setName(plugin.name);
+      setView({ kind: "review", source, url: plugin.url, updating: plugin.id });
+    });
+
+  const apply = (view: Extract<View, { kind: "review" }>) =>
+    run(async () => {
+      if (view.updating !== undefined) await store.update(view.updating, view.source);
+      else await store.install({ name, source: view.source, url: view.url });
       setView({ kind: "list" });
       setDraft("");
       await applied();
@@ -159,12 +175,7 @@ export function ManagerDialog({
                           className={button}
                           disabled={busy}
                           data-testid={`update-${plugin.name}`}
-                          onClick={() =>
-                            void run(async () => {
-                              await store.update(plugin.id);
-                              await applied();
-                            })
-                          }
+                          onClick={() => void reviewUpdate(plugin)}
                         >
                           Update
                         </button>
@@ -252,7 +263,8 @@ export function ManagerDialog({
             busy={busy}
             onName={setName}
             onCancel={() => setView({ kind: "list" })}
-            onInstall={() => void install(view.source, view.url)}
+            updating={view.updating !== undefined}
+            onInstall={() => void apply(view)}
           />
         )}
 
@@ -272,6 +284,7 @@ function Review({
   url,
   name,
   busy,
+  updating,
   onName,
   onCancel,
   onInstall,
@@ -280,6 +293,8 @@ function Review({
   url: string | undefined;
   name: string;
   busy: boolean;
+  /** True when this is a new version of a plugin already installed. */
+  updating: boolean;
   onName: (name: string) => void;
   onCancel: () => void;
   onInstall: () => void;
@@ -292,8 +307,8 @@ function Review({
   return (
     <div className="mt-2 flex min-h-0 flex-col" data-testid="review-step">
       <p className="text-sm leading-relaxed text-ink-3">
-        This is the code that will run on every load. {url ?? "Pasted source"} —{" "}
-        <span className="font-mono">{hash.slice(0, 12)}</span>
+        {updating ? "This is the new version, and " : "This is "}the code that will run on every
+        load. {url ?? "Pasted source"} — <span className="font-mono">{hash.slice(0, 12)}</span>
       </p>
       <input
         className={`${field} mt-2`}
@@ -319,7 +334,7 @@ function Review({
           onClick={onInstall}
           data-testid="confirm-install"
         >
-          Add and run
+          {updating ? "Update and run" : "Add and run"}
         </button>
       </div>
     </div>

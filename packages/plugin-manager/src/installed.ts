@@ -102,8 +102,11 @@ export type Installed = {
   inspect(): Promise<readonly InspectedPlugin[]>;
   /** Validates the source, writes it, and pins its hash. */
   install(input: InstallInput): Promise<InstalledPlugin>;
-  /** Re-fetches an entry from its URL and re-pins the new hash. */
-  update(id: string): Promise<InstalledPlugin>;
+  /**
+   * Re-pins an entry from its URL. Pass the source the user reviewed to apply
+   * exactly that; omit it and this fetches, which means applying code nobody saw.
+   */
+  update(id: string, reviewed?: string): Promise<InstalledPlugin>;
   setEnabled(id: string, enabled: boolean): void;
   remove(id: string): Promise<void>;
   /** The stored source, or a `PluginManagerError` if it no longer matches. */
@@ -198,11 +201,13 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
       return installed;
     },
 
-    update: async (id) => {
+    update: async (id, reviewed) => {
       const current = entry(id);
       if (current.url === undefined)
         throw new PluginManagerError(`"${current.name}" was pasted, so there is nothing to update`);
-      const source = await fetchSource(current.url);
+      // The reviewed source wins: re-fetching here would apply whatever the URL
+      // serves *now*, which is not what the user was shown and approved.
+      const source = reviewed ?? (await fetchSource(current.url));
       const refreshed = await pin(
         { name: current.name, source, url: current.url },
         current.id,

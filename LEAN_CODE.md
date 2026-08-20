@@ -26,6 +26,11 @@ Two questions decide most arguments:
 - *How many files must I open to answer one question?* One is the target.
 - *If I change this, what else must change with it?* Nothing is the target.
 
+And one habit worth more than any rule here: **have someone read it who did not
+write it.** Two rounds of that on this repo found six defects, including two
+"fixes" that worked only in development and a comment stating the exact opposite
+of the code beneath it. Nothing in this document would have caught those.
+
 ---
 
 ## 2. Names
@@ -130,7 +135,10 @@ quietly. Look for it in:
   point at the file for the rest.
 
 Where a snippet must appear in prose, make the test enforce it — this repo's
-docs embed real files verbatim and fail CI when they drift.
+docs embed real files verbatim and fail CI when they drift. **Know what the test
+does not cover.** Only fences annotated `path=` are checked, which is 10 of the
+84 in `apps/docs/content`; every wrong snippet a reviewer has found here was in
+one of the other 74. An unenforced snippet is a claim, and claims rot.
 
 **But do not pay for DRY with coupling.** A little copying is better than a
 little dependency. The docs app keeps its own copy of the icon rather than
@@ -186,7 +194,11 @@ uniform, so a reader can tell "not supported here" from "not implemented yet".
 - **Do not mock.** Run a real `Bun.serve`, use a real in-memory filesystem. Every
   stub is a place the test can agree with itself and disagree with production.
 - **A regression test must fail without the fix.** Check that it does, by
-  reverting the fix in place and watching it go red.
+  reverting the fix in place and watching it go red. Two tests written during
+  this pass could not fail; one was deleted, one rewritten.
+- **Test the artifact, not just the source.** A fix that depends on names,
+  stack frames or source positions can be erased by the bundler and still pass
+  every test. Grep `dist/` before believing it.
 
 ---
 

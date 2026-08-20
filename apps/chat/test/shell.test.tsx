@@ -4,7 +4,7 @@ import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, PluginHost } from "@tiny/plugin";
 import { MemoryRouter } from "react-router";
 import { App } from "../src/App.tsx";
-import { deleteConversation, listConversations, putConversation } from "../src/conversations.ts";
+import { deleteConversation, putConversation } from "../src/conversations.ts";
 
 // Panels and pages are promises the *app* makes, so they are asserted against
 // the real `App` rather than a stand-in: that a rail nobody asked for does not
@@ -12,14 +12,10 @@ import { deleteConversation, listConversations, putConversation } from "../src/c
 // a path the app already owns.
 
 afterEach(cleanup);
-beforeEach(async () => {
-  localStorage.clear();
-  // Conversations live in one IndexedDB that outlives a test file, so what the
-  // sidebar shows here depends on whichever files ran first — `useChat` and the
-  // store's own suite both leave rows behind, and file order differs by
-  // platform. Counting rows is only meaningful from a known-empty start.
-  for (const chat of await listConversations()) await deleteConversation(chat.id);
-});
+// The conversation store is emptied after every test by `test/setup.ts`, which
+// is what lets the row counts below mean anything: they are taken against a
+// sidebar with no chats in it, whatever ran before this file.
+beforeEach(() => localStorage.clear());
 
 const mount = async (plugins: readonly IdentifiedPlugin[], at = "/") => {
   await act(async () => {

@@ -46,15 +46,18 @@ const server = Bun.serve({
       return Response.json({ error: { message: "bad key" } }, { status: 401 });
     if (pathname === "/text-error/chat/completions")
       return new Response("plain failure", { status: 500 });
-    // A failing response whose body dies mid-read — the connection dropped while
-    // the server was still writing its error.
-    if (pathname === "/torn-body/models")
+    // A failing response whose body stops mid-JSON, as a dropped connection
+    // leaves it. Closing the stream rather than erroring it is deliberate: the
+    // client sees the same truncated bytes either way, but `controller.error`
+    // has no reader to reach and only surfaces as an unhandled server error in
+    // the log — a CI annotation for a test that passes.
+    if (pathname === "/half-written-error/models")
       return new Response(
         new ReadableStream({
           async pull(controller) {
             controller.enqueue(new TextEncoder().encode('{"error":'));
             await Bun.sleep(1);
-            controller.error(new Error("connection reset"));
+            controller.close();
           },
         }),
         { status: 500 },
@@ -368,12 +371,16 @@ describe("fetchModelIds", () => {
     expect(await fetchModelIds(endpointFor("/v1"))).toEqual(["zeta", "alpha"]);
   });
 
-  test("still reports a typed error when the failure body is torn mid-read", async () => {
-    await fetchModelIds(endpointFor("/torn-body")).catch((error: ChatApiError) => {
-      expect(error).toBeInstanceOf(ChatApiError);
-      expect(error.status).toBe(500);
-      expect(error.message.length).toBeGreaterThan(0);
-    });
+  test("still reports a typed error when the failure body stops mid-JSON", async () => {
+    // `.catch(assert)` would pass silently if this ever stopped rejecting, so
+    // the rejection itself is asserted before anything is read off the error.
+    const error = await fetchModelIds(endpointFor("/half-written-error")).then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(ChatApiError);
+    expect((error as ChatApiError).status).toBe(500);
+    expect((error as ChatApiError).message.length).toBeGreaterThan(0);
   });
 
   test("honours an abort signal", async () => {

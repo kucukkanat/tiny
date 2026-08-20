@@ -1,4 +1,5 @@
-import type { Extension, ExtensionAPI } from "@tiny/ai";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * Replay only the last `turns` messages so a long thread cannot grow the
@@ -8,9 +9,9 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * turns — so it always survives the trim. Older turns are dropped from the
  * *request* only; the conversation on disk is untouched.
  */
-export const historyWindow = (turns: number): Extension =>
-  function historyWindow(pi: ExtensionAPI) {
+export const historyWindow = (turns: number): IdentifiedPlugin =>
+  definePlugin("historyWindow", (pi) => {
     pi.on("context", (event) =>
       event.messages.length <= turns ? undefined : { messages: event.messages.slice(-turns) },
     );
-  };
+  });

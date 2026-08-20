@@ -9,7 +9,7 @@
  * or is marked as ours. The parts with their own implementation live beside it —
  * key matching in keys.ts, slots in Slot.tsx, providers in providers.ts.
  */
-import type { EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
+import type { ApiType, EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
 import type { ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
 import type { KeyId } from "./keys.ts";
@@ -120,7 +120,18 @@ export type PluginSettings = {
   readonly model: string;
   /** Which registered provider `model` belongs to; the user's own endpoint when absent. */
   readonly providerId?: string | undefined;
+  /** Which pi api the endpoint speaks; absent means `openai-completions`. */
+  readonly api?: ApiType | undefined;
 };
+
+/** Whether an endpoint is configured enough to send with. */
+export const settingsComplete = (
+  settings: PluginSettings | undefined,
+): settings is PluginSettings =>
+  settings !== undefined &&
+  settings.baseUrl.trim() !== "" &&
+  settings.apiKey.trim() !== "" &&
+  settings.model.trim() !== "";
 
 /** Namespaced per plugin, so a plugin can persist state without touching app data. */
 export type PluginStorage = {

@@ -3,7 +3,7 @@ import type { ChatMessage } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 import type { IdentifiedPlugin } from "@tiny/plugin";
 import { loadPlugins } from "@tiny/plugin";
-import { plugins } from "../src/plugins.ts";
+import { historyWindow, systemPrompt } from "../src/index.ts";
 
 // Driven through streamChat against a real OpenAI-compatible server, so these
 // run through pi-shaped registration and the actual request path rather than
@@ -47,23 +47,57 @@ const run = async (
 
 const sentMessages = () => lastBody?.messages ?? [];
 
-// The app's plugin file is a list of packages. What each does is tested in the
-// package that owns it; what is tested here is the list this app ships.
+const turns = (count: number): ChatMessage[] =>
+  Array.from({ length: count }, (_, index) => ({
+    role: index % 2 === 0 ? "user" : "assistant",
+    content: `turn ${index}`,
+  }));
 
-describe("registry", () => {
-  test("ships observers only, leaving the request byte-identical", async () => {
-    await run([]);
-    const baseline = sentMessages();
-    // The registry holds plugins, so it reaches streamChat the way the app
-    // sends it: through the host, which replays the recorded `on()` calls.
-    await run(plugins);
-    expect(sentMessages()).toEqual(baseline);
+describe("systemPrompt", () => {
+  test("sets the prompt when the conversation carries none", async () => {
+    await run([systemPrompt("be terse")]);
+    expect(sentMessages()[0]).toEqual({ role: "system", content: "be terse" });
   });
 
-  test("wires the settings dialog in, so the app owns no settings UI of its own", async () => {
-    const { commands, contributions } = await loadPlugins(plugins);
+  test("defers to a prompt the conversation already carries", async () => {
+    await run(
+      [systemPrompt("be terse")],
+      [
+        { role: "system", content: "be verbose" },
+        { role: "user", content: "hi" },
+      ],
+    );
+    expect(sentMessages()[0]).toEqual({ role: "system", content: "be verbose" });
+  });
+});
 
-    expect(commands.some((command) => command.name === "settings")).toBe(true);
-    expect(contributions.some((entry) => entry.slot === "app.overlays")).toBe(true);
+describe("historyWindow", () => {
+  test("replays only the last n turns", async () => {
+    await run([historyWindow(3)], turns(10));
+    expect(sentMessages()).toEqual([
+      { role: "assistant", content: "turn 7" },
+      { role: "user", content: "turn 8" },
+      { role: "assistant", content: "turn 9" },
+    ]);
+  });
+
+  test("leaves history shorter than the window untouched", async () => {
+    await run([historyWindow(50)], turns(4));
+    expect(sentMessages()).toHaveLength(4);
+  });
+
+  test("keeps the system prompt, which is not one of the turns", async () => {
+    await run(
+      [historyWindow(1)],
+      [
+        { role: "system", content: "be terse" },
+        { role: "user", content: "old" },
+        { role: "user", content: "newest" },
+      ],
+    );
+    expect(sentMessages()).toEqual([
+      { role: "system", content: "be terse" },
+      { role: "user", content: "newest" },
+    ]);
   });
 });

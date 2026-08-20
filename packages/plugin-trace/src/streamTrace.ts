@@ -1,4 +1,5 @@
-import type { Extension, ExtensionAPI } from "@tiny/ai";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * Summarise pi's raw event stream during development — useful when a provider
@@ -9,8 +10,8 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * whole extension is a no-op in production (`process.env.NODE_ENV` is inlined
  * by the bundler).
  */
-export const streamTrace = (log: (message: string) => void = console.debug): Extension =>
-  function streamTrace(pi: ExtensionAPI) {
+export const streamTrace = (log: (message: string) => void = console.debug): IdentifiedPlugin =>
+  definePlugin("streamTrace", (pi) => {
     if (process.env.NODE_ENV === "production") return;
 
     // One extension instance serves every request, so the tally resets on start.
@@ -25,4 +26,4 @@ export const streamTrace = (log: (message: string) => void = console.debug): Ext
       count("done");
       log(`[trace] ${[...counts].map(([type, n]) => `${type}×${n}`).join(" ")}`);
     });
-  };
+  });

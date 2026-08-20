@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import type { PluginSettings } from "@tiny/plugin";
 import { loadPlugins, PluginHost, Slot, usePluginHost, useProvideApp } from "@tiny/plugin";
 import { useMemo, useState } from "react";
-import { plugins } from "../src/plugins/index.ts";
-import { settingsPlugin } from "../src/plugins/settingsPlugin.tsx";
-import type { Settings } from "../src/settings.ts";
+import { settings as settingsPlugin } from "../src/settings.tsx";
 
 // Settings ships as a plugin, so the dialog reaches the screen through
 // `app.overlays` and opens through a registered command. These drive the real
@@ -12,12 +11,12 @@ import type { Settings } from "../src/settings.ts";
 
 afterEach(cleanup);
 
-const configured: Settings = { baseUrl: "https://example.test/v1", apiKey: "sk", model: "m" };
+const configured: PluginSettings = { baseUrl: "https://example.test/v1", apiKey: "sk", model: "m" };
 
 let host: ReturnType<typeof usePluginHost> | undefined;
 
 /** A minimal stand-in for `App`: publishes settings and renders the overlay slot. */
-function Harness({ initial }: { initial: Settings | undefined }) {
+function Harness({ initial }: { initial: PluginSettings | undefined }) {
   const [current, setCurrent] = useState(initial);
   host = usePluginHost();
 
@@ -40,7 +39,7 @@ function Harness({ initial }: { initial: Settings | undefined }) {
   return <Slot name="app.overlays" />;
 }
 
-const mount = async (initial: Settings | undefined) => {
+const mount = async (initial: PluginSettings | undefined) => {
   host = undefined;
   render(
     <PluginHost plugins={[settingsPlugin()]}>
@@ -76,11 +75,5 @@ describe("settings as a plugin", () => {
     const { commands, shortcuts } = await loadPlugins([settingsPlugin()]);
     expect(commands.map((command) => command.invocationName)).toEqual(["settings"]);
     expect(shortcuts.map((shortcut) => shortcut.shortcut)).toEqual(["super+,", "ctrl+,"]);
-  });
-
-  test("is wired into the app's registry", async () => {
-    const { commands, contributions } = await loadPlugins(plugins);
-    expect(commands.some((command) => command.name === "settings")).toBe(true);
-    expect(contributions.some((entry) => entry.slot === "app.overlays")).toBe(true);
   });
 });

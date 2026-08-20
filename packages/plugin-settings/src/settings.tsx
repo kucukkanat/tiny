@@ -1,19 +1,24 @@
 import type { IdentifiedPlugin } from "@tiny/plugin";
-import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
+import {
+  createExternalStore,
+  definePlugin,
+  settingsComplete,
+  usePluginContext,
+} from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
-import { settingsComplete } from "../settings.ts";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 
 /**
- * Endpoint configuration, shipped as a plugin rather than as app structure.
+ * Endpoint configuration, as a plugin.
  *
- * This is the dogfood: the dialog reaches the screen through `app.overlays`,
- * opens through a registered command, and binds a shortcut — so the three
- * halves of the plugin API are exercised by a feature the app actually needs.
- * `App` keeps no settings state of its own, and `Sidebar`'s gear simply runs
- * the command.
+ * This is the dogfood, and it lives outside the app on purpose: the dialog
+ * reaches the screen through `app.overlays`, opens through a registered command
+ * and a shortcut, and reads and writes the endpoint through `ctx.settings` and
+ * `ctx.updateSettings`. Nothing here imports the app. If a feature this central
+ * can be built from outside, the plugin API is sufficient — and if it ever stops
+ * being sufficient, this package stops compiling.
  */
-export const settingsPlugin = (): IdentifiedPlugin => {
+export const settings = (): IdentifiedPlugin => {
   // Open/closed lives in the plugin's own closure: the command handler and the
   // contributed component are separate call sites that need the same switch.
   const open = createExternalStore(false);
@@ -38,7 +43,7 @@ export const settingsPlugin = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("settingsPlugin", (pi) => {
+  return definePlugin("settings", (pi) => {
     pi.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),

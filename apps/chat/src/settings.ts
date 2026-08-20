@@ -58,16 +58,3 @@ export function loadSettings(): Settings | undefined {
 export function saveSettings(settings: Settings): void {
   localStorage.setItem(KEY, JSON.stringify(settings));
 }
-
-/**
- * A settings object is usable once every field is non-empty.
- *
- * Still only about the user's *own* endpoint: a plugin provider supplies its own
- * base URL and key, so a conversation can run through one while this is false.
- * `App` asks `canSend` for that question.
- */
-export const settingsComplete = (settings: Settings | undefined): settings is Settings =>
-  settings !== undefined &&
-  settings.baseUrl.trim() !== "" &&
-  settings.apiKey.trim() !== "" &&
-  settings.model.trim() !== "";

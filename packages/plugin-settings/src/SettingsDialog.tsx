@@ -1,6 +1,6 @@
 import { API_TYPES, type ApiType, ChatApiError, describeError, listModels } from "@tiny/ai";
+import type { PluginSettings } from "@tiny/plugin";
 import { useState } from "react";
-import type { Settings } from "../settings.ts";
 
 const field =
   "h-8 w-full rounded-control bg-field px-2.5 text-base text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
@@ -38,8 +38,8 @@ export function SettingsDialog({
   onSave,
   onClose,
 }: {
-  initial: Settings | undefined;
-  onSave: (settings: Settings, models: readonly string[]) => void;
+  initial: PluginSettings | undefined;
+  onSave: (settings: PluginSettings, models: readonly string[]) => void;
   onClose: (() => void) | undefined;
 }) {
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? "");

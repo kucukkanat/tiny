@@ -21,6 +21,8 @@
         "@tiny/plugin-fs": "workspace:*",
         "@tiny/plugin-hitl": "workspace:*",
         "@tiny/plugin-manager": "workspace:*",
+        "@tiny/plugin-settings": "workspace:*",
+        "@tiny/plugin-trace": "workspace:*",
         "@tiny/ui": "workspace:*",
         "idb-keyval": "^6.2.2",
         "react": "^19.1.0",
@@ -112,6 +114,39 @@
       },
       "peerDependencies": {
         "react": "^19.2.8",
+      },
+    },
+    "packages/plugin-prompt": {
+      "name": "@tiny/plugin-prompt",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tiny/ai": "workspace:*",
+        "@tiny/plugin": "workspace:*",
+      },
+    },
+    "packages/plugin-settings": {
+      "name": "@tiny/plugin-settings",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tiny/ai": "workspace:*",
+        "@tiny/plugin": "workspace:*",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.11.2",
+        "@testing-library/react": "^16.3.2",
+        "@types/react": "^19.1.0",
+        "react-dom": "^19.2.8",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
+      },
+    },
+    "packages/plugin-trace": {
+      "name": "@tiny/plugin-trace",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tiny/ai": "workspace:*",
+        "@tiny/plugin": "workspace:*",
       },
     },
     "packages/ui": {
@@ -286,6 +321,12 @@
     "@tiny/plugin-hitl": ["@tiny/plugin-hitl@workspace:packages/plugin-hitl"],
 
     "@tiny/plugin-manager": ["@tiny/plugin-manager@workspace:packages/plugin-manager"],
+
+    "@tiny/plugin-prompt": ["@tiny/plugin-prompt@workspace:packages/plugin-prompt"],
+
+    "@tiny/plugin-settings": ["@tiny/plugin-settings@workspace:packages/plugin-settings"],
+
+    "@tiny/plugin-trace": ["@tiny/plugin-trace@workspace:packages/plugin-trace"],
 
     "@tiny/ui": ["@tiny/ui@workspace:packages/ui"],
 

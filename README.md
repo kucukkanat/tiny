@@ -23,6 +23,9 @@ from a URL or pasted source, with no rebuild and no page reload.
 | [`packages/plugin-fs`](packages/plugin-fs) (`@tiny/plugin-fs`) | Filesystem tools for the model (`fs_read`, `fs_write`, `fs_edit`, `fs_delete`, `fs_list`), backed by the browser's Origin Private File System. |
 | [`packages/plugin-hitl`](packages/plugin-hitl) (`@tiny/plugin-hitl`) | Human in the loop — the model asks, the user answers. Built on pi's `tool_call` event, so a refusal steers the model rather than ending the turn. |
 | [`packages/plugin-manager`](packages/plugin-manager) (`@tiny/plugin-manager`) | Install plugins at runtime from a URL or pasted source — stored in OPFS, pinned by SHA-256, managed from a dialog in the app. |
+| [`packages/plugin-prompt`](packages/plugin-prompt) (`@tiny/plugin-prompt`) | Two plugins that change what the model is sent — a system prompt, and a history window. Opt-in. |
+| [`packages/plugin-settings`](packages/plugin-settings) (`@tiny/plugin-settings`) | The endpoint dialog, as a plugin. Imports nothing from the app — the dogfood that keeps the API honest. |
+| [`packages/plugin-trace`](packages/plugin-trace) (`@tiny/plugin-trace`) | Two plugins that watch a reply and change nothing — token usage, and a stream trace. |
 | [`packages/ui`](packages/ui) (`@tiny/ui`) | Beautiful UI primitives adapted for this app, plus their design tokens. |
 | [`apps/docs`](apps/docs) (`@tiny/docs`) | The plugin documentation site — markdown in, static site out, on the same Bun toolchain. |
 

@@ -2,7 +2,7 @@ import { PluginHost } from "@tiny/plugin";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Route, Routes } from "react-router";
 import { App } from "./App.tsx";
-import { plugins } from "./plugins/index.ts";
+import { plugins } from "./plugins.ts";
 
 const root = document.getElementById("root");
 if (root === null) throw new Error("Missing #root element");

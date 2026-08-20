@@ -6,6 +6,7 @@ import {
   modelsOf,
   Slot,
   StatusBar,
+  settingsComplete,
   usePluginExtensions,
   usePluginHost,
   usePluginProviders,
@@ -23,13 +24,7 @@ import {
   listConversations,
   putConversation,
 } from "./conversations.ts";
-import {
-  loadSettings,
-  OWN_ENDPOINT,
-  type Settings,
-  saveSettings,
-  settingsComplete,
-} from "./settings.ts";
+import { loadSettings, OWN_ENDPOINT, type Settings, saveSettings } from "./settings.ts";
 import { Thread } from "./Thread.tsx";
 import { useChat } from "./useChat.ts";
 

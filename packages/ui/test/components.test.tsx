@@ -81,7 +81,7 @@ describe("StreamText", () => {
   });
 });
 
-describe("Thinking", () => {
+describe("ReasoningTrace", () => {
   test("shows the duration once settled and toggles the trace", () => {
     render(<ReasoningTrace working={false} seconds={4} text="reasoning trace" />);
     const toggle = screen.getByRole("button");

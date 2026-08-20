@@ -58,9 +58,13 @@ a reader and one to the compiler. It is `modelSpec` at every hop now.
 definitions available) silently resolves to the wrong one. The accumulator is
 `toolRuns`.
 
-**A file's name is a promise about its only export.** `ManagerDialog.tsx`
-exports `ManagerDialog`. PascalCase `.tsx` when the primary export is a React
-component of that exact name; camelCase otherwise.
+**A file's name is a promise about what is inside.** Name it after its primary
+export (`ManagerDialog.tsx` exports `ManagerDialog`) or, when a file holds one
+family, after the family — `Slot.tsx` also exports `Widgets` and `StatusBar`,
+which are the other two things the host renders into. What a name may not do is
+describe a language feature (`types.ts`) or a framework (`hooks/`). PascalCase
+`.tsx` when the primary export is a React component of that exact name;
+camelCase otherwise.
 
 ---
 

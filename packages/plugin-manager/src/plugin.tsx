@@ -12,8 +12,9 @@ export type PluginManagerOptions = InstalledOptions;
  *
  * Its factory is `async`, and `loadPlugins` awaits each factory — so by the
  * time the host has a registry, everything installed at runtime has already
- * registered into it through the same `pi`. Nothing distinguishes a plugin the
- * user pasted in from one that shipped with the build.
+ * registered into it through the same `pi`. A plugin the user pasted in can do
+ * everything one that shipped with the build can — including, for now, sharing
+ * this plugin's storage namespace. See `activate.ts`.
  *
  * Adding, enabling or removing calls `ctx.reload()`, which rebuilds the whole
  * registry: that is what makes a removed plugin actually stop running, since

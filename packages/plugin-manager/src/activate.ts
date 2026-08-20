@@ -10,8 +10,15 @@ export type ActivationResult = {
 /**
  * Runs every installed plugin that is enabled and still matches its pinned
  * hash, handing each the *same* `pi` the manager itself was given — so what
- * they register lands in the app's one registry, indistinguishable from a
- * plugin that shipped with the build.
+ * they register lands in the app's one registry, with the same capabilities as
+ * a plugin that shipped with the build.
+ *
+ * **They also share the manager's identity**, because `pi` carries the id that
+ * `loadPlugins` assigned to the manager. So every installed plugin writes to
+ * `ctx.storage` under `tiny-plugin:pluginManager:` and its errors are labelled
+ * with the manager's name. Two installed plugins that both store a key called
+ * `"state"` overwrite each other. Giving each its own id needs `loadPlugins` to
+ * hand out a scoped `pi`, which it cannot do yet.
  *
  * This is called from inside the manager's own factory, which `loadPlugins`
  * awaits; that is the whole trick, and why no change to the host was needed to

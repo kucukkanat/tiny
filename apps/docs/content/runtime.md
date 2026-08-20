@@ -45,6 +45,13 @@ recorded in the same arrays, in the same pass, by the same code.
 That is the entire mechanism. Nothing in `@tiny/plugin` knows that runtime
 plugins exist.
 
+> **They share the manager's identity.** `pi` carries the id `loadPlugins` gave
+> `pluginManager`, so every installed plugin's `ctx.storage` writes under
+> `tiny-plugin:pluginManager:` and its errors are labelled with the manager's
+> name. Two installed plugins that both store `"state"` overwrite each other.
+> Scoping them needs `loadPlugins` to hand out a per-plugin `pi`, which it does
+> not do yet.
+
 ```text
 loadPlugins([settings(), fileSystem(), pluginManager()])
 │

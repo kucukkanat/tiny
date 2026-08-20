@@ -26,9 +26,9 @@ from a URL or pasted source, with no rebuild and no page reload.
 | [`packages/ui`](packages/ui) (`@tiny/ui`) | Beautiful UI primitives adapted for this app, plus their design tokens. |
 | [`apps/docs`](apps/docs) (`@tiny/docs`) | The plugin documentation site — markdown in, static site out, on the same Bun toolchain. |
 
-Plugin packages are named `@tiny/plugin-<name>` in this repo, and `tiny-plugin-<name>` (or
-`@<vendor>/tiny-plugin-<name>`) when published by someone else — so `tiny-plugin-` appears
-in every plugin's name and nowhere else. See
+Plugin packages are named `@tiny/plugin-<name>` here, and `tiny-plugin-<name>` (or
+`@<vendor>/tiny-plugin-<name>`) when published by someone else — so `plugin-` follows the
+scope in both cases and a plugin is recognisable from its name alone. See
 [`packages/plugin`](packages/plugin/README.md#naming-an-extension-package).
 
 ## Contributing

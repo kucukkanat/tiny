@@ -9,7 +9,7 @@ import { PluginManagerError } from "./errors.ts";
  * the same thing a bundled plugin gets. There is no sandbox here and there
  * cannot be one: a plugin renders React into the app and calls the same APIs
  * the app does. The trust decision happens before this is ever called, in the
- * manifest; see `store.ts`.
+ * manifest; see `installed.ts`.
  */
 export const compile = async (source: string): Promise<Plugin> => {
   const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));

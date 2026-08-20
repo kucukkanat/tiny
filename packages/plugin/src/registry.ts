@@ -163,7 +163,6 @@ export type HostActions = {
 export const terminalFallbacks = {
   theme: identityTheme,
   custom: async () => undefined,
-  getEditorText: () => "",
   getToolsExpanded: () => false,
   setToolsExpanded: () => {},
   setWorkingMessage: () => {},
@@ -221,6 +220,9 @@ const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: fal
     setTitle: () => {},
     setEditorText: () => {},
     pasteToEditor: () => {},
+    // No host means no composer, so there is no draft to read. The mounted
+    // host overrides this with the real one.
+    getEditorText: () => "",
     ...terminalFallbacks,
   };
   return {

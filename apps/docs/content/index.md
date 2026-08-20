@@ -56,13 +56,22 @@ what that costs and what guards it.
 | --- | --- |
 | `pi.registerCommand(name, opts)` | a slash command, with argument completions |
 | `pi.registerShortcut(key, opts)` | a keybinding, in pi's `KeyId` format |
-| `pi.registerTool(tool)` | a tool the model may call mid-answer |
-| `pi.contribute(slot, Component)` | React into one of four named regions |
+| `pi.registerTool(tool)` | a [tool](tools.md) the model may call mid-answer |
+| `pi.registerProvider(id, config)` | another [endpoint](providers.md) in the model picker |
+| `pi.registerMarkdownTransformer(fn)` | a rewrite of message text on its way to the screen |
 | `pi.on(event, handler)` | a hook on the request lifecycle |
+| `pi.events` | a bus for talking to other plugins |
+| `pi.contribute(slot, Component)` | React into one of four named regions |
 
-The first three and `on` are pi's, with pi's names and signatures.
-[`contribute`](slots.md) is the one addition — pi's answer to rich UI returns
+Every one of those is pi's, with pi's name and signature, except the last.
+[`contribute`](slots.md) is the single addition — pi's answer to rich UI returns
 terminal components, which is exactly the half that cannot cross into a browser.
+
+There is more of the SDK than this: `setModel`, `sendUserMessage`,
+`getActiveTools`/`setActiveTools`, `setSessionName`, and on `ctx`, `abort`,
+`isIdle`, `getContextUsage`, `newSession` and `reload`. The
+[compatibility page](pi-compat.md) is the full accounting — what is inherited,
+what is reduced, and what is absent.
 
 ## Where to go next
 

@@ -42,6 +42,10 @@ useProvideApp(
       stop: chat.stop,
       updateSettings,
       navigate: (path: string) => navigate(path),
+      // Optional: `pi.getSessionName` / `setSessionName` report they are
+      // unsupported when a host has no named sessions.
+      sessionName,
+      setSessionName,
     }),
     [chat.messages, chat.streaming, chat.send, chat.stop, settings, updateSettings, navigate],
   ),
@@ -66,11 +70,11 @@ safe. What it cannot defend against is a field that genuinely changes:
 send: (text) => chat.send(text),   // …if `chat.send` itself is unstable
 
 // Wrong — the callback gets folded into `send`, so `send` is unstable too.
-const chat = useChat(id, settings, (createdId) => navigate(`/c/${createdId}`));
+const chat = useChat(id, endpoint, model, (createdId) => navigate(`/c/${createdId}`));
 
 // Right.
 const onCreated = useCallback((createdId: string) => navigate(`/c/${createdId}`), [navigate]);
-const chat = useChat(id, settings, onCreated);
+const chat = useChat(id, endpoint, model, onCreated);
 ```
 
 Watch for callbacks that get folded into others. An inline `onConversationCreated`
@@ -105,14 +109,17 @@ these is safe to leave in place.
 Two hooks return what plugins registered for the model:
 
 ```tsx
-const chat = useChat(id, settings, onCreated, usePluginExtensions(), usePluginTools());
+const chat = useChat(id, endpoint, model, onCreated, usePluginExtensions(), usePluginTools());
 ```
 
 | Hook | Returns |
 | --- | --- |
 | `usePluginExtensions()` | the `@tiny/ai` extensions the registry collected |
-| `usePluginTools()` | the `ToolDefinition[]` plugins registered |
-| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `commands`, the registry |
+| `usePluginTools()` | the `ToolDefinition[]` plugins registered, minus any `setActiveTools` switched off |
+| `usePluginProviders()` | the endpoints registered with [`registerProvider`](providers.md) |
+| `usePluginEvents()` | the bus behind `pi.events` |
+| `useMarkdown(text, context)` | that text after every registered transformer |
+| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `commands`, `activeTools`, the registry |
 
 `usePluginHost().editorText` is what `ui.setEditorText` and `ui.pasteToEditor`
 push at the composer; feed it into your input as a controlled value.
@@ -129,8 +136,30 @@ const registry = await loadPlugins([fileSystem(), notion({ token })]);
 registry.commands;      // [{ name, invocationName, pluginId, options }]
 registry.tools;         // ToolDefinition[], duplicates dropped
 registry.contributions; // [{ id, slot, pluginId, component }]
+registry.markdown;      // [{ pluginId, transformer }], in load order
+registry.providers;     // [{ id, pluginId, config }] — a snapshot, see below
 registry.extensions;    // [Extension] — one, replaying every `on()` call
 ```
+
+`loadPlugins` takes a second argument for the parts that outlive one load:
+
+```ts
+await loadPlugins(plugins, {
+  providers,           // a ProviderStore, so late registrations survive
+  events,              // the shared bus, so subscriptions survive a reload
+  host: () => actions, // resolved per call, for pi methods that drive the app
+});
+```
+
+`registry.providers` is a **snapshot**, because pi allows `registerProvider` to be
+called long after the factory returns. `PluginHost` subscribes to the store
+instead and exposes the live list through `usePluginProviders()`; a bare
+`loadPlugins` caller should hold the store itself.
+
+`host` supplies what `pi.getCommands`, `pi.setModel`, `pi.sendUserMessage`,
+`pi.setSessionName` and `pi.get/setActiveTools` reach. Omit it and each reports
+that no host is mounted rather than throwing, which is what makes `loadPlugins`
+usable in a test or a script.
 
 ## Why `@tiny/ai` needed no change
 

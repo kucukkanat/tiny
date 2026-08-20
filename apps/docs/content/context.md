@@ -31,6 +31,11 @@ type PluginContext = {
   readonly storage: PluginStorage;
   runCommand(name: string, args?: string): Promise<void>;
   readonly commands: readonly CommandInfo[];
+  abort(): void;
+  isIdle(): boolean;
+  hasPendingMessages(): boolean;
+  getContextUsage(): ContextUsage;
+  newSession(): void;
   reload(): Promise<void>;
 };
 ```
@@ -137,6 +142,11 @@ ctx.navigate("/c/abc123");  // hash routes: "/" is a new conversation
 same endpoint needs it. That is a real capability, and it is one of the reasons
 [installing a runtime plugin is a trust decision](runtime.md#the-trust-boundary).
 
+`settings.providerId` names the [registered provider](providers.md) the selected
+model came from; absent means the user's own endpoint. If you are adding a
+provider, pass its key as a thunk rather than a string — a key in the config sits
+in the registry, where this very object would hand it to every other plugin.
+
 ## Storage
 
 ```ts
@@ -164,6 +174,27 @@ await ctx.runCommand("greet", "you"); // with arguments
 `runCommand` matches the invocation name first and the registered name second, so
 it finds `review:2` and also plain `review`. An unknown name logs and resolves;
 it does not throw.
+
+## Idle, abort and usage
+
+pi's questions about the turn in flight, with pi's names.
+
+```ts
+ctx.isIdle();              // false while a reply is streaming
+ctx.hasPendingMessages();  // the same question from the other side
+ctx.abort();               // stop the reply — the same as ctx.chat.stop()
+ctx.newSession();          // start a fresh conversation
+ctx.getContextUsage();     // { input, output, totalTokens, contextWindow }
+```
+
+There is no queue here — a reply is either streaming or it is not — so `isIdle`
+and `hasPendingMessages` are exact opposites rather than two different questions.
+
+`getContextUsage()` reports the last completed turn. **`contextWindow` is `0`**
+unless the endpoint publishes one: a bring-your-own OpenAI-compatible server
+advertises nothing but model ids, so `@tiny/ai` fills its model descriptor with
+placeholders. The same is true of cost. See
+[what a provider could supply instead](providers.md#what-does-not-port-from-pi).
 
 ## reload
 

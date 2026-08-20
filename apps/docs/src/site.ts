@@ -67,6 +67,12 @@ export const sections: readonly Section[] = [
         title: "Tools for the model",
         blurb: "registerTool, and how a call becomes a result.",
       },
+      {
+        slug: "providers",
+        file: "providers.md",
+        title: "Providers",
+        blurb: "Adding an endpoint to the model picker, and what pi's version does not port.",
+      },
     ],
   },
   {

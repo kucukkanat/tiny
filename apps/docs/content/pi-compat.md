@@ -2,15 +2,27 @@
 
 `@tiny/plugin` is shaped after **pi's extension SDK**
 ([`@earendil-works/pi-coding-agent`](https://github.com/earendil-works/pi), see its
-`docs/extensions.md`). This page is the honest accounting of what that means, so
-nothing here is mistaken for full SDK conformance.
+`packages/coding-agent/docs/extensions.md`). This page is the honest accounting
+of what that means, so nothing here is mistaken for full SDK conformance.
 
 **A pi extension that touches only RPC-portable methods runs here unmodified.**
 
+## Coverage at a glance
+
+Counted against pi's documented surface.
+
+| Area | pi | Here |
+| --- | --- | --- |
+| `ctx.ui.*` | 26 methods | all 26 — 10 functional, 16 degraded as RPC degrades them — plus `open()` |
+| Events for `pi.on` | 34 | all 34 accepted; 5 fire |
+| `pi.*` methods | 26 | 15, plus `contribute()` |
+| `ExtensionContext` | 18 members | 9, plus 7 of the app's own |
+| `ExtensionCommandContext` extras | 7 | `reload()` |
+
 ## Why a terminal API works in a browser
 
-pi's extension UI is already renderer-agnostic, because pi runs extensions against
-a non-terminal frontend in **RPC mode**. `ctx.mode` is
+pi's extension UI is already renderer-agnostic, because pi runs extensions
+against a non-terminal frontend in **RPC mode**. `ctx.mode` is
 `"tui" | "rpc" | "json" | "print"`, `ctx.hasUI` is true in both TUI *and* RPC, and
 pi's `docs/rpc.md` §"Extension UI Protocol" documents exactly which `ctx.ui`
 methods survive that transition.
@@ -38,14 +50,32 @@ Same names, argument order and return values.
 
 | | |
 | --- | --- |
-| `pi.on(event, handler)` | for the five events below |
+| `pi.on(event, handler)` | for the five events that fire |
 | `pi.registerCommand(name, { description, getArgumentCompletions, handler })` | `handler(args, ctx)` |
 | `pi.registerShortcut(key, { description, handler })` | pi's `KeyId` format; modifiers are `ctrl` / `shift` / `alt` / `super` |
-| `pi.registerTool(tool)` | pi's shape, with `parameters` as plain JSON Schema |
+| `pi.registerTool(tool)` | pi's positional `execute` and content-block result — see [Tools](tools.md) |
+| `pi.getCommands()` | extension commands, in invocation order |
+| `pi.registerMarkdownTransformer(fn)` | chained in load order, each seeing the last one's output |
+| `pi.events` | the shared bus — `on` / `once` / `off` / `emit` |
+| `pi.getAllTools()` / `getActiveTools()` / `setActiveTools(names)` | over the registry's tools |
+| `pi.setModel(model)` | writes through to the app's settings |
+| `pi.sendUserMessage(content)` | sends as the user |
+| `pi.setSessionName(name)` / `getSessionName()` | the conversation's title |
 | `ctx.ui.select / confirm / input` | including `{ timeout, signal }` and pi's dismissal values |
 | `ctx.ui.editor(title, prefill)` | pi takes no options here, so neither do we |
 | `ctx.ui.notify / setStatus / setWidget / setTitle / setEditorText / pasteToEditor` | fire-and-forget |
 | `ctx.mode`, `ctx.hasUI`, `ctx.signal` | `mode` is `"react"` |
+| `ctx.abort()`, `ctx.isIdle()`, `ctx.hasPendingMessages()` | one reply at a time, so the last two are opposites |
+| `ctx.getContextUsage()` | tokens for the turn |
+| `ctx.newSession()` | starts a fresh conversation |
+| `ctx.reload()` | pi's `/reload` flow, over plugin factories rather than files on disk |
+
+`ctx.reload()` is worth naming explicitly because it is easy to assume otherwise:
+it is **pi's**, adapted, not an invention here. pi reloads extensions, skills,
+prompts and themes from disk; this re-runs every plugin factory and rebuilds the
+registry. Both resolve once the new runtime is live, and in both, a plugin that no
+longer registers is gone. See
+[reloading](runtime.md#reloading-is-how-unloading-works).
 
 ## Events
 
@@ -53,9 +83,9 @@ Five fire, because five are all `@tiny/ai` emits: `before_agent_start`,
 `context`, `message_start`, `message_update`, `message_end`.
 
 **Every other pi event name is accepted without error and never fires.** A pi
-extension that subscribes to `session_start`, `tool_call` or `turn_end` loads
-cleanly and simply never hears from them — which is the difference between "runs
-unmodified" and "compiles unmodified".
+extension that subscribes to `session_start`, `tool_call`, `turn_end` or
+`session_compact_failed` loads cleanly and simply never hears from them — which is
+the difference between "runs unmodified" and "compiles unmodified".
 
 ## Degraded
 
@@ -75,16 +105,31 @@ extension degrades here precisely as it would over RPC.
 | `setWorkingMessage`, `setWorkingVisible`, `setWorkingIndicator`, `setHiddenThinkingLabel`, `setFooter`, `setHeader`, `setEditorComponent`, `setToolsExpanded`, `addAutocompleteProvider` | no-op |
 | `ctx.ui.theme` | every method is the identity, so `theme.fg("accent", "●")` yields `"●"` rather than throwing |
 
+## Reduced
+
+pi's name and intent, with less behind them. Worth reading before assuming a
+straight port.
+
+| | What survives |
+| --- | --- |
+| `pi.registerProvider(id, config)` | base URL, authentication and a model list. pi's credential store, generation-checked catalog persistence and native `pi-ai` `Provider` have nowhere to live, and `@tiny/ai` streams to an endpoint directly rather than through pi-ai's registry — see [Providers](providers.md) |
+| `pi.registerMarkdownTransformer(fn)` | the transformer's context has `messageType` and `isStreaming`, but not pi's `availableWidth`: a browser has no column count |
+| `pi.sendUserMessage(content)` | the message is sent; pi's `{ deliverAs: "followUp" }` has no queue to deliver into |
+| `ctx.ui.pasteToEditor(text)` | appends rather than inserting at a cursor with collapse handling. pi's RPC mode degrades this further, to a plain replace |
+
 ## Omitted
 
 No analogue in a browser chat, so they are absent rather than faked.
 
 | pi has | Why not here |
 | --- | --- |
-| `registerProvider`, `registerFlag` | no provider registry and no CLI |
+| `registerFlag`, `getFlag` | no CLI to parse flags from |
+| `exec` | no shell in a browser |
+| `sendMessage`, `appendEntry`, `setLabel` | no session entries to append or label |
 | `registerMessageRenderer`, `registerEntryRenderer` | they return `pi-tui` components; the concept ports, the signature does not |
-| `ctx.sessionManager`, `ctx.cwd`, `ctx.modelRegistry` | no session store, filesystem or provider registry |
-| `pi.sendMessage`, `pi.appendEntry`, `pi.exec` | no session entries and no shell |
+| `getThinkingLevel`, `setThinkingLevel`, `ctx.scopedModels` | no thinking-level or scoped-model concept behind a bare endpoint |
+| `ctx.sessionManager`, `ctx.cwd`, `ctx.modelRegistry`, `ctx.model` | no session store, filesystem or pi-ai model registry |
+| `ctx.compact()`, `waitForIdle()`, `fork()`, `navigateTree()`, `switchSession()`, `shutdown()`, `isProjectTrusted()`, `getSystemPrompt()` | no compaction, session tree or project trust here |
 | Auto-discovery from `~/.pi/agent/extensions/` | plugins are listed in the app's registry, or [installed at runtime](runtime.md) |
 
 ## Added
@@ -95,12 +140,7 @@ No pi equivalent.
 | --- | --- |
 | `pi.contribute(slot, Component)` | [React components into named regions](slots.md) |
 | `ctx.ui.open(render)` | a React component as a modal, resolving when it closes |
-| `ctx.reload()` | [re-run every factory and rebuild the registry](runtime.md#reloading-is-how-unloading-works) |
 | `ctx.chat`, `ctx.settings`, `ctx.updateSettings`, `ctx.navigate`, `ctx.storage`, `ctx.runCommand`, `ctx.commands` | the app's own state and actions |
-
-`ctx.reload()` exists because pi discovers extensions from disk at startup and
-this host does not: a plugin that installs other plugins needs a way to apply the
-change without a page reload.
 
 ## One deliberate behavioural difference
 
@@ -124,8 +164,12 @@ Bringing an extension over from `.pi/extensions/`:
 3. Does it branch on `ctx.mode`? `"react"` is a new member of the union, so a
    `=== "tui"` guard stays false, and an `!== "tui"` guard now passes. Check the
    latter.
-4. Does it use `ctx.sessionManager`, `ctx.cwd`, `pi.exec` or `pi.sendMessage`?
-   Those are absent, not degraded — the extension will not run as-is.
-5. Does it rely on events other than the five above? They will never fire.
+4. Does it use `ctx.sessionManager`, `ctx.cwd`, `pi.exec`, `pi.appendEntry` or
+   `pi.registerFlag`? Those are absent, not degraded — the extension will not run
+   as-is.
+5. Does it call `pi.registerProvider` with credential storage, `refreshModels`
+   persistence or a native `pi-ai` `Provider`? Only the base-URL-and-models part
+   is honoured. See [Providers](providers.md).
+6. Does it rely on events other than the five above? They will never fire.
 
 Everything else should run untouched.

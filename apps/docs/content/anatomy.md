@@ -204,6 +204,63 @@ Handlers are recorded during `loadPlugins` and replayed into whatever
 `pi.registerTool` gives the model something it can call. It has its own page:
 [Tools for the model](tools.md).
 
+## Providers
+
+`pi.registerProvider(id, config)` adds another endpoint to the model picker, and
+`pi.unregisterProvider(id)` takes it away again. Both work during the factory and
+long after it returns: [Providers](providers.md).
+
+## Markdown
+
+`pi.registerMarkdownTransformer(fn)` rewrites message text on its way to the
+screen. Transformers run in load order, each seeing the previous one's output:
+
+```ts
+pi.registerMarkdownTransformer((markdown, { messageType, isStreaming }) => {
+  if (isStreaming || messageType === "assistant-thinking") return markdown;
+  return markdown.replaceAll("-->", "→");
+});
+```
+
+Display-only, as in pi: the original text is what stays in the conversation and in
+the model's context. A transformer that throws is skipped with the markdown so far
+kept, and the rest of the chain still runs — which is what makes it safe to run on
+every streamed frame. Keep it synchronous and cheap for the same reason.
+
+pi's context also carries `availableWidth`; a browser has no column count, so that
+field is absent here.
+
+## Talking to other plugins
+
+`pi.events` is a bus plugins share — deliberately not the lifecycle events of
+`pi.on`, so a plugin emitting `message_end` cannot fool another plugin's handler.
+
+```ts
+pi.events.on("todo:changed", (data) => refresh(data));
+pi.events.emit("todo:changed", { count: 3 });
+```
+
+`on` returns an unsubscribe function; `once` and `off` are there too. A listener
+that throws is logged and the rest still run.
+
+## Reading and driving the app
+
+These reach the running host, and may be called at any time — from the factory,
+from a command handler, from an event.
+
+| Call | Does |
+| --- | --- |
+| `pi.getCommands()` | every command available to `runCommand` |
+| `pi.getAllTools()` | every registered tool name |
+| `pi.getActiveTools()` | the ones currently offered to the model |
+| `pi.setActiveTools(names)` | narrow that list |
+| `pi.setModel(model)` | switch the model the next request uses |
+| `pi.sendUserMessage(content)` | send a message as the user |
+| `pi.getSessionName()` / `setSessionName(name)` | the conversation's title |
+
+Called before a `PluginHost` is mounted, each reports the fact and does nothing
+rather than throwing — `loadPlugins` is usable on its own, in a test or a script.
+
 ## Slots
 
 `pi.contribute(slot, Component)` renders React into one of four named regions:

@@ -99,9 +99,6 @@ export const transformMarkdown = (
   return current;
 };
 
-/** The id given to a plugin that declared none: its position in the list. */
-export const positionalId = (index: number): string => `plugin-${index}`;
-
 /** Whether an id was derived from list position rather than declared. */
 export const isPositionalId = (id: string): boolean => /^plugin-\d+$/.test(id);
 
@@ -116,7 +113,7 @@ export const isPositionalId = (id: string): boolean => /^plugin-\d+$/.test(id);
  * which is the only moment the difference can cost anything.
  */
 const pluginId = (plugin: Plugin, index: number): string =>
-  plugin.id !== undefined && plugin.id !== "" ? plugin.id : positionalId(index);
+  plugin.id !== undefined && plugin.id !== "" ? plugin.id : `plugin-${index}`;
 
 /**
  * pi keeps every registration of a duplicated command name and disambiguates

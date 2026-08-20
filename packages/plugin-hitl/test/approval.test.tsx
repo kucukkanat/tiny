@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import type { ToolDefinition } from "@tiny/ai";
 import { toolOutput } from "@tiny/ai";
 import type { Plugin } from "@tiny/plugin";
-import { humanInTheLoop } from "../src/index.tsx";
+import { humanInTheLoop } from "../src/index.ts";
 import { answer, cardIsOpen, createServer, forgetHost, mount, reply } from "./harness.tsx";
 
 // The whole path, end to end and unmocked: a real server answers with a tool

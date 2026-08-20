@@ -120,7 +120,7 @@ set.
 | 4 | `allow` | you |
 | 5 | `fallback` — `"ask"` unless you say otherwise | you |
 
-`resolve`, `remember` and `forget` are exported, so the same precedence is
+`resolve`, `remember` and `withoutDecision` are exported, so the same precedence is
 testable on its own without a host or a model.
 
 ## What the user sees

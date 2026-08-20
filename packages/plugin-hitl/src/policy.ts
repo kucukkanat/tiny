@@ -26,7 +26,7 @@ export type Policy = {
 };
 
 /**
- * Resolve one call against the policy.
+ * Decide one call against the policy.
  *
  * Order, most binding first:
  *
@@ -40,7 +40,7 @@ export type Policy = {
  * `deny` outranks a remembered `"allow"` on purpose: "always allow this" is a
  * shortcut through the questions, not a way past a rule someone else set.
  */
-export const resolve = (policy: Policy, remembered: Remembered, call: PendingCall): Decision =>
+export const decideCall = (policy: Policy, remembered: Remembered, call: PendingCall): Decision =>
   policy.decide?.(call) ??
   (policy.deny?.includes(call.toolName) === true
     ? "deny"
@@ -48,11 +48,11 @@ export const resolve = (policy: Policy, remembered: Remembered, call: PendingCal
       (policy.allow?.includes(call.toolName) === true ? "allow" : (policy.fallback ?? "ask"))));
 
 /** Remembering is per tool name, so a later choice replaces an earlier one. */
-export const remember = (
+export const withDecision = (
   current: Remembered,
   toolName: string,
   decision: Decision,
 ): Remembered => ({ ...current, [toolName]: decision });
 
-export const forget = (current: Remembered, toolName: string): Remembered =>
+export const withoutDecision = (current: Remembered, toolName: string): Remembered =>
   Object.fromEntries(Object.entries(current).filter(([name]) => name !== toolName));

@@ -2,17 +2,17 @@ import type { Plugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
 import { inlineApproval, type Verdict } from "./inlineApproval.tsx";
 import { createPendingStore } from "./pending.ts";
 import {
-  forget,
+  decideCall,
   type PendingCall,
   type Policy,
   type Remembered,
-  remember,
-  resolve,
+  withDecision,
+  withoutDecision,
 } from "./policy.ts";
 
 export type { Verdict } from "./inlineApproval.tsx";
 export type { Decision, PendingCall, Policy, Remembered } from "./policy.ts";
-export { forget, remember, resolve } from "./policy.ts";
+export { decideCall, withDecision, withoutDecision } from "./policy.ts";
 
 export type HitlOptions = Policy & {
   /** Sent to the model when a call is denied without a reason of its own. */
@@ -64,7 +64,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
 
     pi.on("tool_call", async (event, ctx) => {
       const call: PendingCall = { toolName: event.toolName, input: event.input };
-      const decision = resolve(options, stored(ctx.storage), call);
+      const decision = decideCall(options, stored(ctx.storage), call);
       if (decision === "allow") return undefined;
       if (decision === "deny") return { block: true, reason: options.denyReason ?? DEFAULT_DENIED };
 
@@ -75,7 +75,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
       if (verdict?.remember === true)
         ctx.storage.set(
           STORED,
-          remember(stored(ctx.storage), call.toolName, verdict.approved ? "allow" : "deny"),
+          withDecision(stored(ctx.storage), call.toolName, verdict.approved ? "allow" : "deny"),
         );
       // A dismissed card is a refusal, not a pass: the only safe reading of
       // "the user closed the dialog" is that they did not agree.
@@ -93,7 +93,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
           return;
         }
         const forgetAll = "Forget all";
-        const chosen = await ctx.ui.select("Remembered approvals — pick one to forget", [
+        const chosen = await ctx.ui.select("Remembered approvals — pick one to withoutDecision", [
           ...entries.map(([name, decision]) => `${decision} ${name}`),
           forgetAll,
         ]);
@@ -104,7 +104,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
           return;
         }
         const name = chosen.slice(chosen.indexOf(" ") + 1);
-        ctx.storage.set(STORED, forget(stored(ctx.storage), name));
+        ctx.storage.set(STORED, withoutDecision(stored(ctx.storage), name));
         ctx.ui.notify(`${name} will ask again.`, "info");
       },
     });

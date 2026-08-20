@@ -31,6 +31,12 @@ Plugin packages are named `@tiny/plugin-<name>` in this repo, and `tiny-plugin-<
 in every plugin's name and nowhere else. See
 [`packages/plugin`](packages/plugin/README.md#naming-an-extension-package).
 
+## Contributing
+
+[`LEAN_CODE.md`](LEAN_CODE.md) is how this repo is kept readable — the naming,
+structure and duplication rules it is held to, and a checklist to run before a
+pull request.
+
 ## Quick start
 
 ```sh

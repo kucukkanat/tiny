@@ -49,7 +49,7 @@ export type HostValue = {
   readonly activeTools: readonly string[];
   /** The bus behind `pi.events`. */
   readonly events: PluginEvents;
-  /** Text pushed at the composer by `ctx.ui.setEditorText`. */
+  /** The composer's draft. The host owns it; the composer is controlled by it. */
   readonly editorText: string;
   setEditorText(text: string): void;
   runCommand(name: string, args?: string): Promise<void>;

@@ -43,6 +43,7 @@ export function PromptBar({
   disabled = false,
   actions,
   text,
+  onTextChange,
 }: {
   onSend: (text: string) => void;
   busy: boolean;
@@ -54,19 +55,14 @@ export function PromptBar({
   disabled?: boolean;
   /** Rendered beside the model picker; the app fills this with a plugin slot. */
   actions?: ReactNode;
-  /**
-   * Replaces the draft whenever it changes — an imperative push, not full
-   * control, so ordinary typing never leaves this component.
-   */
-  text?: string;
+  /** The draft. Controlled: this component owns no copy of it. */
+  text: string;
+  onTextChange: (text: string) => void;
 }) {
-  const [draft, setDraft] = useState("");
+  const draft = text;
   // `model` is an option value, which need not be the name worth showing.
   const selectedLabel = models.find((option) => option.value === model)?.label ?? "Choose model";
 
-  useEffect(() => {
-    if (text !== undefined) setDraft(text);
-  }, [text]);
   const [modelOpen, setModelOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -94,7 +90,7 @@ export function PromptBar({
   const send = () => {
     if (!canSend) return;
     onSend(draft.trim());
-    setDraft("");
+    onTextChange("");
   };
 
   return (
@@ -158,7 +154,7 @@ export function PromptBar({
           rows={1}
           value={draft}
           disabled={disabled}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => onTextChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

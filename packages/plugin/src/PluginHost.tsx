@@ -56,8 +56,9 @@ export function PluginHost({
   const [widgets, setWidgets] = useState<ReadonlyMap<string, Widget>>(new Map());
   const [statuses, setStatuses] = useState<ReadonlyMap<string, string>>(new Map());
   const [editorText, setEditorText] = useState("");
-  // Read by `ui.getEditorText()`, which is built once and must still see the
-  // text as it is now rather than as it was when the memo ran.
+  // The composer is controlled by this state, so it is what the user typed as
+  // well as what a plugin pushed. Mirrored into a ref because `ui` is built once
+  // and `getEditorText()` must still see the text as it is now.
   const editorTextRef = useRef(editorText);
   editorTextRef.current = editorText;
 
@@ -243,9 +244,9 @@ export function PluginHost({
       /* — terminal-only: pi's documented RPC fallbacks — */
       ...terminalFallbacks,
 
-      // Overrides one of those fallbacks: this host *does* own the composer's
-      // text, so a plugin reading the draft gets the draft. Through a ref
-      // because `ui` is memoised and the text changes on every keystroke.
+      // Overrides one of those fallbacks: this host owns the composer's text —
+      // `PromptBar` is controlled by `editorText` — so a plugin reading the
+      // draft gets the draft, including what the user typed by hand.
       getEditorText: () => editorTextRef.current,
     }),
     [ask],

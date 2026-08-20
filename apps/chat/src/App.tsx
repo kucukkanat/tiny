@@ -52,7 +52,7 @@ export function App() {
   const [settings, setSettings] = useState<Settings | undefined>(loadSettings);
   const [ownModels, setOwnModels] = useState<readonly string[]>([]);
   const [chats, setChats] = useState<readonly Conversation[]>([]);
-  const { runCommand, editorText } = usePluginHost();
+  const { runCommand, editorText, setEditorText } = usePluginHost();
 
   // Endpoints plugins added with `pi.registerProvider`, and the models each
   // publishes. Live state: a provider may be registered from a command handler
@@ -298,6 +298,7 @@ export function App() {
             placeholder={canSend ? "Write a message…" : "Configure your endpoint first"}
             actions={<Slot name="composer.actions" />}
             text={editorText}
+            onTextChange={setEditorText}
           />
           <Widgets placement="belowEditor" />
           <StatusBar />

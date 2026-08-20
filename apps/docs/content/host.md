@@ -88,7 +88,11 @@ import { Slot, StatusBar, Widgets } from "@tiny/plugin";
 <Sidebar footer={<Slot name="sidebar.footer" />} />
 
 <Widgets placement="aboveEditor" />
-<PromptBar actions={<Slot name="composer.actions" />} text={editorText} />
+<PromptBar
+  actions={<Slot name="composer.actions" />}
+  text={editorText}
+  onTextChange={setEditorText}
+/>
 <Widgets placement="belowEditor" />
 <StatusBar />
 
@@ -119,10 +123,13 @@ const chat = useChat(id, endpoint, model, onCreated, usePluginExtensions(), useP
 | `usePluginProviders()` | the endpoints registered with [`registerProvider`](providers.md) |
 | `usePluginEvents()` | the bus behind `pi.events` |
 | `useMarkdown(text, context)` | that text after every registered transformer |
-| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `commands`, `activeTools`, the registry |
+| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `setEditorText`, `commands`, `activeTools`, the registry |
 
-`usePluginHost().editorText` is what `ui.setEditorText` and `ui.pasteToEditor`
-push at the composer; feed it into your input as a controlled value.
+`usePluginHost()` gives you `editorText` and `setEditorText`. **Control your
+composer with them** rather than keeping a draft of your own: they are what
+`ui.setEditorText` and `ui.pasteToEditor` write, and what `ui.getEditorText()`
+reads. A composer that holds its own state leaves `getEditorText()` blind to
+everything the user typed.
 
 ## Loading plugins without React
 

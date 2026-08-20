@@ -179,6 +179,8 @@ const MODELS = [
 export function PromptBarExample() {
   const [model, setModel] = useState<string>(MODELS[0].value);
   const [busy, setBusy] = useState(false);
+  // The draft is controlled — PromptBar keeps no copy of it.
+  const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<readonly string[]>([]);
   const controller = useRef<AbortController>(new AbortController());
 
@@ -205,6 +207,8 @@ export function PromptBarExample() {
         models={MODELS}
         model={model}
         onModelChange={setModel}
+        text={draft}
+        onTextChange={setDraft}
       />
     </>
   );

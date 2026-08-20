@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { type ComponentProps, useState } from "react";
 import { Loader } from "../src/Loader.tsx";
 import { PromptBar } from "../src/PromptBar.tsx";
 import { ReasoningTrace } from "../src/ReasoningTrace.tsx";
@@ -102,10 +103,16 @@ describe("ReasoningTrace", () => {
 describe("PromptBar", () => {
   const noop = () => {};
 
+  /** PromptBar is controlled, so a test has to hold the draft for it. */
+  function Composer(props: Omit<ComponentProps<typeof PromptBar>, "text" | "onTextChange">) {
+    const [draft, setDraft] = useState("");
+    return <PromptBar {...props} text={draft} onTextChange={setDraft} />;
+  }
+
   test("sends trimmed text on Enter and clears the draft", () => {
     const sent: string[] = [];
     render(
-      <PromptBar
+      <Composer
         onSend={(text) => sent.push(text)}
         busy={false}
         onStop={noop}
@@ -124,7 +131,7 @@ describe("PromptBar", () => {
   test("Shift+Enter does not send", () => {
     const sent: string[] = [];
     render(
-      <PromptBar
+      <Composer
         onSend={(text) => sent.push(text)}
         busy={false}
         onStop={noop}
@@ -142,7 +149,7 @@ describe("PromptBar", () => {
   test("opens the model menu and reports a selection", () => {
     const chosen: string[] = [];
     render(
-      <PromptBar
+      <Composer
         onSend={noop}
         busy={false}
         onStop={noop}
@@ -162,7 +169,7 @@ describe("PromptBar", () => {
   test("shows stop instead of send while busy", () => {
     const stops: number[] = [];
     render(
-      <PromptBar
+      <Composer
         onSend={noop}
         busy
         onStop={() => stops.push(1)}

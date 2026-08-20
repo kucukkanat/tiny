@@ -116,7 +116,7 @@ export function PromptBar({
                 {/* A heading only where the group actually changes, so a single
                     ungrouped endpoint renders exactly as it always did. */}
                 {option.group !== undefined && option.group !== models[index - 1]?.group && (
-                  <div className="px-2 pt-1.5 pb-0.5 text-[10.5px] font-semibold tracking-wide text-ink-3 uppercase">
+                  <div className="px-2 pt-1.5 pb-0.5 text-2xs font-semibold tracking-wide text-ink-3 uppercase">
                     {option.group}
                   </div>
                 )}
@@ -130,7 +130,7 @@ export function PromptBar({
                   }}
                   className="relative z-10 flex h-7.5 w-full items-center gap-2 rounded-[6px] px-2 text-left"
                 >
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                  <span className="min-w-0 flex-1 truncate text-smd font-medium text-ink">
                     {option.label}
                   </span>
                   <span
@@ -144,7 +144,7 @@ export function PromptBar({
               </Fragment>
             ))}
             {models.length === 0 && (
-              <div className="flex h-9 items-center px-2 text-[12px] text-ink-3">
+              <div className="flex h-9 items-center px-2 text-sm text-ink-3">
                 No models — check settings
               </div>
             )}
@@ -167,7 +167,7 @@ export function PromptBar({
           }}
           placeholder={placeholder}
           aria-label="Prompt"
-          className="min-h-7 w-full resize-none bg-transparent px-1 py-[5px] text-[13px] leading-[18px] text-ink outline-none [overflow-wrap:anywhere] placeholder:text-ink-3"
+          className="min-h-7 w-full resize-none bg-transparent px-1 py-[5px] text-base leading-[18px] text-ink outline-none [overflow-wrap:anywhere] placeholder:text-ink-3"
         />
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-1">
@@ -176,7 +176,7 @@ export function PromptBar({
               aria-expanded={modelOpen}
               aria-label="Choose model"
               onClick={() => setModelOpen((current) => !current)}
-              className="flex h-7 items-center gap-1 rounded-control px-1.5 text-[12px] font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink"
+              className="flex h-7 items-center gap-1 rounded-control px-1.5 text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink"
             >
               {selectedLabel}
               <span className="text-ink-3">

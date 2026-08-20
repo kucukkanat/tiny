@@ -12,6 +12,7 @@
     "@tiny/ai": "workspace:*",
     "@tiny/plugin": "workspace:*",
     "@tiny/plugin-fs": "workspace:*",
+    "@tiny/plugin-hitl": "workspace:*",
     "@tiny/plugin-manager": "workspace:*",
     "@tiny/ui": "workspace:*",
     "idb-keyval": "^6.2.2",

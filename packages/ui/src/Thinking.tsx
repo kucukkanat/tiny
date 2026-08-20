@@ -37,7 +37,7 @@ export function Thinking({
           <ShimmerLabel>Thinking</ShimmerLabel>
         ) : (
           <span
-            className="whitespace-nowrap text-[13px] font-medium text-ink-2"
+            className="whitespace-nowrap text-base font-medium text-ink-2"
             style={{ animation: "fade-in 350ms ease-out both" }}
           >
             {seconds > 0 ? `Thought for ${seconds}s` : "Thought"}
@@ -71,9 +71,7 @@ export function Thinking({
         <div className="overflow-hidden">
           <div className="relative mt-1 ml-[5px] pl-4">
             <span aria-hidden className="absolute top-0 bottom-1 left-[3px] w-px bg-line" />
-            <p className="whitespace-pre-wrap py-1 text-[12.5px] leading-relaxed text-ink-2">
-              {text}
-            </p>
+            <p className="whitespace-pre-wrap py-1 text-smd leading-relaxed text-ink-2">{text}</p>
           </div>
         </div>
       </div>

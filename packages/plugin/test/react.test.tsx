@@ -24,15 +24,18 @@ function Probe() {
 
 const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => {
   host = undefined;
-  render(
-    <PluginHost plugins={plugins}>
-      <Probe />
-      {children}
-      <Slot name="app.overlays" />
-    </PluginHost>,
-  );
-  // Factories run in an effect, so the registry replaces the empty one only
-  // after the first paint — waiting on the identity avoids racing it.
+  // Factories run in an effect and resolve a microtask later, so the registry
+  // replaces the empty one after the first paint. Rendering inside `act` keeps
+  // that second update inside the act scope too, rather than landing loose.
+  await act(async () => {
+    render(
+      <PluginHost plugins={plugins}>
+        <Probe />
+        {children}
+        <Slot name="app.overlays" />
+      </PluginHost>,
+    );
+  });
   await waitFor(() => {
     expect(host).toBeDefined();
     expect(host?.registry).not.toBe(emptyRegistry);
@@ -47,12 +50,16 @@ const runCommand = async (name: string, args?: string) => {
 };
 
 /**
- * Fire a command whose handler blocks on a dialog. It cannot be wrapped in
- * `act`: `act` only flushes when its callback resolves, so the update that
- * opens the dialog would never reach the DOM.
+ * Fire a command whose handler blocks on a dialog.
+ *
+ * Synchronous `act`, deliberately: the handler does not resolve until the user
+ * answers, so awaiting it here would deadlock — but the update that opens the
+ * dialog is queued synchronously, and this flushes exactly that.
  */
 const openCommand = (name: string) => {
-  void host?.runCommand(name);
+  act(() => {
+    void host?.runCommand(name);
+  });
 };
 
 describe("Slot", () => {
@@ -372,10 +379,15 @@ describe("reload", () => {
   /**
    * Kick the reload off, let React flush, *then* await it. Awaiting inside
    * `act` deadlocks: the promise settles from the load effect, and the effect
-   * does not run until the act scope it is waiting on has exited.
+   * does not run until the act scope it is waiting on has exited. So the kick
+   * is a synchronous `act` — enough to flush the state update that starts the
+   * reload — and the wait happens outside.
    */
   const reload = async () => {
-    const pending = host?.contextFor("test").reload();
+    let pending: Promise<void> | undefined;
+    act(() => {
+      pending = host?.contextFor("test").reload();
+    });
     await act(async () => {});
     await pending;
   };
@@ -405,11 +417,13 @@ describe("reload", () => {
       throw new Error("nope");
     };
     host = undefined;
-    render(
-      <PluginHost plugins={[failing]}>
-        <Probe />
-      </PluginHost>,
-    );
+    await act(async () => {
+      render(
+        <PluginHost plugins={[failing]}>
+          <Probe />
+        </PluginHost>,
+      );
+    });
     await waitFor(() => expect(host).toBeDefined());
 
     // The load is reported by the host and the registry stays empty; `reload()`

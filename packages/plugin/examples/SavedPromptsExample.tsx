@@ -15,7 +15,7 @@ export const savedPrompts = (): Plugin => {
       <button
         type="button"
         data-testid="save-prompt"
-        className="h-7 rounded-control px-1.5 text-[12px] text-ink-2 hover:bg-hover hover:text-ink"
+        className="h-7 rounded-control px-1.5 text-sm text-ink-2 hover:bg-hover hover:text-ink"
         onClick={() => void ctx.runCommand("prompts")}
       >
         Prompts

@@ -62,7 +62,7 @@ export const copyButton = (): Plugin => {
       <button
         type="button"
         data-testid="copy-reply"
-        className="rounded-control px-1.5 py-0.5 text-[11.5px] text-ink-3 hover:bg-hover hover:text-ink"
+        className="rounded-control px-1.5 py-0.5 text-xs text-ink-3 hover:bg-hover hover:text-ink"
         onClick={() => {
           void navigator.clipboard?.writeText(message.content);
           ctx.ui.notify("Copied", "info");
@@ -168,7 +168,7 @@ export const savedPrompts = (): Plugin => {
       <button
         type="button"
         data-testid="save-prompt"
-        className="h-7 rounded-control px-1.5 text-[12px] text-ink-2 hover:bg-hover hover:text-ink"
+        className="h-7 rounded-control px-1.5 text-sm text-ink-2 hover:bg-hover hover:text-ink"
         onClick={() => void ctx.runCommand("prompts")}
       >
         Prompts
@@ -218,20 +218,52 @@ them.
 | `composer.actions` | inline beside the model picker |
 | `sidebar.footer` | below the sidebar's settings row |
 | `message.actions` | under each finished assistant reply |
+| `message.pending` | inside the reply still being written — for whatever the run is waiting on |
 
 Two more regions are driven by pi's own API rather than by `contribute`: `<Widgets
 placement="aboveEditor" />` renders whatever `setWidget` holds, and `<StatusBar />` renders
 `setStatus` entries.
 
+### State a contribution shares with its commands
+
+A command handler, a shortcut and a contributed component are three call sites that need
+the same value, and only the last is a component — so the value lives in the factory's
+closure and the component subscribes to it:
+
+```tsx
+import { createExternalStore } from "@tiny/plugin";
+
+const open = createExternalStore(false);
+
+function Overlay() {
+  const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+  return shown ? <Dialog onClose={() => open.set(false)} /> : null;
+}
+
+pi.registerCommand("settings", { handler: () => open.set(true) });
+pi.contribute("app.overlays", Overlay);
+```
+
+`createExternalStore(initial)` returns `{ get, set, subscribe }` over any value — the
+provider registry, `@tiny/plugin-hitl`'s pending approval and the app's own settings
+dialog are all one of these.
+
 ## Events
 
-`pi.on` carries the five events `@tiny/ai` fires — `before_agent_start`, `context`,
-`message_start`, `message_update`, `message_end`. See the "Extensions" section of
-`packages/ai/README.md` for their payloads and chaining rules; nothing about them changes
-here.
+`pi.on` carries the six events `@tiny/ai` fires — `before_agent_start`, `context`,
+`message_start`, `message_update`, `message_end` and `tool_call`. See the "Extensions"
+section of `packages/ai/README.md` for their payloads and chaining rules; nothing about
+them changes here.
+
+`tool_call` is the one with teeth: it fires before a tool runs, `event.input` is mutable
+so a handler can patch the arguments in place, and `{ block: true, reason }` stops the call
+and hands the reason to the model as the tool's result. Handlers get the same context
+commands do — `ctx.ui`, `ctx.hasUI`, `ctx.storage`, widened with the request's `model` and
+`signal` — which is what lets pi's own permission gates run here unedited. See
+`@tiny/plugin-hitl`.
 
 Every other pi event name is **accepted without error** and simply never fires, so a pi
-extension that subscribes to `session_start` or `tool_call` still loads.
+extension that subscribes to `session_start` or `turn_end` still loads.
 
 ## How this differs from pi
 
@@ -242,7 +274,7 @@ for full SDK conformance.
 
 | | |
 | --- | --- |
-| `pi.on(event, handler)` | for the five events above |
+| `pi.on(event, handler)` | for the six events above |
 | `pi.registerCommand(name, { description, getArgumentCompletions, handler })` | `handler(args, ctx)` |
 | `pi.registerShortcut(key, { description, handler })` | pi's `KeyId` format; modifiers are `ctrl` / `shift` / `alt` / `super` |
 | `pi.registerTool(tool)` | pi's `execute(toolCallId, params, signal, onUpdate, ctx)` and content-block result; `parameters` is plain JSON Schema |

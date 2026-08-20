@@ -197,6 +197,65 @@ sources are hash-pinned](runtime.md#the-manifest-is-the-trust-boundary): those
 tools write into the same OPFS that installed plugin sources live in, so the model
 can create a file under `/plugins`. It will never run.
 
+## Approvals are just an event
+
+A tool that writes files, spends money or talks to someone else should ask first.
+Nothing in the tool has to change for that, and no wrapper sits in front of it:
+`@tiny/ai` fires pi's **`tool_call`** event between preparing the arguments and
+running them, and any plugin can answer.
+
+```ts
+pi.on("tool_call", async (event, ctx) => {
+  if (event.toolName !== "fs_delete") return undefined;
+  const ok = await ctx.ui.confirm("Delete?", String(event.input.path));
+  return ok ? undefined : { block: true, reason: "The user said no." };
+});
+```
+
+Three properties are worth understanding before you write one:
+
+- **Blocking does not end the turn.** The `reason` is fed back as the tool's
+  result, so the model reads it and can do something else — ask for a different
+  path, or explain itself. A gate steers; it does not just refuse.
+- **`event.input` is mutable.** Patch the model's arguments in place and the
+  patched values are what runs. The returned object only blocks; it never carries
+  arguments. That is pi's contract, kept verbatim.
+- **The first handler to block wins.** Later ones are skipped, and a handler that
+  throws blocks too — a gate that crashes must fail closed.
+
+Handlers get the same `ctx` a [command](context.md) does, `ctx.ui` included, plus
+the request's `model` and `signal`. That is what makes the dialog above possible,
+and it is why pi's own permission gates run here with no edit but their import.
+
+[`@tiny/plugin-hitl`](https://github.com/kucukkanat/tiny/tree/main/packages/plugin-hitl)
+is this event with a policy and an approval card in front of it. The card renders
+**inside the reply**, through the [`message.pending`](slots.md) slot, rather than
+as a modal over the app: the question is about one tool call, so it is asked where
+that tool call is. It shows the arguments in full, takes an optional line back to
+the model, and offers a "remember this" box:
+
+```ts path=packages/plugin-hitl/examples/readsAreFree.ts
+import type { Plugin } from "@tiny/plugin";
+import { humanInTheLoop } from "@tiny/plugin-hitl";
+
+/**
+ * Reading is cheap and reversible; writing is neither. Naming the safe tools is
+ * usually all the policy an app needs.
+ */
+export const plugins: readonly Plugin[] = [
+  humanInTheLoop({
+    allow: ["fs_list", "fs_read"],
+    deny: ["fs_delete"],
+    labels: { fs_write: "Write File", fs_edit: "Edit File" },
+  }),
+];
+```
+
+Rules resolve most-binding-first: `decide(call)` (the only one that sees the
+arguments), then `deny`, then whatever the user chose to remember, then `allow`,
+then the fallback — which is to ask. Dismissing the card denies, because a closed
+dialog is not consent.
+
 ## Endpoints without tool support
 
 Tool definitions are sent with the request. An endpoint that does not support

@@ -50,7 +50,7 @@ Same names, argument order and return values.
 
 | | |
 | --- | --- |
-| `pi.on(event, handler)` | for the five events that fire |
+| `pi.on(event, handler)` | for the six events that fire, `tool_call` included |
 | `pi.registerCommand(name, { description, getArgumentCompletions, handler })` | `handler(args, ctx)` |
 | `pi.registerShortcut(key, { description, handler })` | pi's `KeyId` format; modifiers are `ctrl` / `shift` / `alt` / `super` |
 | `pi.registerTool(tool)` | pi's positional `execute` and content-block result — see [Tools](tools.md) |
@@ -79,11 +79,22 @@ longer registers is gone. See
 
 ## Events
 
-Five fire, because five are all `@tiny/ai` emits: `before_agent_start`,
-`context`, `message_start`, `message_update`, `message_end`.
+Six fire, because six are all `@tiny/ai` emits: `before_agent_start`, `context`,
+`message_start`, `message_update`, `message_end` and `tool_call`.
+
+`tool_call` is the one that can change what happens. It fires between preparing a
+tool's arguments and running it, `event.input` is mutable so a handler can patch
+the arguments in place, and returning `{ block: true, reason }` stops the call —
+feeding the reason back as the tool's result, so the model reads it and carries
+on. pi's semantics exactly, including that the first handler to block
+short-circuits the rest. See [Approvals](tools.md#approvals-are-just-an-event).
+
+Handlers receive the same context commands do — `ctx.ui`, `ctx.hasUI`,
+`ctx.storage` — widened with the request's own `model` and `signal`. That is what
+lets pi's shipped permission gates run here unedited.
 
 **Every other pi event name is accepted without error and never fires.** A pi
-extension that subscribes to `session_start`, `tool_call`, `turn_end` or
+extension that subscribes to `session_start`, `turn_end` or
 `session_compact_failed` loads cleanly and simply never hears from them — which is
 the difference between "runs unmodified" and "compiles unmodified".
 
@@ -170,6 +181,6 @@ Bringing an extension over from `.pi/extensions/`:
 5. Does it call `pi.registerProvider` with credential storage, `refreshModels`
    persistence or a native `pi-ai` `Provider`? Only the base-URL-and-models part
    is honoured. See [Providers](providers.md).
-6. Does it rely on events other than the five above? They will never fire.
+6. Does it rely on events other than the six above? They will never fire.
 
 Everything else should run untouched.

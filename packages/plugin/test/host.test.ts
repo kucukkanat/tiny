@@ -58,12 +58,20 @@ describe("loadPlugins", () => {
   test("accepts pi events this facade never fires, and drops them from replay", async () => {
     const plugin: Plugin = (pi) => {
       pi.on("session_start", () => {});
-      pi.on("tool_call", () => {});
+      pi.on("turn_end", () => {});
       pi.on("context", () => {});
     };
     const { extensions } = await loadPlugins([plugin]);
     // Registering did not throw, and only the event @tiny/ai emits is replayed.
     expect(replayed(extensions)).toEqual(["context"]);
+  });
+
+  test("replays tool_call, which @tiny/ai does fire", async () => {
+    const plugin: Plugin = (pi) => {
+      pi.on("tool_call", () => ({ block: true }));
+    };
+    const { extensions } = await loadPlugins([plugin]);
+    expect(replayed(extensions)).toEqual(["tool_call"]);
   });
 
   test("produces no extension when nothing subscribes", async () => {
@@ -154,5 +162,55 @@ describe("identityTheme", () => {
     expect(identityTheme.fg("accent", "●")).toBe("●");
     expect(identityTheme.bold("hi")).toBe("hi");
     expect(identityTheme.getFgAnsi("accent")).toBe("");
+  });
+});
+
+describe("the context event handlers receive", () => {
+  /** Pull one handler out of the synthesised extension and call it. */
+  const fire = async (plugin: Plugin, event: unknown) => {
+    const { extensions } = await loadPlugins([plugin]);
+    let handler: ((event: unknown, ctx: unknown) => unknown) | undefined;
+    const api = {
+      on: (_event: string, registered: (event: unknown, ctx: unknown) => unknown) => {
+        handler = registered;
+      },
+    } as unknown as ExtensionAPI;
+    for (const extension of extensions) await extension(api);
+    // `@tiny/ai` supplies only this half; the plugin half is the host's job.
+    return await handler?.(event, { model: undefined, signal: undefined });
+  };
+
+  test("without a host, ui is present but hasUI is false — pi's print mode", async () => {
+    let saw: { hasUI: boolean; confirmed: boolean } | undefined;
+    const plugin: Plugin = (pi) => {
+      pi.on("tool_call", async (_event, ctx) => {
+        saw = { hasUI: ctx.hasUI, confirmed: await ctx.ui.confirm("Run it?", "really?") };
+      });
+    };
+
+    await fire(plugin, { type: "tool_call", toolCallId: "c1", toolName: "x", input: {} });
+    // pi's dismissal value, so a gate written for pi fails closed rather than
+    // crashing on a missing method.
+    expect(saw).toEqual({ hasUI: false, confirmed: false });
+  });
+
+  test("the request's own model and signal win over the plugin context", async () => {
+    const signal = AbortSignal.abort();
+    let saw: unknown;
+    const plugin: Plugin = (pi) => {
+      pi.on("tool_call", (_event, ctx) => {
+        saw = ctx.signal;
+      });
+    };
+    const { extensions } = await loadPlugins([plugin]);
+    let handler: ((event: unknown, ctx: unknown) => unknown) | undefined;
+    const api = {
+      on: (_event: string, registered: (event: unknown, ctx: unknown) => unknown) => {
+        handler = registered;
+      },
+    } as unknown as ExtensionAPI;
+    for (const extension of extensions) await extension(api);
+    await handler?.({ type: "tool_call" }, { model: undefined, signal });
+    expect(saw).toBe(signal);
   });
 });

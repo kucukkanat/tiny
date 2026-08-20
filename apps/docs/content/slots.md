@@ -12,7 +12,12 @@ browser. So this is ours.
 ## The four slots
 
 ```ts
-type SlotName = "app.overlays" | "composer.actions" | "sidebar.footer" | "message.actions";
+type SlotName =
+  | "app.overlays"
+  | "composer.actions"
+  | "sidebar.footer"
+  | "message.actions"
+  | "message.pending";
 ```
 
 | Slot | Renders | Rendered by |
@@ -21,6 +26,7 @@ type SlotName = "app.overlays" | "composer.actions" | "sidebar.footer" | "messag
 | `composer.actions` | inline beside the model picker | `apps/chat/src/App.tsx` |
 | `sidebar.footer` | below the sidebar's settings row | `apps/chat/src/App.tsx` |
 | `message.actions` | under each finished assistant reply | `apps/chat/src/components/Thread.tsx` |
+| `message.pending` | inside the reply still being written | `apps/chat/src/components/Thread.tsx` |
 
 The union is closed on purpose. A slot is a promise the app makes about where
 something will appear and what props it will receive; adding one is an app change,
@@ -34,6 +40,12 @@ type SlotProps = {
   readonly index?: number | undefined;
 };
 ```
+
+`message.pending` is the slot for something the run is *waiting on*, which is why it
+renders only while the reply is live and disappears with it. An approval belongs
+here rather than in `app.overlays`: the question is about one tool call, so it is
+asked where that tool call is, instead of interrupting the whole app. See
+[Approvals](tools.md#approvals-are-just-an-event).
 
 Only `message.actions` fills them — with the message it is rendered under and that
 message's position in the thread. The other three slots pass `undefined` for both,
@@ -70,7 +82,7 @@ export const savedPrompts = (): Plugin => {
       <button
         type="button"
         data-testid="save-prompt"
-        className="h-7 rounded-control px-1.5 text-[12px] text-ink-2 hover:bg-hover hover:text-ink"
+        className="h-7 rounded-control px-1.5 text-sm text-ink-2 hover:bg-hover hover:text-ink"
         onClick={() => void ctx.runCommand("prompts")}
       >
         Prompts
@@ -132,24 +144,28 @@ open state itself and contributes a component that renders `null` when closed:
 
 ```tsx
 export const settings = (): Plugin => {
-  let setOpen: (open: boolean) => void = () => {};
+  const open = createExternalStore(false);
 
   function SettingsOverlay() {
-    const [open, set] = useState(false);
-    setOpen = set;
-    return open ? <Dialog onClose={() => set(false)} /> : null;
+    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+    return shown ? <Dialog onClose={() => open.set(false)} /> : null;
   }
 
   return (pi) => {
-    pi.registerCommand("settings", { handler: () => setOpen(true) });
+    pi.registerCommand("settings", { handler: () => open.set(true) });
     pi.contribute("app.overlays", SettingsOverlay);
   };
 };
 ```
 
+The switch lives in the factory's closure rather than in component state,
+because the command handler and the contributed component are separate call
+sites that need to reach the same one — and only the second of them is a
+component. `createExternalStore` is that switch plus the subscription
+`useSyncExternalStore` wants; it holds any value, not just a boolean.
+
 That is the pattern the app's own settings dialog and the
-[Plugins dialog](runtime.md) both use: the command and the contributed component
-are separate call sites that need to reach the same switch.
+[Plugins dialog](runtime.md) both use.
 
 ## Errors
 

@@ -3,11 +3,11 @@ import { PluginManagerError } from "./errors.ts";
 import { fetchSource, type InspectedPlugin, type Store, sha256 } from "./store.ts";
 
 const field =
-  "w-full rounded-control bg-field px-2.5 py-1.5 text-[13px] text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
+  "w-full rounded-control bg-field px-2.5 py-1.5 text-base text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
 const button =
-  "rounded-control px-2 py-1 text-[12px] text-ink-2 shadow-hairline hover:bg-hover hover:text-ink disabled:opacity-50";
+  "rounded-control px-2 py-1 text-sm text-ink-2 shadow-hairline hover:bg-hover hover:text-ink disabled:opacity-50";
 const primary =
-  "rounded-control bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-50";
+  "rounded-control bg-accent px-2.5 py-1 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50";
 
 const message = (error: unknown): string =>
   error instanceof PluginManagerError || error instanceof Error ? error.message : String(error);
@@ -108,7 +108,7 @@ export function ManagerDialog({
         style={{ animation: "pop-in 180ms var(--ease-out-strong) both" }}
       >
         <div className="flex items-baseline justify-between">
-          <h2 className="text-[14px] font-semibold text-ink">Plugins</h2>
+          <h2 className="text-lg font-semibold text-ink">Plugins</h2>
           <button type="button" className={button} onClick={onClose} data-testid="close-manager">
             Close
           </button>
@@ -116,14 +116,14 @@ export function ManagerDialog({
 
         {view.kind === "list" ? (
           <>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
+            <p className="mt-1 text-sm leading-relaxed text-ink-3">
               Plugins you add run with the same access as the app itself — they can read your
               conversations and call your endpoint. Only add code you trust.
             </p>
 
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto" data-testid="installed-list">
               {installed.length === 0 ? (
-                <p className="py-3 text-[12.5px] text-ink-3">Nothing installed yet.</p>
+                <p className="py-3 text-smd text-ink-3">Nothing installed yet.</p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {installed.map((plugin) => (
@@ -146,10 +146,8 @@ export function ManagerDialog({
                           }
                         />
                         <span className="min-w-0">
-                          <span className="block truncate text-[13px] text-ink">{plugin.name}</span>
-                          <span
-                            className={`block truncate text-[11.5px] ${statusTone[plugin.status]}`}
-                          >
+                          <span className="block truncate text-base text-ink">{plugin.name}</span>
+                          <span className={`block truncate text-xs ${statusTone[plugin.status]}`}>
                             {statusNote[plugin.status] ?? plugin.url ?? "pasted source"}
                           </span>
                         </span>
@@ -199,7 +197,7 @@ export function ManagerDialog({
                     type="button"
                     data-testid={`mode-${option}`}
                     aria-pressed={mode === option}
-                    className={`rounded-control px-2 py-1 text-[12px] ${
+                    className={`rounded-control px-2 py-1 text-sm ${
                       mode === option
                         ? "bg-accent-tint text-accent-ink"
                         : "text-ink-2 hover:bg-hover"
@@ -225,7 +223,7 @@ export function ManagerDialog({
                 />
               ) : (
                 <textarea
-                  className={`${field} mt-2 h-28 resize-none font-mono text-[12px]`}
+                  className={`${field} mt-2 h-28 resize-none font-mono text-sm`}
                   data-testid="add-source"
                   placeholder={"export default (pi) => {\n  pi.registerCommand(…)\n}"}
                   value={draft}
@@ -259,7 +257,7 @@ export function ManagerDialog({
         )}
 
         {error !== undefined && (
-          <p role="alert" className="mt-2 text-[12px] text-red" data-testid="manager-error">
+          <p role="alert" className="mt-2 text-sm text-red" data-testid="manager-error">
             {error}
           </p>
         )}
@@ -293,7 +291,7 @@ function Review({
 
   return (
     <div className="mt-2 flex min-h-0 flex-col" data-testid="review-step">
-      <p className="text-[12px] leading-relaxed text-ink-3">
+      <p className="text-sm leading-relaxed text-ink-3">
         This is the code that will run on every load. {url ?? "Pasted source"} —{" "}
         <span className="font-mono">{hash.slice(0, 12)}</span>
       </p>
@@ -306,7 +304,7 @@ function Review({
       />
       <pre
         data-testid="review-source"
-        className="mt-2 min-h-0 flex-1 overflow-auto rounded-card bg-inset p-2.5 font-mono text-[11.5px] whitespace-pre text-ink-2"
+        className="mt-2 min-h-0 flex-1 overflow-auto rounded-card bg-inset p-2.5 font-mono text-xs whitespace-pre text-ink-2"
       >
         {source}
       </pre>

@@ -12,10 +12,13 @@ import type {
 import { type ApiType, apiFor } from "./apis.ts";
 import { endpointModel, fetchModelIds, type ModelOptions } from "./endpoint.ts";
 import {
+  BLOCKED_MESSAGE,
   type Extension,
   type ExtensionContext,
   emitBeforeAgentStart,
   emitContext,
+  emitToolCall,
+  type Handlers,
   loadExtensions,
   notify,
 } from "./extension.ts";
@@ -230,7 +233,14 @@ export async function* streamChat(
 
       // A tool the model invented, or one that threw, comes back as an error
       // result rather than a thrown request: the model gets to correct itself.
-      const [output, failed, result] = await run(tool, call, options.signal, onUpdate, ctx);
+      const [output, failed, result] = await run(
+        tool,
+        call,
+        options.signal,
+        onUpdate,
+        ctx,
+        handlers,
+      );
 
       for (const summary of updates)
         yield { kind: "tool", id: call.id, name: call.name, status: "running", summary };
@@ -263,12 +273,32 @@ const run = async (
   signal: AbortSignal | undefined,
   onUpdate: (update: ToolUpdate) => void,
   ctx: ExtensionContext,
+  handlers: Handlers,
 ): Promise<[output: string, failed: boolean, result: ToolResult | undefined]> => {
   if (tool === undefined) return [`No such tool: ${call.name}`, true, undefined];
   try {
     // pi lets a tool repair arguments before it sees them; a throw here is a
     // tool error like any other.
     const params = tool.prepareArguments?.(call.arguments) ?? call.arguments;
+
+    // pi fires `tool_call` between argument preparation and execution, which is
+    // where a permission gate belongs: the arguments are final, and nothing has
+    // run yet. Handlers may patch `params` in place, so `event.input` is the
+    // same object that reaches `execute`.
+    const blocked = await emitToolCall(
+      handlers,
+      { type: "tool_call", toolCallId: call.id, toolName: call.name, input: params },
+      ctx,
+    );
+    // pi re-checks the signal after the hook and *before* honouring a block,
+    // which is the right order: a handler that asks the user is the natural
+    // place for them to give up, and giving up must fail the stream rather than
+    // report a refusal and burn another round trip.
+    if (signal?.aborted === true) throw signal.reason;
+    // A block is an error result, not a failed request: the model reads the
+    // reason and can ask for something else instead of the turn dying.
+    if (blocked?.block === true) return [blocked.reason ?? BLOCKED_MESSAGE, true, undefined];
+
     const result = await tool.execute(call.id, params, signal, onUpdate, ctx);
     return [toolText(result), false, result];
   } catch (error) {

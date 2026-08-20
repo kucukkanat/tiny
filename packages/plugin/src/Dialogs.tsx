@@ -14,12 +14,12 @@ export type Toast = { readonly id: string; readonly message: string; readonly ty
 const overlay =
   "fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4 backdrop-blur-[2px]";
 const card = "w-full max-w-sm rounded-card bg-surface p-4 shadow-overlay";
-const title = "text-[13.5px] font-semibold text-ink";
-const body = "mt-1 text-[12.5px] leading-[1.5] text-ink-2";
+const title = "text-md font-semibold text-ink";
+const body = "mt-1 text-smd leading-[1.5] text-ink-2";
 const field =
-  "mt-3 h-8 w-full rounded-control bg-field px-2.5 text-[13px] text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
+  "mt-3 h-8 w-full rounded-control bg-field px-2.5 text-base text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
 const row = "mt-4 flex justify-end gap-2";
-const btn = "h-8 rounded-control px-3 text-[12.5px] font-medium";
+const btn = "h-8 rounded-control px-3 text-smd font-medium";
 const primary = `${btn} bg-accent text-accent-ink`;
 const ghost = `${btn} text-ink-2 hover:bg-hover`;
 
@@ -86,7 +86,7 @@ export function Dialog({
                 key={option}
                 type="button"
                 data-testid={`dialog-option-${option}`}
-                className="h-8 rounded-control px-2 text-left text-[12.5px] text-ink hover:bg-hover"
+                className="h-8 rounded-control px-2 text-left text-smd text-ink hover:bg-hover"
                 onClick={() => onResolve(option)}
               >
                 {option}
@@ -170,7 +170,7 @@ export function Toasts({ toasts }: { toasts: readonly Toast[] }) {
         <output
           key={toast.id}
           data-testid="plugin-toast"
-          className={`rounded-control bg-surface px-3 py-1.5 text-[12.5px] shadow-overlay ${toastTone[toast.type]}`}
+          className={`rounded-control bg-surface px-3 py-1.5 text-smd shadow-overlay ${toastTone[toast.type]}`}
           style={{ animation: "fade-up 200ms var(--ease-out-strong) both" }}
         >
           {toast.message}

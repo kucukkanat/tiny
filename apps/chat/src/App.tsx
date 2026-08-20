@@ -269,7 +269,7 @@ export function App() {
           <div className="mx-auto w-full max-w-2xl px-4">
             {empty ? (
               <div className="flex h-full min-h-[60vh] items-end justify-center pb-6">
-                <p className="text-[15px] text-ink-3">Ask anything</p>
+                <p className="text-xl text-ink-3">Ask anything</p>
               </div>
             ) : (
               <Thread messages={chat.messages} streaming={chat.streaming} error={chat.error} />

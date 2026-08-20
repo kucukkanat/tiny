@@ -62,9 +62,9 @@ const appendCaret = (tree: Root): void => {
 /* Block spacing lives on the wrapper; every element below carries only what
  * makes it read as that element, in design tokens. */
 const components: Components = {
-  h1: ({ children }) => <h1 className="text-[17px] font-semibold text-ink">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-[15px] font-semibold text-ink">{children}</h2>,
-  h3: ({ children }) => <h3 className="text-[13.5px] font-semibold text-ink">{children}</h3>,
+  h1: ({ children }) => <h1 className="text-2xl font-semibold text-ink">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-xl font-semibold text-ink">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-md font-semibold text-ink">{children}</h3>,
   ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
   a: ({ children, href }) => (
@@ -78,7 +78,7 @@ const components: Components = {
     </a>
   ),
   code: ({ children }) => (
-    <code className="rounded-chip bg-inset px-1 py-0.5 font-mono text-[12px]">{children}</code>
+    <code className="rounded-chip bg-inset px-1 py-0.5 font-mono text-sm">{children}</code>
   ),
   pre: ({ children }) => (
     <pre className="overflow-x-auto rounded-card bg-inset p-3 shadow-hairline [&_code]:bg-transparent [&_code]:p-0">
@@ -91,7 +91,7 @@ const components: Components = {
   hr: () => <hr className="border-line" />,
   table: ({ children }) => (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[12.5px]">{children}</table>
+      <table className="w-full border-collapse text-smd">{children}</table>
     </div>
   ),
   th: ({ children }) => (
@@ -105,7 +105,7 @@ export function StreamText({ text, done }: { text: string; done: boolean }) {
   return (
     <div
       data-testid="stream-text"
-      className="space-y-3 text-[13px] leading-relaxed break-words text-ink"
+      className="space-y-3 text-base leading-relaxed break-words text-ink"
     >
       <Markdown
         remarkPlugins={[remarkGfm]}

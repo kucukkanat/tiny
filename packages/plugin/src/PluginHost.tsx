@@ -3,10 +3,15 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { type AppBridge, HostContext, type HostValue, type Widget } from "./context.ts";
 import { Dialog, type DialogRequest, type Toast, Toasts } from "./Dialogs.tsx";
 import { createEvents } from "./events.ts";
-import { emptyRegistry, type HostActions, loadPlugins, type Registry } from "./host.ts";
+import {
+  emptyRegistry,
+  type HostActions,
+  loadPlugins,
+  type Registry,
+  terminalFallbacks,
+} from "./host.ts";
 import { matchesKey } from "./keys.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
-import { identityTheme } from "./theme.ts";
 import type {
   CommandInfo,
   ContextUsage,
@@ -63,6 +68,10 @@ export function PluginHost({
   const [nonce, setNonce] = useState(0);
   const reloading = useRef<(() => void)[]>([]);
 
+  // Declared up here because the load effect below reads it, while the context
+  // it holds is only built further down.
+  const contextForRef = useRef<((pluginId: string) => PluginContext) | undefined>(undefined);
+
   // Providers and the event bus outlive one load: pi allows `registerProvider`
   // long after the factory returns, and a bus that reset on reload would drop
   // subscriptions mid-conversation.
@@ -101,6 +110,7 @@ export function PluginHost({
       providers: providerStore.current,
       events,
       host: () => hostActions.current,
+      context: (pluginId) => contextForRef.current?.(pluginId),
     }).then(
       (loaded) => {
         if (!live) return;
@@ -215,36 +225,19 @@ export function PluginHost({
       pasteToEditor: (text) => setEditorText((current) => current + text),
 
       /* — ours — */
-      open: <T,>(render: (done: (result: T) => void) => ReactNode) =>
+      open: <T,>(render: (done: (result: T) => void) => ReactNode, opts?: DialogOptions) =>
         ask<T | undefined>(
           (id) => ({
             kind: "custom",
             id,
             render: (done) => render(done as (result: T) => void),
           }),
-          undefined,
+          opts,
           undefined,
         ),
 
       /* — terminal-only: pi's documented RPC fallbacks — */
-      theme: identityTheme,
-      custom: async () => undefined,
-      getEditorText: () => "",
-      getToolsExpanded: () => false,
-      setToolsExpanded: () => {},
-      setWorkingMessage: () => {},
-      setWorkingVisible: () => {},
-      setWorkingIndicator: () => {},
-      setHiddenThinkingLabel: () => {},
-      setFooter: () => {},
-      setHeader: () => {},
-      setEditorComponent: () => {},
-      getEditorComponent: () => undefined,
-      onTerminalInput: () => () => {},
-      addAutocompleteProvider: () => {},
-      getAllThemes: () => [],
-      getTheme: () => undefined,
-      setTheme: () => ({ success: false, error: "themes are not available in the React host" }),
+      ...terminalFallbacks,
     }),
     [ask],
   );
@@ -349,6 +342,11 @@ export function PluginHost({
   const publish = useCallback((next: AppBridge) => {
     setBridge((current) => (sameBridge(current, next) ? current : next));
   }, []);
+
+  // Same reason as `hostActions`: `loadPlugins` captures the getter once, but an
+  // event handler runs much later and must see the context of that moment. It
+  // is unset only until the first render finishes, before any plugin can fire.
+  contextForRef.current = contextFor;
 
   // Read through a ref because `loadPlugins` captures the getter once, while a
   // pi method may be called from a handler running long afterwards.

@@ -1,16 +1,4 @@
-import type {
-  ApiType,
-  BeforeAgentStartEvent,
-  BeforeAgentStartEventResult,
-  ContextEvent,
-  ContextEventResult,
-  ExtensionHandler,
-  MessageEndEvent,
-  MessageStartEvent,
-  MessageUpdateEvent,
-  ModelOptions,
-  ToolDefinition,
-} from "@tiny/ai";
+import type { ApiType, EventMap, ExtensionContext, ModelOptions, ToolDefinition } from "@tiny/ai";
 import type { ComponentType, ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
 
@@ -177,8 +165,17 @@ export type PluginUIContext = {
   pasteToEditor(text: string): void;
 
   /* — ours: no portable pi equivalent — */
-  /** Open a React component as a modal overlay, resolving when it closes. */
-  open<T>(render: (done: (result: T) => void) => ReactNode): Promise<T | undefined>;
+  /**
+   * Open a React component as a modal overlay, resolving when it closes.
+   *
+   * Takes pi's dialog options for the same reason its dialogs do: an overlay
+   * that outlives the request it belongs to has to be dismissable from the
+   * outside. Dismissal resolves to `undefined`.
+   */
+  open<T>(
+    render: (done: (result: T) => void) => ReactNode,
+    opts?: DialogOptions,
+  ): Promise<T | undefined>;
 
   /* — terminal-only: pi's documented RPC fallbacks — */
   readonly theme: ThemeLike;
@@ -313,8 +310,19 @@ export type ShortcutOptions = {
   handler(ctx: PluginContext): Promise<void> | void;
 };
 
-/** Named regions of the app a plugin can render into. */
-export type SlotName = "app.overlays" | "composer.actions" | "sidebar.footer" | "message.actions";
+/**
+ * Named regions of the app a plugin can render into.
+ *
+ * `message.pending` is the one inside a reply still being written — for anything
+ * the run is waiting on, which is where an approval belongs: a question about
+ * this tool call, asked where the tool call is, rather than over the whole app.
+ */
+export type SlotName =
+  | "app.overlays"
+  | "composer.actions"
+  | "sidebar.footer"
+  | "message.actions"
+  | "message.pending";
 
 /** Props a slot passes down; `message.actions` is the only one that carries data. */
 export type SlotProps = {
@@ -324,13 +332,29 @@ export type SlotProps = {
 
 export type Contribution = ComponentType<SlotProps>;
 
-type EventMap = {
-  before_agent_start: [BeforeAgentStartEvent, BeforeAgentStartEventResult];
-  context: [ContextEvent, ContextEventResult];
-  message_start: [MessageStartEvent, undefined];
-  message_update: [MessageUpdateEvent, undefined];
-  message_end: [MessageEndEvent, undefined];
-};
+/**
+ * What an event handler receives.
+ *
+ * pi hands event handlers the same context its commands get — `ui` included,
+ * which is what makes a permission gate possible at all — so this widens
+ * `@tiny/ai`'s `{ model, signal }` with the plugin's own context rather than
+ * asking plugins to smuggle `ui` out of a contributed component.
+ *
+ * `model` and `signal` always come from the live request. `hasUI` is the one
+ * field that loosens: a registry loaded without a host (`loadPlugins` on its
+ * own) still gets every method, but they return pi's dismissal values and
+ * `hasUI` is false — exactly what pi reports in print mode, and exactly what
+ * pi's own permission gates already guard on.
+ */
+export type PluginEventContext = ExtensionContext &
+  Omit<PluginContext, "hasUI"> & { readonly hasUI: boolean };
+
+/** pi's `ExtensionHandler`, over the wider context above. */
+export type PluginEventHandler<E, R = undefined> = (
+  event: E,
+  ctx: PluginEventContext,
+  // biome-ignore lint/suspicious/noConfusingVoidType: pi's signature, kept verbatim
+) => Promise<R | void> | R | void;
 
 /** Every pi event name, so a pi extension can subscribe without a type error. */
 type UnfiredEvent =
@@ -355,7 +379,6 @@ type UnfiredEvent =
   | "session_start"
   | "session_tree"
   | "thinking_level_select"
-  | "tool_call"
   | "tool_execution_end"
   | "tool_execution_start"
   | "tool_execution_update"
@@ -428,7 +451,7 @@ export interface PluginAPI {
   /** Subscribe to a lifecycle event `@tiny/ai` fires. */
   on<K extends keyof EventMap>(
     event: K,
-    handler: ExtensionHandler<EventMap[K][0], EventMap[K][1]>,
+    handler: PluginEventHandler<EventMap[K][0], EventMap[K][1]>,
   ): void;
   /** Accepted so pi extensions load; these events never fire here. */
   on(event: UnfiredEvent, handler: (...args: never[]) => unknown): void;

@@ -27,12 +27,16 @@ function Probe() {
 
 const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => {
   host = undefined;
-  render(
-    <PluginHost plugins={plugins}>
-      <Probe />
-      {children}
-    </PluginHost>,
-  );
+  // Factories resolve a microtask after the first paint; rendering inside `act`
+  // keeps that second update in the act scope rather than landing loose.
+  await act(async () => {
+    render(
+      <PluginHost plugins={plugins}>
+        <Probe />
+        {children}
+      </PluginHost>,
+    );
+  });
   await waitFor(() => {
     expect(host).toBeDefined();
     expect(host?.registry).not.toBe(emptyRegistry);
@@ -116,8 +120,10 @@ describe("examples run", () => {
     expect(localStorage.getItem("tiny-plugin:plugin-0:saved")).toBe('["Summarise this."]');
 
     // The composer button opens the picker through the registered command.
+    // Synchronous `act`: the handler parks on the dialog, so awaiting it would
+    // deadlock, but the update that opens the dialog is queued right away.
     await waitFor(() => expect(screen.getByTestId("save-prompt")).toBeDefined());
-    screen.getByTestId("save-prompt").click();
+    act(() => screen.getByTestId("save-prompt").click());
     await waitFor(() => expect(screen.getByTestId("dialog-option-Summarise this.")).toBeDefined());
     await act(async () => screen.getByTestId("dialog-option-Summarise this.").click());
     await waitFor(() => expect(host?.editorText).toBe("Summarise this."));

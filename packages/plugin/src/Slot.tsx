@@ -21,7 +21,7 @@ class Boundary extends Component<{ pluginId: string; children: ReactNode }, { fa
   override render() {
     if (this.state.failed)
       return (
-        <span data-testid="plugin-error" className="text-[11.5px] text-red">
+        <span data-testid="plugin-error" className="text-xs text-red">
           {this.props.pluginId} failed
         </span>
       );
@@ -68,10 +68,7 @@ export function Widgets({ placement }: { placement: WidgetPlacement }) {
   return (
     <div className="flex flex-col gap-1 py-1.5" data-testid={`plugin-widgets-${placement}`}>
       {shown.map(([key, widget]) => (
-        <div
-          key={key}
-          className="font-mono text-[11.5px] leading-[1.5] whitespace-pre-wrap text-ink-2"
-        >
+        <div key={key} className="font-mono text-xs leading-[1.5] whitespace-pre-wrap text-ink-2">
           {widget.lines.join("\n")}
         </div>
       ))}
@@ -86,7 +83,7 @@ export function StatusBar() {
 
   return (
     <div
-      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1 text-[11.5px] text-ink-3"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1 text-xs text-ink-3"
       data-testid="plugin-status"
     >
       {[...statuses.entries()].map(([key, text]) => (

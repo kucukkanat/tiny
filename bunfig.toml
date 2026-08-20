@@ -1,4 +1,2 @@
 [test]
-# Root test runs cover every workspace; the DOM/IndexedDB setup is harmless for
-# the non-DOM packages (native fetch is restored inside the setup itself).
-preload = ["./apps/chat/test/setup.ts"]
+preload = ["./test/setup.ts"]

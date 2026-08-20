@@ -1,5 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { createExternalStore, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { activate } from "./activate.ts";
 import { ManagerDialog } from "./Manager.tsx";
@@ -26,25 +26,15 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
   // settings plugin uses: the command handler, the sidebar button and the
   // overlay are three call sites that need one switch. It survives `reload()`,
   // so the dialog stays open while plugins are being added.
-  let open = false;
-  const listeners = new Set<() => void>();
-  const subscribe = (listener: () => void) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  };
-  const isOpen = () => open;
-  const setOpen = (next: boolean) => {
-    open = next;
-    for (const listener of listeners) listener();
-  };
+  const open = createExternalStore(false);
 
   function ManagerOverlay() {
     const ctx = usePluginContext();
-    const shown = useSyncExternalStore(subscribe, isOpen, isOpen);
+    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
     if (!shown) return null;
 
     return (
-      <ManagerDialog store={store} onChanged={() => ctx.reload()} onClose={() => setOpen(false)} />
+      <ManagerDialog store={store} onChanged={() => ctx.reload()} onClose={() => open.set(false)} />
     );
   }
 
@@ -54,13 +44,13 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
         type="button"
         data-testid="open-plugins"
         title="Plugins"
-        onClick={() => setOpen(true)}
+        onClick={() => open.set(true)}
         className="flex h-8 w-full items-center gap-1.5 rounded-control px-2 text-ink-2 hover:bg-hover-2"
       >
-        <span aria-hidden className="shrink-0 text-[13px]">
+        <span aria-hidden className="shrink-0 text-base">
           ⊞
         </span>
-        <span className="min-w-0 flex-1 truncate text-left text-[13.5px] font-medium">Plugins</span>
+        <span className="min-w-0 flex-1 truncate text-left text-md font-medium">Plugins</span>
       </button>
     );
   }
@@ -71,15 +61,15 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
     // leaving the user no way in to remove it.
     pi.registerCommand("plugins", {
       description: "Add and manage plugins",
-      handler: () => setOpen(true),
+      handler: () => open.set(true),
     });
     pi.registerShortcut("super+shift+p", {
       description: "Manage plugins",
-      handler: () => setOpen(true),
+      handler: () => open.set(true),
     });
     pi.registerShortcut("ctrl+shift+p", {
       description: "Manage plugins",
-      handler: () => setOpen(true),
+      handler: () => open.set(true),
     });
     pi.contribute("app.overlays", ManagerOverlay);
     pi.contribute("sidebar.footer", ManagerButton);

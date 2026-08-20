@@ -94,6 +94,52 @@ export function ThinkingExample() {
 }
 ```
 
+
+### ApprovalCard
+
+The question an agent asks before it acts, rendered **inline in the reply** rather
+than over the app — a modal interrupts the whole page for a decision that belongs
+to one tool call. Radio rows, a free-text row among them for saying what to do
+instead, an optional "always for this tool" box, and an arrow that lights up once
+there is something to send. Choosing arms the arrow rather than sending on a
+timer, unlike the original: this is a permission gate, and a mis-click should not
+be able to spend money. `examples/ApprovalCardExample.tsx`:
+
+```tsx
+import { ApprovalCard } from "@tiny/ui";
+import { useState } from "react";
+
+/** Asks before the agent writes, then reports what was decided. */
+export function ApprovalCardExample() {
+  const [outcome, setOutcome] = useState<string | undefined>(undefined);
+
+  if (outcome !== undefined) return <p className="text-base text-ink-2">{outcome}</p>;
+
+  return (
+    <ApprovalCard
+      question="Run Write File?"
+      detail={
+        <pre className="rounded-control bg-field p-2 font-mono text-xs text-ink-2">
+          {JSON.stringify({ path: "/notes/hello.md", content: "hi" }, null, 2)}
+        </pre>
+      }
+      options={[
+        { id: "approve", label: "Run it" },
+        { id: "deny", label: "Don't run it", tone: "danger" },
+      ]}
+      notePlaceholder="Or tell the model what to do instead…"
+      rememberLabel="Always for fs_write"
+      onSubmit={({ optionId, note, remember }) =>
+        setOutcome(
+          `${optionId}${note === "" ? "" : ` — "${note}"`}${remember ? " (remembered)" : ""}`,
+        )
+      }
+      onDismiss={() => setOutcome("dismissed, which denies")}
+    />
+  );
+}
+```
+
 ### Loader
 
 Pixel-grid loader with its own elapsed timer. `examples/LoaderExample.tsx`:

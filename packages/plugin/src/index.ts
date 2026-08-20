@@ -27,6 +27,8 @@ export { PluginHost } from "./PluginHost.tsx";
 export type { ProviderStore } from "./providers.ts";
 export { createProviderStore, endpointOf, modelId, modelOptions, modelsOf } from "./providers.ts";
 export { Slot, StatusBar, Widgets } from "./Slot.tsx";
+export type { ExternalStore } from "./store.ts";
+export { createExternalStore } from "./store.ts";
 export { identityTheme } from "./theme.ts";
 export type {
   AutocompleteItem,
@@ -43,6 +45,8 @@ export type {
   PluginAPI,
   PluginChat,
   PluginContext,
+  PluginEventContext,
+  PluginEventHandler,
   PluginMessage,
   PluginSettings,
   PluginStorage,

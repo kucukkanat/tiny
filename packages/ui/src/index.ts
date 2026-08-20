@@ -1,3 +1,5 @@
+export type { ApprovalOption, ApprovalOutcome } from "./ApprovalCard.tsx";
+export { ApprovalCard } from "./ApprovalCard.tsx";
 export { GlideMenu } from "./GlideMenu.tsx";
 export { Loader, ShimmerLabel } from "./Loader.tsx";
 export type { ModelOption } from "./PromptBar.tsx";

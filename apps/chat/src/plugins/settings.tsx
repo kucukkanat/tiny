@@ -1,5 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { createExternalStore, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { SettingsDialog } from "../components/SettingsDialog.tsx";
 import { settingsComplete } from "../storage/settings.ts";
@@ -16,21 +16,11 @@ import { settingsComplete } from "../storage/settings.ts";
 export const settings = (): Plugin => {
   // Open/closed lives in the plugin's own closure: the command handler and the
   // contributed component are separate call sites that need the same switch.
-  let open = false;
-  const listeners = new Set<() => void>();
-  const subscribe = (listener: () => void) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  };
-  const isOpen = () => open;
-  const setOpen = (next: boolean) => {
-    open = next;
-    for (const listener of listeners) listener();
-  };
+  const open = createExternalStore(false);
 
   function SettingsOverlay() {
     const ctx = usePluginContext();
-    const shown = useSyncExternalStore(subscribe, isOpen, isOpen);
+    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
     // An unconfigured app has nothing to chat with, so the dialog is forced
     // open and cannot be dismissed until an endpoint answers.
     const required = !settingsComplete(ctx.settings);
@@ -41,9 +31,9 @@ export const settings = (): Plugin => {
         initial={ctx.settings}
         onSave={(next) => {
           ctx.updateSettings(next);
-          setOpen(false);
+          open.set(false);
         }}
-        onClose={required ? undefined : () => setOpen(false)}
+        onClose={required ? undefined : () => open.set(false)}
       />
     );
   }
@@ -51,11 +41,11 @@ export const settings = (): Plugin => {
   return (pi) => {
     pi.registerCommand("settings", {
       description: "Configure the endpoint",
-      handler: () => setOpen(true),
+      handler: () => open.set(true),
     });
     // pi's modifier set has no `mod`; `super` is Cmd on macOS.
-    pi.registerShortcut("super+,", { description: "Open settings", handler: () => setOpen(true) });
-    pi.registerShortcut("ctrl+,", { description: "Open settings", handler: () => setOpen(true) });
+    pi.registerShortcut("super+,", { description: "Open settings", handler: () => open.set(true) });
+    pi.registerShortcut("ctrl+,", { description: "Open settings", handler: () => open.set(true) });
     pi.contribute("app.overlays", SettingsOverlay);
   };
 };

@@ -207,6 +207,30 @@ result shapes match pi's.
 | `message_start` | `message` | — |
 | `message_update` | `message`, `assistantMessageEvent` | — |
 | `message_end` | `message` (carries `usage` and `cost`) | — |
+| `tool_call` | `toolCallId`, `toolName`, `input` (**mutable**) | `{ block, reason }` — stops the call |
+
+`tool_call` fires between preparing a tool's arguments and running it, which is
+where a permission gate belongs: the arguments are final and nothing has happened
+yet. pi's contract is kept exactly —
+
+- **`event.input` is mutable.** Patch the model's arguments in place; later
+  handlers see the patch, and nothing is re-validated afterwards. The return
+  value only ever blocks.
+- **The first handler to block wins** and the rest are skipped.
+- **A block is an error result, not a failed request.** `reason` (or pi's
+  `"Tool execution was blocked"`) is fed back as the tool's output, so the model
+  reads it and can try something else instead of the turn dying.
+- **The signal is re-checked after the handlers.** A gate that asks the user is
+  the natural place for them to give up, and giving up fails the stream rather
+  than reporting a refusal nobody made.
+
+```ts
+pi.on("tool_call", (event) =>
+  String(event.input.path).includes("/.env")
+    ? { block: true, reason: "That path is off limits." }
+    : undefined,
+);
+```
 
 `assistantMessageEvent` is pi-ai's raw token-level event (`text_delta`,
 `thinking_delta`, `toolcall_*`, …), so an extension can observe everything the
@@ -289,7 +313,7 @@ Honest accounting, so nothing here is mistaken for full SDK conformance:
 | --- | --- |
 | `registerTool`, `registerCommand`, `registerShortcut`, `registerFlag`, `registerProvider` | Not implemented — there is no agent loop, tool executor or command palette to register into |
 | `ctx.ui` (confirm, select, notify, custom TUI), `ctx.sessionManager`, `ctx.cwd`, `ctx.modelRegistry` | `ctx` carries `model` and `signal` only |
-| Session, turn, agent, tool and input events | Not fired — this facade makes one LLM call and has no session |
+| Session, turn, agent and input events, and the `tool_execution_*` / `tool_result` pair | Not fired. `tool_call` is the one tool event here, because it is the one this package's own loop can honour |
 | `message_end` can return `{ message }` to replace the finalized message | Observation only; the facade streams deltas and never hands back a message |
 | `AgentMessage` (pi-agent-core) in event payloads | pi-ai's `Message` / `AssistantMessage`, which this package already re-exports |
 | Extensions auto-discovered from `~/.pi/agent/extensions/` and loaded via jiti | Passed explicitly as `options.extensions` |

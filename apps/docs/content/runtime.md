@@ -30,9 +30,9 @@ What makes it different is one word:
 
 ```ts
 return async (pi) => {
-  pi.registerCommand("plugins", { description: "Add and manage plugins", handler: () => setOpen(true) });
-  pi.registerShortcut("super+shift+p", { description: "Manage plugins", handler: () => setOpen(true) });
-  pi.registerShortcut("ctrl+shift+p", { description: "Manage plugins", handler: () => setOpen(true) });
+  pi.registerCommand("plugins", { description: "Add and manage plugins", handler: () => open.set(true) });
+  pi.registerShortcut("super+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
+  pi.registerShortcut("ctrl+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
   pi.contribute("app.overlays", ManagerOverlay);
   pi.contribute("sidebar.footer", ManagerButton);
 

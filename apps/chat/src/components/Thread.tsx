@@ -21,7 +21,7 @@ function Tools({ runs }: { runs: readonly StoredToolRun[] }) {
       {runs.map((run) => (
         <div
           key={run.id}
-          className={`flex items-baseline gap-1.5 font-mono text-[11.5px] ${toolTone[run.status]}`}
+          className={`flex items-baseline gap-1.5 font-mono text-xs ${toolTone[run.status]}`}
         >
           <span aria-hidden>{toolMark[run.status]}</span>
           <span className="font-medium">{run.name}</span>
@@ -81,6 +81,8 @@ function Assistant({
         <Thinking working={reasoningLive} seconds={reasoningSeconds} text={thinking} />
       )}
       <Tools runs={tools} />
+      {/* Only the live reply can be waiting on anyone. */}
+      {!done && <Slot name="message.pending" />}
       {(content !== "" || done) && <StreamText text={body} done={done} />}
       {/* Only finished replies carry actions — there is nothing to copy or
           retry while the tokens are still arriving. */}
@@ -125,7 +127,7 @@ export function Thread({
       {messages.map((message, index) =>
         message.role === "user" ? (
           <div key={index} className="flex justify-end pl-14">
-            <div className="rounded-xl bg-field px-3 py-1.5 text-[13px] leading-[1.4] whitespace-pre-wrap text-ink">
+            <div className="rounded-xl bg-field px-3 py-1.5 text-base leading-[1.4] whitespace-pre-wrap text-ink">
               <Transformed text={message.content} context={USER_MESSAGE} />
             </div>
           </div>
@@ -158,7 +160,7 @@ export function Thread({
       )}
 
       {error !== undefined && (
-        <p role="alert" className="text-[12.5px] text-red">
+        <p role="alert" className="text-smd text-red">
           {error}
         </p>
       )}

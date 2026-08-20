@@ -10,6 +10,7 @@
     "build": "bun run --filter @tiny/chat build",
     "build:site": "bun run scripts/build-site.ts",
     "docs": "bun run --filter @tiny/docs dev",
+    "mock": "bun run scripts/mock-endpoint.ts",
     "test": "bun test packages apps",
     "lint": "biome check .",
     "format": "biome format --write .",
@@ -17,7 +18,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
+    "@happy-dom/global-registrator": "^20.11.2",
     "@types/bun": "^1.3.14",
+    "fake-indexeddb": "^6.0.0",
     "typescript": "^5.9.0"
   }
 }

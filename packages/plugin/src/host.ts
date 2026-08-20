@@ -1,6 +1,7 @@
-import type { Extension, ExtensionAPI, ToolDefinition } from "@tiny/ai";
+import { type Extension, type ExtensionContext, firesEvent, type ToolDefinition } from "@tiny/ai";
 import { createEvents, type PluginEvents } from "./events.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
+import { identityTheme } from "./theme.ts";
 import type {
   CommandInfo,
   CommandOptions,
@@ -10,6 +11,9 @@ import type {
   MarkdownTransformer,
   Plugin,
   PluginAPI,
+  PluginContext,
+  PluginEventContext,
+  PluginUIContext,
   ProviderEntry,
   ShortcutOptions,
   SlotName,
@@ -139,6 +143,31 @@ export type HostActions = {
   setSessionName(name: string): void;
 };
 
+/**
+ * pi's documented RPC fallbacks for the terminal-only half of `ctx.ui`: present,
+ * never throwing, returning what an extension would get over RPC.
+ */
+export const terminalFallbacks = {
+  theme: identityTheme,
+  custom: async () => undefined,
+  getEditorText: () => "",
+  getToolsExpanded: () => false,
+  setToolsExpanded: () => {},
+  setWorkingMessage: () => {},
+  setWorkingVisible: () => {},
+  setWorkingIndicator: () => {},
+  setHiddenThinkingLabel: () => {},
+  setFooter: () => {},
+  setHeader: () => {},
+  setEditorComponent: () => {},
+  getEditorComponent: () => undefined,
+  onTerminalInput: () => () => {},
+  addAutocompleteProvider: () => {},
+  getAllThemes: () => [],
+  getTheme: () => undefined,
+  setTheme: () => ({ success: false, error: "themes are not available in the React host" }),
+};
+
 /** What a host that has not published anything yet can honestly do: nothing. */
 const detachedHost = (): HostActions => {
   const unavailable = (method: string) => () => {
@@ -156,6 +185,56 @@ const detachedHost = (): HostActions => {
   };
 };
 
+/**
+ * The context an event handler gets when no host is mounted.
+ *
+ * pi runs extensions in print and JSON modes too, where every `ctx.ui` method
+ * exists but nothing can be asked of the user; handlers are expected to notice
+ * via `ctx.hasUI` and decide for themselves. This is that mode. Dialogs resolve
+ * to pi's dismissal values rather than throwing, so a permission gate written
+ * for pi fails closed here instead of crashing.
+ */
+const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: false } => {
+  const memory = new Map<string, unknown>();
+  const ui: PluginUIContext = {
+    select: async () => undefined,
+    confirm: async () => false,
+    input: async () => undefined,
+    editor: async () => undefined,
+    open: async () => undefined,
+    notify: () => {},
+    setStatus: () => {},
+    setWidget: () => {},
+    setTitle: () => {},
+    setEditorText: () => {},
+    pasteToEditor: () => {},
+    ...terminalFallbacks,
+  };
+  return {
+    ui,
+    mode: "react",
+    hasUI: false,
+    signal: undefined,
+    chat: { messages: [], streaming: undefined, send: () => {}, stop: () => {} },
+    settings: undefined,
+    updateSettings: () => {},
+    navigate: () => {},
+    storage: {
+      get: <T>(key: string) => memory.get(key) as T | undefined,
+      set: (key, value) => void memory.set(key, value),
+      remove: (key) => void memory.delete(key),
+    },
+    runCommand: async () => {},
+    commands: [],
+    abort: () => {},
+    isIdle: () => true,
+    hasPendingMessages: () => false,
+    getContextUsage: () => ({ input: 0, output: 0, totalTokens: 0, contextWindow: 0 }),
+    newSession: () => {},
+    reload: async () => {},
+  };
+};
+
 export type LoadOptions = {
   /** Providers outlive one load, because pi allows registering after the factory. */
   readonly providers?: ProviderStore | undefined;
@@ -163,6 +242,12 @@ export type LoadOptions = {
   readonly events?: PluginEvents | undefined;
   /** Resolved per call, so a handler running later sees the live host. */
   readonly host?: (() => HostActions) | undefined;
+  /**
+   * The plugin context to widen event handlers with, so `ctx.ui` reaches them
+   * as it does in pi. Resolved per call for the same reason as `host`, and
+   * allowed to return nothing while the host is still mounting.
+   */
+  readonly context?: ((pluginId: string) => PluginContext | undefined) | undefined;
 };
 
 /**
@@ -177,7 +262,7 @@ export const loadPlugins = async (
   plugins: readonly Plugin[],
   options: LoadOptions = {},
 ): Promise<Registry> => {
-  const recorded: [string, unknown][] = [];
+  const recorded: [pluginId: string, event: string, handler: unknown][] = [];
   const commands: Omit<CommandEntry, "invocationName">[] = [];
   const shortcuts: ShortcutEntry[] = [];
   const contributions: ContributionEntry[] = [];
@@ -187,6 +272,7 @@ export const loadPlugins = async (
   const providers = options.providers ?? createProviderStore();
   const events = options.events ?? createEvents();
   const host = options.host ?? detachedHost;
+  const context = options.context ?? (() => undefined);
   // A reload re-runs every factory, so provider registrations must not stack up
   // on top of the previous load's.
   providers.reset();
@@ -197,7 +283,7 @@ export const loadPlugins = async (
       // The overloads on PluginAPI keep callers honest; the recorder is
       // deliberately untyped so unfired pi events are stored just the same.
       on: (event: string, handler: unknown) => {
-        recorded.push([event, handler]);
+        recorded.push([id, event, handler]);
       },
       registerCommand: (name, options) => {
         commands.push({ name, pluginId: id, options });
@@ -234,13 +320,25 @@ export const loadPlugins = async (
     await plugin(api);
   }
 
+  // Built at most once per load, so a plugin running without a host still gets
+  // storage that survives between events rather than a fresh empty one each time.
+  let detached: ReturnType<typeof detachedContext> | undefined;
+  const fallbackContext = () => (detached ??= detachedContext());
+
   // Replay is idempotent: `loadExtensions` builds fresh handler arrays per call.
   const replay: Extension = (pi) => {
-    for (const [event, handler] of recorded) {
-      const on = pi.on as (event: string, handler: unknown) => void;
+    for (const [owner, event, handler] of recorded) {
       // Events this facade never fires are dropped rather than registered, so a
       // pi extension subscribing to `session_start` loads without erroring.
-      if (FIRED_EVENTS.has(event)) on(event, handler);
+      if (!firesEvent(event)) continue;
+      const on = pi.on as (event: string, handler: unknown) => void;
+      const run = handler as (event: unknown, ctx: PluginEventContext) => unknown;
+      // `@tiny/ai` can only supply `{ model, signal }`; pi hands handlers the
+      // same context its commands get. The request's own half wins, so `model`
+      // and `signal` always describe the call in flight.
+      on(event, (fired: unknown, ctx: ExtensionContext) =>
+        run(fired, { ...(context(owner) ?? fallbackContext()), ...ctx }),
+      );
     }
   };
 
@@ -265,15 +363,3 @@ export const loadPlugins = async (
     extensions: recorded.length > 0 ? [replay] : [],
   };
 };
-
-/** The five events `@tiny/ai` actually emits. */
-const FIRED_EVENTS: ReadonlySet<string> = new Set([
-  "before_agent_start",
-  "context",
-  "message_start",
-  "message_update",
-  "message_end",
-]);
-
-/** Exposed for tests and for `ExtensionAPI`-shaped assertions. */
-export type { ExtensionAPI };

@@ -21,6 +21,7 @@ from a URL or pasted source, with no rebuild and no page reload.
 | [`packages/ai`](packages/ai) (`@tiny/ai`) | Typed streaming client for OpenAI-compatible endpoints (reasoning deltas, model listing), on the [pi](https://pi.dev) LLM harness. |
 | [`packages/plugin`](packages/plugin) (`@tiny/plugin`) | Plugin host — tools, commands, shortcuts, dialogs and render slots — shaped after pi's extension SDK, so a pi extension using only RPC-portable methods runs unmodified. |
 | [`packages/plugin-fs`](packages/plugin-fs) (`@tiny/plugin-fs`) | Filesystem tools for the model (`fs_read`, `fs_write`, `fs_edit`, `fs_delete`, `fs_list`), backed by the browser's Origin Private File System. |
+| [`packages/plugin-hitl`](packages/plugin-hitl) (`@tiny/plugin-hitl`) | Human in the loop — the model asks, the user answers. Built on pi's `tool_call` event, so a refusal steers the model rather than ending the turn. |
 | [`packages/plugin-manager`](packages/plugin-manager) (`@tiny/plugin-manager`) | Install plugins at runtime from a URL or pasted source — stored in OPFS, pinned by SHA-256, managed from a dialog in the app. |
 | [`packages/ui`](packages/ui) (`@tiny/ui`) | Beautiful UI primitives adapted for this app, plus their design tokens. |
 | [`apps/docs`](apps/docs) (`@tiny/docs`) | The plugin documentation site — markdown in, static site out, on the same Bun toolchain. |
@@ -38,6 +39,7 @@ bun run dev        # dev server with HMR
 bun run build      # static build → apps/chat/dist
 bun run docs       # build the docs site and serve it on :4321
 bun run build:site # docs at / and the app at /app/ → dist (what Pages serves)
+bun run mock       # a local endpoint that always calls a tool, on :8787
 bun run test       # unit + integration tests
 bun run lint       # biome
 bun run typecheck  # tsc, strict

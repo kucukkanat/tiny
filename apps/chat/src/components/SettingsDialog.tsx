@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Settings } from "../storage/settings.ts";
 
 const field =
-  "h-8 w-full rounded-control bg-field px-2.5 text-[13px] text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
+  "h-8 w-full rounded-control bg-field px-2.5 text-base text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
 
 /** pi's api type identifiers, with the names people know them by. */
 const API_LABELS: Record<ApiType, string> = {
@@ -79,8 +79,8 @@ export function SettingsDialog({
         className="w-full max-w-sm rounded-[14px] bg-surface p-4 shadow-overlay"
         style={{ animation: "pop-in 180ms var(--ease-out-strong) both" }}
       >
-        <h2 className="text-[14px] font-semibold text-ink">Settings</h2>
-        <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
+        <h2 className="text-lg font-semibold text-ink">Settings</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-3">
           Any endpoint pi can stream from. Your key stays in this browser and is only sent to the
           base URL below.
         </p>
@@ -91,7 +91,7 @@ export function SettingsDialog({
             void save();
           }}
         >
-          <label className="flex flex-col gap-1 text-[12px] font-medium text-ink-2">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
             API
             <select
               value={api}
@@ -106,7 +106,7 @@ export function SettingsDialog({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-[12px] font-medium text-ink-2">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
             Base URL
             <input
               value={baseUrl}
@@ -115,7 +115,7 @@ export function SettingsDialog({
               className={field}
             />
           </label>
-          <label className="flex flex-col gap-1 text-[12px] font-medium text-ink-2">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
             API key
             <input
               type="password"
@@ -126,7 +126,7 @@ export function SettingsDialog({
             />
           </label>
           {error !== undefined && (
-            <p role="alert" className="text-[12px] text-red">
+            <p role="alert" className="text-sm text-red">
               {error}
             </p>
           )}
@@ -135,7 +135,7 @@ export function SettingsDialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 items-center rounded-control px-3 text-[12.5px] font-medium text-ink-2 transition-colors duration-150 hover:bg-hover"
+                className="flex h-8 items-center rounded-control px-3 text-smd font-medium text-ink-2 transition-colors duration-150 hover:bg-hover"
               >
                 Cancel
               </button>
@@ -143,7 +143,7 @@ export function SettingsDialog({
             <button
               type="submit"
               disabled={checking || baseUrl.trim() === "" || apiKey.trim() === ""}
-              className="flex h-8 items-center rounded-control bg-ink px-3 text-[12.5px] font-medium text-surface transition-[opacity,transform] duration-150 active:scale-[0.97] disabled:opacity-40"
+              className="flex h-8 items-center rounded-control bg-ink px-3 text-smd font-medium text-surface transition-[opacity,transform] duration-150 active:scale-[0.97] disabled:opacity-40"
             >
               {checking ? "Checking…" : "Save"}
             </button>

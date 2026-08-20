@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import type { StreamDelta, ToolDefinition } from "../src/index.ts";
-import { streamChat, toolOutput } from "../src/index.ts";
+import type { Extension, StreamDelta, ToolCallEvent, ToolDefinition } from "../src/index.ts";
+import { BLOCKED_MESSAGE, streamChat, toolOutput } from "../src/index.ts";
 
 // The agent loop is driven against a real in-process OpenAI-compatible server
 // that answers with tool calls — no mocks, and no stand-in for the loop itself.
@@ -227,5 +227,154 @@ describe("the tool loop", () => {
       ));
     };
     expect(run()).rejects.toThrow("cancelled");
+  });
+});
+
+/** Drives the loop with extensions as well as tools. */
+const collectWith = async (
+  path: string,
+  tools: readonly ToolDefinition[],
+  extensions: readonly Extension[],
+  signal?: AbortSignal,
+) => {
+  requests = [];
+  const deltas: StreamDelta[] = [];
+  for await (const delta of streamChat(
+    endpointFor(path),
+    "test-model",
+    [{ role: "user", content: "go" }],
+    { tools, extensions, ...(signal === undefined ? {} : { signal }) },
+  ))
+    deltas.push(delta);
+  return deltas;
+};
+
+describe("the tool_call event", () => {
+  test("a blocking handler stops the tool and tells the model why", async () => {
+    let ran = false;
+    const watched: ToolDefinition = {
+      ...echo,
+      execute: () => {
+        ran = true;
+        return toolOutput("no");
+      },
+    };
+    const gate: Extension = (pi) =>
+      pi.on("tool_call", (event) =>
+        event.toolName === "echo" ? { block: true, reason: "Blocked by user" } : undefined,
+      );
+
+    const deltas = await collectWith("/once", [watched], [gate]);
+
+    expect(ran).toBe(false);
+    // The model still gets its turn: a block is an error result, not a dead request.
+    expect(answer(deltas)).toBe("done");
+    expect(requests[1]?.messages.at(-1)).toMatchObject({ content: "Blocked by user" });
+    expect(toolDeltas(deltas).at(-1)).toMatchObject({
+      status: "error",
+      summary: "Blocked by user",
+    });
+  });
+
+  test("blocking without a reason uses pi's wording", async () => {
+    const gate: Extension = (pi) => pi.on("tool_call", () => ({ block: true }));
+    await collectWith("/once", [echo], [gate]);
+    expect(requests[1]?.messages.at(-1)).toMatchObject({ content: BLOCKED_MESSAGE });
+  });
+
+  test("carries pi's event shape", async () => {
+    const seen: ToolCallEvent[] = [];
+    const spy: Extension = (pi) => {
+      pi.on("tool_call", (event) => {
+        seen.push({ ...event, input: { ...event.input } });
+      });
+    };
+    await collectWith("/once", [echo], [spy]);
+    expect(seen).toEqual([
+      { type: "tool_call", toolCallId: "c1", toolName: "echo", input: { value: "hi" } },
+    ]);
+  });
+
+  test("mutating event.input patches the arguments the tool actually receives", async () => {
+    let received: unknown;
+    const watched: ToolDefinition = {
+      ...echo,
+      execute: (_id, params) => {
+        received = params.value;
+        return toolOutput("ok");
+      },
+    };
+    // pi's contract: patch in place, do not return the arguments.
+    const patch: Extension = (pi) => {
+      pi.on("tool_call", (event) => {
+        event.input.value = "patched";
+      });
+    };
+
+    await collectWith("/once", [watched], [patch]);
+    expect(received).toBe("patched");
+  });
+
+  test("later handlers see earlier mutations, and the first block short-circuits", async () => {
+    const order: string[] = [];
+    const first: Extension = (pi) => {
+      pi.on("tool_call", (event) => {
+        order.push(`first:${String(event.input.value)}`);
+        event.input.value = "one";
+      });
+    };
+    const second: Extension = (pi) =>
+      pi.on("tool_call", (event) => {
+        order.push(`second:${String(event.input.value)}`);
+        return { block: true, reason: "stop" };
+      });
+    const third: Extension = (pi) => {
+      pi.on("tool_call", () => {
+        order.push("third");
+      });
+    };
+
+    await collectWith("/once", [echo], [first, second, third]);
+    expect(order).toEqual(["first:hi", "second:one"]);
+  });
+
+  test("a throwing handler blocks the call rather than letting it through", async () => {
+    let ran = false;
+    const watched: ToolDefinition = {
+      ...echo,
+      execute: () => {
+        ran = true;
+        return toolOutput("no");
+      },
+    };
+    const broken: Extension = (pi) =>
+      pi.on("tool_call", () => {
+        throw new Error("gate exploded");
+      });
+
+    await collectWith("/once", [watched], [broken]);
+    expect(ran).toBe(false);
+    expect(requests[1]?.messages.at(-1)).toMatchObject({ content: "gate exploded" });
+  });
+
+  test("aborting during the handler fails the stream instead of running the tool", async () => {
+    const controller = new AbortController();
+    let ran = false;
+    const watched: ToolDefinition = {
+      ...echo,
+      execute: () => {
+        ran = true;
+        return toolOutput("no");
+      },
+    };
+    // Standing in for a user who dismisses an approval dialog by hitting stop.
+    const asks: Extension = (pi) => {
+      pi.on("tool_call", () => {
+        controller.abort();
+      });
+    };
+
+    await expect(collectWith("/once", [watched], [asks], controller.signal)).rejects.toThrow();
+    expect(ran).toBe(false);
   });
 });

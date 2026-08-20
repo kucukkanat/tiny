@@ -52,12 +52,6 @@ type ModelsPayload = {
 };
 
 /**
- * How each API family asks for its model list.
- *
- * The route and the auth header differ per family even though most of the
- * response shapes agree, so this is the one place that knows the difference.
- */
-/**
  * Whether an endpoint's base URL is expected to carry the version segment.
  *
  * This is not a style choice — it follows what each implementation does with
@@ -75,6 +69,12 @@ const VERSION_IN_PATH: Record<ApiType, string> = {
   "mistral-conversations": "/v1",
 };
 
+/**
+ * How each API family asks for its model list.
+ *
+ * The route and the auth header differ per family even though most of the
+ * response shapes agree, so this is the one place that knows the difference.
+ */
 const modelsRequest = (
   endpoint: Endpoint,
   api: ApiType,

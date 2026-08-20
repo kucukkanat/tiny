@@ -1,5 +1,14 @@
 import { type ToolDefinition, toolOutput } from "@tiny/ai";
-import { directoryAt, display, FsError, fileAt, readFile, segments, writeFile } from "./opfs.ts";
+import {
+  directoryAt,
+  display,
+  FsError,
+  fileAt,
+  notFound,
+  readFile,
+  segments,
+  writeFile,
+} from "./opfs.ts";
 
 /** Resolves the root lazily so a page that never calls a tool never touches OPFS. */
 export type RootResolver = () => Promise<FileSystemDirectoryHandle>;
@@ -26,9 +35,6 @@ const pathParam = {
   type: "string",
   description: "Absolute path inside the sandbox, e.g. /notes/todo.md",
 } as const;
-
-const notFoundEntry = (error: unknown): boolean =>
-  error instanceof DOMException && error.name === "NotFoundError";
 
 /**
  * The five filesystem tools, bound to a root.
@@ -157,7 +163,7 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       try {
         await parent.removeEntry(name, { recursive: true });
       } catch (error) {
-        if (notFoundEntry(error)) throw new FsError(`No such file or directory: ${display(parts)}`);
+        if (notFound(error)) throw new FsError(`No such file or directory: ${display(parts)}`);
         throw error;
       }
       return toolOutput(`Deleted ${display(parts)}`, { details: { path: display(parts) } });

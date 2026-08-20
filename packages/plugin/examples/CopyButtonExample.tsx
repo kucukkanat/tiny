@@ -14,7 +14,7 @@ export const copyButton = (): Plugin => {
       <button
         type="button"
         data-testid="copy-reply"
-        className="rounded-control px-1.5 py-0.5 text-[11.5px] text-ink-3 hover:bg-hover hover:text-ink"
+        className="rounded-control px-1.5 py-0.5 text-xs text-ink-3 hover:bg-hover hover:text-ink"
         onClick={() => {
           void navigator.clipboard?.writeText(message.content);
           ctx.ui.notify("Copied", "info");

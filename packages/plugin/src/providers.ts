@@ -1,4 +1,5 @@
 import type { Endpoint, ModelOptions } from "@tiny/ai";
+import { createExternalStore } from "./store.ts";
 import type { ProviderConfig, ProviderEntry, ProviderModel } from "./types.ts";
 
 /**
@@ -20,39 +21,26 @@ export type ProviderStore = {
 };
 
 export const createProviderStore = (): ProviderStore => {
-  let entries: readonly ProviderEntry[] = [];
-  const listeners = new Set<() => void>();
-  const announce = () => {
-    for (const listener of listeners) listener();
-  };
+  const entries = createExternalStore<readonly ProviderEntry[]>([]);
 
   return {
-    list: () => entries,
+    list: entries.get,
+    subscribe: entries.subscribe,
 
-    register: (pluginId, id, config) => {
+    register: (pluginId, id, config) =>
       // pi lets a later registration override an earlier one of the same name,
       // which is how an extension replaces a built-in provider.
-      entries = [...entries.filter((entry) => entry.id !== id), { id, pluginId, config }];
-      announce();
-    },
+      entries.set([...entries.get().filter((entry) => entry.id !== id), { id, pluginId, config }]),
 
     unregister: (id) => {
-      const next = entries.filter((entry) => entry.id !== id);
-      if (next.length === entries.length) return false;
-      entries = next;
-      announce();
+      const next = entries.get().filter((entry) => entry.id !== id);
+      if (next.length === entries.get().length) return false;
+      entries.set(next);
       return true;
     },
 
     reset: () => {
-      if (entries.length === 0) return;
-      entries = [];
-      announce();
-    },
-
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
+      if (entries.get().length > 0) entries.set([]);
     },
   };
 };

@@ -18,6 +18,7 @@ export type {
   BeforeAgentStartEventResult,
   ContextEvent,
   ContextEventResult,
+  EventMap,
   Extension,
   ExtensionAPI,
   ExtensionContext,
@@ -25,7 +26,10 @@ export type {
   MessageEndEvent,
   MessageStartEvent,
   MessageUpdateEvent,
+  ToolCallEvent,
+  ToolCallEventResult,
 } from "./extension.ts";
+export { BLOCKED_MESSAGE, firesEvent } from "./extension.ts";
 export type {
   ChatMessage,
   ChatRole,

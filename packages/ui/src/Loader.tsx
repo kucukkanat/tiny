@@ -23,7 +23,7 @@ function useElapsed(): string {
 export function ShimmerLabel({ children }: { children: string }) {
   return (
     <span
-      className="bg-clip-text text-[13px] font-medium text-transparent"
+      className="bg-clip-text text-base font-medium text-transparent"
       style={{
         backgroundImage:
           "linear-gradient(90deg, var(--ink-3) 35%, var(--ink) 50%, var(--ink-3) 65%)",
@@ -54,7 +54,7 @@ export function Loader({ label = "Thinking" }: { label?: string }) {
         ))}
       </span>
       <ShimmerLabel>{label}</ShimmerLabel>
-      <span className="font-mono text-[12px] text-ink-3 tabular-nums">{elapsed}</span>
+      <span className="font-mono text-sm text-ink-3 tabular-nums">{elapsed}</span>
     </div>
   );
 }

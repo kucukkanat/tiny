@@ -90,6 +90,29 @@
   --color-orange: var(--orange);
   --color-red: var(--red);
 
+  /* Type scale. These are the sizes the design already used as one-off literals,
+   * given names — so the sizes are pickable from a list rather than guessed, and
+   * changing one changes it everywhere. Line height stays inherited, as it was
+   * when each of these was written inline. */
+  --text-2xs: 10.5px;
+  --text-2xs--line-height: inherit;
+  --text-xs: 11.5px;
+  --text-xs--line-height: inherit;
+  --text-sm: 12px;
+  --text-sm--line-height: inherit;
+  --text-smd: 12.5px;
+  --text-smd--line-height: inherit;
+  --text-base: 13px;
+  --text-base--line-height: inherit;
+  --text-md: 13.5px;
+  --text-md--line-height: inherit;
+  --text-lg: 14px;
+  --text-lg--line-height: inherit;
+  --text-xl: 15px;
+  --text-xl--line-height: inherit;
+  --text-2xl: 17px;
+  --text-2xl--line-height: inherit;
+
   --radius-chip: 6px;
   --radius-control: 8px;
   --radius-card: 10px;

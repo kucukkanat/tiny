@@ -143,8 +143,8 @@ export const clearChat = (): Plugin => (pi) => {
 
 ## Events
 
-`pi.on(event, handler)` subscribes to the request lifecycle. Five events actually
-fire, because five are all `@tiny/ai` emits:
+`pi.on(event, handler)` subscribes to the request lifecycle. Six events actually
+fire, because six are all `@tiny/ai` emits:
 
 | Event | Fires | Handler may return |
 | --- | --- | --- |
@@ -153,6 +153,10 @@ fire, because five are all `@tiny/ai` emits:
 | `message_start` | when a reply begins | — |
 | `message_update` | on every streamed delta | — |
 | `message_end` | on the finalized message, with usage | — |
+| `tool_call` | before a tool runs, arguments final | `{ block, reason }` to stop it |
+
+`tool_call` is the only one that can stop something happening, which makes it the
+hook every approval flow hangs off — see [Approvals](tools.md#approvals-are-just-an-event).
 
 Payloads and chaining rules are `@tiny/ai`'s and are documented in
 `packages/ai/README.md`; nothing about them changes here.

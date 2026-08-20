@@ -33,7 +33,8 @@ export const segments = (path: string): readonly string[] => {
 /** Renders segments back as an absolute path, for messages the model reads. */
 export const display = (parts: readonly string[]): string => `/${parts.join("/")}`;
 
-const notFound = (error: unknown): boolean =>
+/** OPFS reports a missing entry by throwing, not by returning nothing. */
+export const notFound = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "NotFoundError";
 
 /** Walks to a directory, optionally creating each missing segment. */

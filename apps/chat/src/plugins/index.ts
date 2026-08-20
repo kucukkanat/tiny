@@ -1,5 +1,6 @@
 import type { Plugin } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
+import { humanInTheLoop } from "@tiny/plugin-hitl";
 import { pluginManager } from "@tiny/plugin-manager";
 import { historyWindow } from "./historyWindow.ts";
 import { settings } from "./settings.tsx";
@@ -21,14 +22,30 @@ export { historyWindow, settings, streamTrace, systemPrompt, usageLogger };
  * A plugin that only subscribes to events is exactly an `@tiny/ai` extension,
  * which is why the four originals below need no edit.
  *
- * Only observers and `settings` are enabled by default: none can alter what is
- * sent. The two commented out rewrite the request, so they are left opt-in
- * rather than quietly changing how every conversation behaves.
+ * Nothing enabled here rewrites what is sent to the model: the observers only
+ * watch, `settings` owns the endpoint dialog, and `humanInTheLoop` gates tool
+ * calls rather than the request. The two commented out do rewrite it, so they
+ * are left opt-in rather than quietly changing how every conversation behaves.
  */
 export const plugins: readonly Plugin[] = [
   usageLogger(),
   streamTrace(),
   settings(),
+  // Ask before the model runs a tool. Listed before the plugins that register
+  // tools only for readability — `tool_call` fires for every tool in the
+  // registry regardless of load order.
+  //
+  // Reads inside the OPFS sandbox are free: they cannot reach the real disk and
+  // cannot destroy anything. Everything else asks, including tools that arrive
+  // later from `pluginManager`, which are the ones nobody has vetted.
+  humanInTheLoop({
+    allow: ["fs_list", "fs_read"],
+    labels: {
+      fs_write: "Write File",
+      fs_edit: "Edit File",
+      fs_delete: "Delete",
+    },
+  }),
   // Filesystem tools for the model, sandboxed to this origin's OPFS. Needs a
   // tool-calling model; endpoints without tool support simply ignore them.
   fileSystem(),

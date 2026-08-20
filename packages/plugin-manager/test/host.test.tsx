@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PluginHost, Slot, usePluginHost } from "@tiny/plugin";
 import { memoryRoot } from "@tiny/plugin-fs/memory";
 import { memoryManifest } from "../src/memory.ts";
@@ -34,13 +34,17 @@ beforeEach(() => {
 });
 
 const mount = async () => {
-  render(
-    <PluginHost plugins={[pluginManager(options)]}>
-      <Probe />
-      <Slot name="sidebar.footer" />
-      <Slot name="app.overlays" />
-    </PluginHost>,
-  );
+  // The manager's factory is async, so the registry lands a microtask after the
+  // first paint — rendering inside `act` keeps that update in the act scope.
+  await act(async () => {
+    render(
+      <PluginHost plugins={[pluginManager(options)]}>
+        <Probe />
+        <Slot name="sidebar.footer" />
+        <Slot name="app.overlays" />
+      </PluginHost>,
+    );
+  });
   await waitFor(() => expect(host?.commands.length).toBeGreaterThan(0));
 };
 
@@ -57,7 +61,9 @@ describe("in the host", () => {
 
   test("the `plugins` command opens it too", async () => {
     await mount();
-    await host?.runCommand("plugins");
+    await act(async () => {
+      await host?.runCommand("plugins");
+    });
     expect(await screen.findByTestId("plugin-manager")).toBeTruthy();
   });
 

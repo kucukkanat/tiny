@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ApprovalCardExample } from "../examples/ApprovalCardExample.tsx";
 import { GlideMenuExample } from "../examples/GlideMenuExample.tsx";
 import { LoaderExample } from "../examples/LoaderExample.tsx";
 import { PromptBarExample } from "../examples/PromptBarExample.tsx";
@@ -23,9 +24,25 @@ const EXAMPLES = [
   "PromptBarExample.tsx",
   "SidebarExample.tsx",
   "GlideMenuExample.tsx",
+  "ApprovalCardExample.tsx",
 ] as const;
 
 describe("examples render", () => {
+  test("ApprovalCardExample sends only once a choice is made", async () => {
+    render(<ApprovalCardExample />);
+    // The arrow is inert until there is an answer to send.
+    expect(screen.getByTestId("approval-send").hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(screen.getByTestId("approval-note"), { target: { value: "use /tmp" } });
+    fireEvent.click(screen.getByTestId("approval-option-deny"));
+    fireEvent.click(screen.getByTestId("approval-remember"));
+    fireEvent.click(screen.getByTestId("approval-send"));
+
+    await waitFor(() => expect(screen.getByText(/deny/)).toBeTruthy());
+    expect(screen.getByText(/use \/tmp/)).toBeTruthy();
+    expect(screen.getByText(/remembered/)).toBeTruthy();
+  });
+
   test("StreamTextExample reveals a markdown reply word by word", async () => {
     const { container } = render(<StreamTextExample />);
     await waitFor(() => expect(container.querySelector("h3")?.textContent).toContain("Why"));

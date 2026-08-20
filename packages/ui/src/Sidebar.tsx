@@ -60,7 +60,7 @@ export function Sidebar({
     >
       <div className="mb-2 flex h-10 shrink-0 items-center justify-between px-2 pt-1">
         {!collapsed && (
-          <span className="ml-2 truncate text-[14px] font-semibold text-ink">{title}</span>
+          <span className="ml-2 truncate text-lg font-semibold text-ink">{title}</span>
         )}
         <button
           type="button"
@@ -87,7 +87,7 @@ export function Sidebar({
             </Icon>
           </span>
           {!collapsed && (
-            <span className="ml-1.5 min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink-2">
+            <span className="ml-1.5 min-w-0 flex-1 truncate text-md font-medium text-ink-2">
               New chat
             </span>
           )}
@@ -96,7 +96,7 @@ export function Sidebar({
 
       {!collapsed && (
         <>
-          <div className="mx-2 mt-3 flex h-7 items-center px-2 text-[12.5px] font-medium text-ink-3">
+          <div className="mx-2 mt-3 flex h-7 items-center px-2 text-smd font-medium text-ink-3">
             Chats
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -112,7 +112,7 @@ export function Sidebar({
                     onClick={() => onSelect(chat.id)}
                     className={`${rowClass(chat.id === activeId)} mx-0 min-w-0 flex-1`}
                   >
-                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink-2">
+                    <span className="min-w-0 flex-1 truncate text-md font-medium text-ink-2">
                       {chat.title}
                     </span>
                   </button>
@@ -129,7 +129,7 @@ export function Sidebar({
                 </div>
               ))}
               {chats.length === 0 && (
-                <div className="mx-2 px-2 py-2 text-[12.5px] text-ink-3">No chats yet</div>
+                <div className="mx-2 px-2 py-2 text-smd text-ink-3">No chats yet</div>
               )}
             </GlideMenu>
           </div>
@@ -155,7 +155,7 @@ export function Sidebar({
             </Icon>
           </span>
           {!collapsed && (
-            <span className="ml-1.5 min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink-2">
+            <span className="ml-1.5 min-w-0 flex-1 truncate text-md font-medium text-ink-2">
               Settings
             </span>
           )}

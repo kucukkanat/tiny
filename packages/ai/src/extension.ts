@@ -67,6 +67,32 @@ export type MessageEndEvent = {
 };
 
 /**
+ * Fired before a tool executes. **Can block.**
+ *
+ * `input` is deliberately mutable: pi's contract is that a handler patches the
+ * model's arguments by mutating it in place, and that the return value does one
+ * thing only — block the call. Later handlers see earlier mutations, and no
+ * re-validation happens afterwards.
+ */
+export type ToolCallEvent = {
+  readonly type: "tool_call";
+  readonly toolCallId: string;
+  readonly toolName: string;
+  /** Mutable, as in pi. Patch arguments here rather than in the return value. */
+  input: Record<string, unknown>;
+};
+
+export type ToolCallEventResult = {
+  /** Block execution. To modify arguments, mutate `event.input` instead. */
+  readonly block?: boolean;
+  /** Shown to the model in place of the result. */
+  readonly reason?: string;
+};
+
+/** pi's wording when a handler blocks without saying why. */
+export const BLOCKED_MESSAGE = "Tool execution was blocked";
+
+/**
  * The reduced context handlers receive. pi passes session, cwd, model registry
  * and UI here; a browser facade has only the model and the request's signal.
  */
@@ -75,12 +101,14 @@ export type ExtensionContext = {
   readonly signal: AbortSignal | undefined;
 };
 
-type EventMap = {
+/** Every event this package fires, with the payload and result of each. */
+export type EventMap = {
   before_agent_start: [BeforeAgentStartEvent, BeforeAgentStartEventResult];
   context: [ContextEvent, ContextEventResult];
   message_start: [MessageStartEvent, undefined];
   message_update: [MessageUpdateEvent, undefined];
   message_end: [MessageEndEvent, undefined];
+  tool_call: [ToolCallEvent, ToolCallEventResult];
 };
 
 export interface ExtensionAPI {
@@ -100,7 +128,18 @@ const emptyHandlers = (): Handlers => ({
   message_start: [],
   message_update: [],
   message_end: [],
+  tool_call: [],
 });
+
+/**
+ * Whether this package fires `event` at all.
+ *
+ * Read off `Handlers` rather than listed again, so a host that drops
+ * subscriptions to events nothing emits — as `@tiny/plugin` does for the pi
+ * events with no analogue here — cannot fall out of step with what is emitted.
+ */
+const FIRED = emptyHandlers();
+export const firesEvent = (event: string): boolean => Object.hasOwn(FIRED, event);
 
 /**
  * Run each factory to collect its subscriptions. Factories may be async — pi
@@ -163,4 +202,28 @@ export const emitContext = async (
     if (result?.messages !== undefined) current = result.messages;
   }
   return current;
+};
+
+/**
+ * Run every `tool_call` handler until one blocks.
+ *
+ * pi's semantics exactly (`ExtensionRunner.emitToolCall`): handlers run in
+ * registration order, each seeing `event.input` as the ones before it left it,
+ * and the first `block: true` short-circuits the rest. A handler that throws is
+ * left to propagate — pi treats a gate that crashes as a gate that blocked,
+ * which is what the caller's error path already does here.
+ */
+export const emitToolCall = async (
+  handlers: Handlers,
+  event: ToolCallEvent,
+  ctx: ExtensionContext,
+): Promise<ToolCallEventResult | undefined> => {
+  let result: ToolCallEventResult | undefined;
+  for (const handler of handlers.tool_call) {
+    const returned = await handler(event, ctx);
+    if (returned === undefined) continue;
+    result = returned;
+    if (result.block === true) return result;
+  }
+  return result;
 };

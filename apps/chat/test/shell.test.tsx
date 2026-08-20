@@ -4,7 +4,7 @@ import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, PluginHost } from "@tiny/plugin";
 import { MemoryRouter } from "react-router";
 import { App } from "../src/App.tsx";
-import { deleteConversation, putConversation } from "../src/conversations.ts";
+import { deleteConversation, listConversations, putConversation } from "../src/conversations.ts";
 
 // Panels and pages are promises the *app* makes, so they are asserted against
 // the real `App` rather than a stand-in: that a rail nobody asked for does not
@@ -12,7 +12,14 @@ import { deleteConversation, putConversation } from "../src/conversations.ts";
 // a path the app already owns.
 
 afterEach(cleanup);
-beforeEach(() => localStorage.clear());
+beforeEach(async () => {
+  localStorage.clear();
+  // Conversations live in one IndexedDB that outlives a test file, so what the
+  // sidebar shows here depends on whichever files ran first — `useChat` and the
+  // store's own suite both leave rows behind, and file order differs by
+  // platform. Counting rows is only meaningful from a known-empty start.
+  for (const chat of await listConversations()) await deleteConversation(chat.id);
+});
 
 const mount = async (plugins: readonly IdentifiedPlugin[], at = "/") => {
   await act(async () => {
@@ -123,11 +130,15 @@ describe("a plugin page", () => {
     // as a row would be a row with no title, so looking for one by name proves
     // nothing — only the count does.
     await mount([]);
+    // Wait for the conversation list to land before counting: it arrives from
+    // IndexedDB a tick after mount, and a count taken either side of that tick
+    // is a different number.
+    await waitFor(() => expect(screen.getByText("No chats yet")).toBeDefined());
     const bare = screen.getByLabelText("Chats").querySelectorAll("[data-row]").length;
 
     cleanup();
     await mount([quiet]);
-    await waitFor(() => expect(screen.getByLabelText("Chats")).toBeDefined());
+    await waitFor(() => expect(screen.getByText("No chats yet")).toBeDefined());
     expect(screen.getByLabelText("Chats").querySelectorAll("[data-row]").length).toBe(bare);
 
     // Still addressable — a command or `ctx.navigate` is how it is reached.

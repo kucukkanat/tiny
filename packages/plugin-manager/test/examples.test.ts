@@ -28,6 +28,16 @@ describe("examples run", () => {
     expect(stdout).toContain("disabled: plugins");
   });
 
+  test("install-typescript.ts compiles TypeScript and JSX at install time", async () => {
+    const { stdout, exitCode } = await run("install-typescript.ts");
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("installed Hello");
+    expect(stdout).toContain("commands: plugins, hello");
+    // The manager contributes one overlay of its own; the plugin's is the second.
+    expect(stdout).toContain("overlays: 2");
+    expect(stdout).toContain('rejected: Cannot import "lodash"');
+  });
+
   test("install-from-url.ts pins the fetched source and refuses a tampered copy", async () => {
     const { stdout, exitCode } = await run("install-from-url.ts");
     expect(exitCode).toBe(0);

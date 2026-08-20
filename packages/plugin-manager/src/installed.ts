@@ -1,5 +1,6 @@
 import { compile } from "./compile.ts";
 import { PluginManagerError } from "./errors.ts";
+import { type HostModules, hostModules } from "./runtime.ts";
 
 /**
  * Where an installed plugin lives, and why it lives in two places.
@@ -47,6 +48,11 @@ export type InstalledOptions = {
   readonly manifest?: ManifestStorage | undefined;
   /** Stamped onto new entries; injectable so examples and tests stay stable. */
   readonly now?: (() => string) | undefined;
+  /**
+   * Modules an installed plugin may `import` by name, *in addition* to the
+   * defaults every host offers. See `runtime.ts`.
+   */
+  readonly modules?: HostModules | undefined;
 };
 
 const MANIFEST_KEY = "tiny:plugins";
@@ -117,6 +123,7 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
   const root = options.root ?? originPrivateRoot;
   const storage = options.manifest ?? browserStorage();
   const now = options.now ?? (() => new Date().toISOString());
+  const modules = hostModules(options.modules);
 
   const directory = async (create = false) =>
     (await root()).getDirectoryHandle(DIRECTORY, { create });
@@ -161,9 +168,9 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
   };
 
   const pin = async (input: InstallInput, id: string, enabled: boolean, addedAt: string) => {
-    // Compiling first means a syntax error or a module without a plugin export
-    // is rejected before anything is written.
-    await compile(input.source);
+    // Compiling first means a syntax error, an unresolvable import or a module
+    // without a plugin export is rejected before anything is written.
+    await compile(input.source, modules);
     await writeSource(id, input.source);
     return {
       id,

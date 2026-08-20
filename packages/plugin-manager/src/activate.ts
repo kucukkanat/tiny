@@ -1,6 +1,7 @@
 import type { PluginAPI } from "@tiny/plugin";
 import { compile } from "./compile.ts";
 import type { Installed, InstalledPlugin } from "./installed.ts";
+import { defaultModules, type HostModules } from "./runtime.ts";
 
 export type ActivationResult = {
   readonly plugin: InstalledPlugin;
@@ -17,7 +18,9 @@ export type ActivationResult = {
  * `loadPlugins` assigned to the manager. So every installed plugin writes to
  * `ctx.storage` under `tiny-plugin:pluginManager:` and its errors are labelled
  * with the manager's name. Two installed plugins that both store a key called
- * `"state"` overwrite each other. Giving each its own id needs `loadPlugins` to
+ * `"state"` overwrite each other, and — for the same reason — two that both
+ * register a panel called `"notes"` collapse into one, since a panel's id is
+ * namespaced by the plugin's. Giving each its own id needs `loadPlugins` to
  * hand out a scoped `pi`, which it cannot do yet.
  *
  * This is called from inside the manager's own factory, which `loadPlugins`
@@ -30,12 +33,13 @@ export type ActivationResult = {
 export const activate = async (
   store: Installed,
   pi: PluginAPI,
+  modules: HostModules = defaultModules,
 ): Promise<readonly ActivationResult[]> => {
   const results: ActivationResult[] = [];
   for (const installed of store.list()) {
     if (!installed.enabled) continue;
     try {
-      const plugin = await compile(await store.verifiedSource(installed));
+      const plugin = await compile(await store.verifiedSource(installed), modules);
       await plugin(pi);
       results.push({ plugin: installed });
     } catch (error) {

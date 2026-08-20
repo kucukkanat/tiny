@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { activate } from "./activate.ts";
 import { type InstalledOptions, openInstalled } from "./installed.ts";
 import { ManagerDialog } from "./ManagerDialog.tsx";
+import { hostModules } from "./runtime.ts";
 
 export type PluginManagerOptions = InstalledOptions;
 
@@ -22,6 +23,9 @@ export type PluginManagerOptions = InstalledOptions;
  */
 export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlugin => {
   const store = openInstalled(options);
+  // Resolved once, so the set a plugin is validated against at install time is
+  // exactly the set it is compiled against on every later load.
+  const modules = hostModules(options.modules);
 
   // Open/closed lives in the factory's closure, the same arrangement the
   // settings plugin uses: the command handler, the sidebar button and the
@@ -75,6 +79,6 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
     pi.contribute("app.overlays", ManagerOverlay);
     pi.contribute("sidebar.footer", ManagerButton);
 
-    await activate(store, pi);
+    await activate(store, pi, modules);
   });
 };

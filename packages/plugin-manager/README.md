@@ -29,6 +29,32 @@ Applying a change — adding, enabling, disabling, removing — calls
 what makes a removed plugin actually stop running: registrations have no undo of
 their own, so unloading is rebuilding.
 
+## TypeScript, JSX, and what a plugin may import
+
+An installed plugin can be written in TypeScript and JSX. Both are compiled in
+the browser, at install time, by [sucrase](https://github.com/alangpierce/sucrase)
+— 47 KB gzipped, in its own chunk, fetched on the first compile rather than on
+every visit. Types are *stripped*,
+never checked: there is no typechecker in a browser and no `node_modules` to
+check against, so an author's editor is the only thing that will catch a bad
+type. Plain JavaScript passes through byte-for-byte unchanged.
+
+Compiling is only half of it. A plugin is imported through a blob URL, which has
+no package resolution behind it and no import map, so `import { useState } from
+"react"` has nothing to resolve against. Every bare specifier is rewritten to a
+generated module that re-exports the **host's own** instance:
+
+```ts
+pluginManager({ modules: { "@tiny/ui": tinyUi } });
+```
+
+`react`, `react/jsx-runtime` and `@tiny/plugin` are always available; `modules`
+adds to them. Handing back the app's own React is the whole reason hooks work —
+a second copy would carry its own dispatcher, and every hook a plugin called
+would throw. Anything not on the list is refused at install time with the
+allowed names in the message, and so is a relative import, which a single-file
+blob module could never resolve.
+
 ## Where things are stored, and why in two places
 
 | | Where | Reachable by |
@@ -57,8 +83,10 @@ executes; `Update` re-fetches and re-pins on demand. `http(s)` only.
 
 **By paste.** The same review step, with no URL to update from.
 
-Either way the module must `export default` a function — a syntax error or a
-module without that export is rejected before anything is stored.
+Either way the module must `export default` a function. The source is compiled
+during the review step, so a syntax error, an import the host does not offer or a
+module without that export is rejected before anything is stored — and what gets
+pinned is the source the user read, not a build of it.
 
 ## API
 
@@ -141,6 +169,69 @@ commands: plugins, words
 disabled: plugins
 ```
 
+### A plugin written in TypeScript and JSX
+
+`examples/install-typescript.ts`:
+
+```ts path=packages/plugin-manager/examples/install-typescript.ts
+import { loadPlugins } from "@tiny/plugin";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { openInstalled, pluginManager } from "@tiny/plugin-manager";
+import { memoryManifest } from "@tiny/plugin-manager/testing";
+
+// A plugin installed at runtime may be written in TypeScript and JSX. It is
+// compiled in the browser at install time, so what the user approves is the
+// source they can read rather than a bundle they cannot.
+const disk = memoryRoot();
+const options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
+const store = openInstalled(options);
+
+// Types are stripped, never checked — a plugin's types are worth whatever its
+// author's editor made of them. `import type` disappears entirely, which is why
+// a plugin can be fully typed against packages the host never offers.
+const SOURCE = `
+import type { Plugin, PluginAPI } from "@tiny/plugin";
+import { useState } from "react";
+
+type Props = { readonly greeting: string };
+
+const Hello = ({ greeting }: Props) => {
+  const [count, setCount] = useState(0);
+  return <button type="button" onClick={() => setCount(count + 1)}>{greeting} {count}</button>;
+};
+
+const plugin: Plugin = (pi: PluginAPI) => {
+  pi.contribute("app.overlays", () => <Hello greeting="hi" />);
+  pi.registerCommand("hello", { description: "Say hi", handler: () => {} });
+};
+
+export default plugin;
+`;
+
+const installed = await store.install({ name: "Hello", source: SOURCE });
+console.log(`installed ${installed.name} — sha256 ${installed.sha256.slice(0, 12)}`);
+
+// `useState` above is the *app's* useState. Bare specifiers are rewritten to
+// the host's own instances, because two copies of React would each carry their
+// own dispatcher and every hook in a plugin would throw.
+const registry = await loadPlugins([pluginManager(options)]);
+console.log(`commands: ${registry.commands.map((command) => command.invocationName).join(", ")}`);
+console.log(`overlays: ${registry.contributions.filter((c) => c.slot === "app.overlays").length}`);
+
+// Only what the host offers can be imported by name, and the error says so
+// rather than failing at load time with a browser resolution message.
+await store
+  .install({ name: "Needs lodash", source: 'import _ from "lodash";\nexport default () => _;' })
+  .catch((error: unknown) => console.log(`rejected: ${(error as Error).message}`));
+```
+
+```
+installed Hello — sha256 5bf4302a1cf9
+commands: plugins, hello
+overlays: 2
+rejected: Cannot import "lodash": a plugin may import "react", "react/jsx-runtime", "@tiny/plugin", or an absolute URL.
+```
+
 ### Installing from a URL, and what tampering costs
 
 `examples/install-from-url.ts`:
@@ -197,20 +288,26 @@ commands: plugins
 
 ## Writing a plugin someone can install
 
-A single module with a default export. It receives the same `pi` documented in
-[`@tiny/plugin`](../plugin/README.md):
+A single module with a default export, TypeScript and JSX included. It receives
+the same `pi` documented in [`@tiny/plugin`](../plugin/README.md):
 
-```js
-export default (pi) => {
+```tsx
+import type { Plugin } from "@tiny/plugin";
+
+const Shout: Plugin = (pi) => {
   pi.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });
 };
+
+export default Shout;
 ```
 
 Serve that file from anywhere with permissive CORS — a gist's raw URL, a static
-host — and it installs by URL.
+host — and it installs by URL. Publish the source rather than a bundle: the
+review step shows the user what it is about to store, and nobody can review a
+bundle.
 
 ## Tests
 

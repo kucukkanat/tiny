@@ -228,7 +228,7 @@ export function ManagerDialog({
                 <input
                   className={`${field} mt-2`}
                   data-testid="add-url"
-                  placeholder="https://example.com/my-plugin.js"
+                  placeholder="https://example.com/my-plugin.tsx"
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                 />

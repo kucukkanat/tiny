@@ -48,7 +48,9 @@ plugins exist.
 > **They share the manager's identity.** `pi` carries the id `loadPlugins` gave
 > `pluginManager`, so every installed plugin's `ctx.storage` writes under
 > `tiny-plugin:pluginManager:` and its errors are labelled with the manager's
-> name. Two installed plugins that both store `"state"` overwrite each other.
+> name. Two installed plugins that both store `"state"` overwrite each other,
+> and — same cause — two that both register a [panel](panels.md) called `"notes"`
+> collapse into one, because a panel's id is namespaced by the plugin's.
 > Scoping them needs `loadPlugins` to hand out a per-plugin `pi`, which it does
 > not do yet.
 
@@ -205,28 +207,48 @@ yourself.
 
 ## Writing an installable plugin
 
-A single module with a default export. It receives the same `pi` documented
-throughout this site:
+A single module with a default export, in TypeScript and JSX if you want them.
+It receives the same `pi` documented throughout this site:
 
-```js
-export default (pi) => {
+```tsx
+import type { Plugin } from "@tiny/plugin";
+import { useState } from "react";
+
+const Shout: Plugin = (pi) => {
   pi.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });
 };
+
+export default Shout;
 ```
 
 Constraints worth knowing before you write one:
 
 - **Default export, and it must be a function.** A named export is not found.
-- **Plain JavaScript that a browser can `import`.** There is no build step
-  between your file and the page — no TypeScript, no JSX. If you want either,
-  compile before you publish.
-- **No bare specifiers.** `import { useState } from "react"` will not resolve;
-  there is no import map. Import from a URL, or do without.
+- **TypeScript and JSX are compiled in the browser**, at install time, by
+  [sucrase](https://github.com/alangpierce/sucrase) — 47 KB gzipped, in its own
+  chunk, fetched on the first compile. A visitor with nothing installed never
+  downloads it. Plain JavaScript passes through byte-for-byte unchanged.
+- **Types are stripped, not checked.** There is no typechecker in the browser and
+  no `node_modules` to check against. Your editor is the only thing that will
+  tell you a type is wrong; the app will happily run code that does not typecheck.
+- **Only the host's modules can be imported by name.** `react`,
+  `react/jsx-runtime` and `@tiny/plugin` everywhere; this app adds `@tiny/ui`.
+  Each resolves to the app's *own* instance — that is what makes hooks work,
+  since a second copy of React would carry its own dispatcher and throw. Anything
+  else is refused at install time, with the list of what is allowed. Import from
+  an absolute URL if you need more.
+- **One file.** A blob URL has no directory, so a relative import has nothing to
+  resolve against. That is refused at install time too.
 - **The factory may be `async`**, and `loadPlugins` will await it. Keep it quick:
   every other plugin behind it in the list is waiting.
+
+Since the compiler runs at install, a syntax error, an unknown import or a
+module without a plugin export is caught while the user is still looking at the
+dialog — nothing is written to storage. It also means what gets pinned and
+reviewed is the source you wrote, not a bundle nobody can read.
 
 See [Publishing a plugin](publishing.md) for naming, CORS and distribution.
 

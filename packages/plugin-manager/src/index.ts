@@ -1,5 +1,5 @@
 export { type ActivationResult, activate } from "./activate.ts";
-export { compile } from "./compile.ts";
+export { compile, transpile } from "./compile.ts";
 export { PluginManagerError } from "./errors.ts";
 export {
   fetchSource,
@@ -15,3 +15,4 @@ export {
 } from "./installed.ts";
 export { ManagerDialog } from "./ManagerDialog.tsx";
 export { type PluginManagerOptions, pluginManager } from "./plugin.tsx";
+export { defaultModules, type HostModules, hostModules, hostModuleUrl } from "./runtime.ts";

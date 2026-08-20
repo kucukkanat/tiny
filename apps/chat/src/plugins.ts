@@ -4,6 +4,7 @@ import { humanInTheLoop } from "@tiny/plugin-hitl";
 import { pluginManager } from "@tiny/plugin-manager";
 import { settings } from "@tiny/plugin-settings";
 import { streamTrace, usageLogger } from "@tiny/plugin-trace";
+import * as tinyUi from "@tiny/ui";
 
 /**
  * The plugins this app runs, in order.
@@ -41,5 +42,10 @@ export const plugins: readonly IdentifiedPlugin[] = [
   // Lets the user install further plugins at runtime, from a URL or pasted
   // source. It must come after the plugins that ship with the app so those own
   // their command names.
-  pluginManager(),
+  //
+  // `modules` is what an installed plugin may `import` by name. `react` and
+  // `@tiny/plugin` come as standard; this app adds its design system, so a
+  // plugin's UI is built from the same components — and the same tokens — as
+  // the rest of the app rather than hand-rolled CSS that drifts from the theme.
+  pluginManager({ modules: { "@tiny/ui": tinyUi } }),
 ];

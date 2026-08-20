@@ -59,31 +59,47 @@ snippet cannot rot into something that no longer runs.
 
 ## Shape of an installable file
 
-For the Plugins dialog, publish **one JavaScript file with a default export**:
+For the Plugins dialog, publish **one file with a default export**. TypeScript
+and JSX are compiled in the user's browser at install time, so publish the source
+rather than a build of it:
 
-```js
-export default (pi) => {
+```tsx
+import type { Plugin } from "@tiny/plugin";
+
+const Shout: Plugin = (pi) => {
   pi.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });
 };
+
+export default Shout;
 ```
 
-There is no build step between that file and the page, so:
+Publishing source rather than output is the point: the install dialog shows the
+user exactly what it is about to store, and a bundle is not something anyone can
+review. Constraints:
 
-- **Plain JavaScript.** No TypeScript, no JSX. If you write either, compile first
-  and publish the output.
-- **No bare specifiers.** `import … from "react"` does not resolve — there is no
-  import map. Import from an absolute URL, or do without.
+- **Types are stripped, not checked.** The browser has no typechecker and no
+  `node_modules`. Your CI is the only thing that will catch a type error, so run
+  `tsc` before you publish — the app will not.
+- **Only the host's modules can be imported by name.** `react`,
+  `react/jsx-runtime` and `@tiny/plugin` everywhere, plus whatever the app adds
+  (this one adds `@tiny/ui`). Each resolves to the app's own instance, which is
+  what makes hooks work. Anything else is refused at install, with the allowed
+  list in the message. Import from an absolute URL if you need more.
 - **One file.** Relative imports have nothing to resolve against; a blob URL has
   no directory. Bundle to a single module.
 
-Building an installable file from a TypeScript source is one command:
+Pre-building still works, and is worth it if your plugin has dependencies a host
+will not offer — bundle them in and publish the output:
 
 ```bash
-bun build src/index.ts --outfile dist/plugin.js --format esm --target browser
+bun build src/index.tsx --outfile dist/plugin.js --format esm --target browser --external react
 ```
+
+Keep `react` external: bundling it in gives your plugin a second copy, whose
+hooks will throw the moment the app renders your component.
 
 ## Serving it
 

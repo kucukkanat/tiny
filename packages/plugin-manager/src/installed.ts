@@ -69,13 +69,13 @@ export const fetchSource = async (url: string): Promise<string> => {
     throw new PluginManagerError(`Only http(s) URLs can be fetched, not ${parsed.protocol}`);
 
   const response = await fetch(parsed).catch((error: unknown) => {
-    throw new PluginManagerError(`Could not reach ${url}: ${describe(error)}`);
+    throw new PluginManagerError(`Could not reach ${url}: ${messageOf(error)}`);
   });
   if (!response.ok) throw new PluginManagerError(`${url} responded ${response.status}`);
   return response.text();
 };
 
-const describe = (error: unknown): string =>
+const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 const notFound = (error: unknown): boolean =>

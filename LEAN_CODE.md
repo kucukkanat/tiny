@@ -175,8 +175,10 @@ uniform, so a reader can tell "not supported here" from "not implemented yet".
 ## 8. Tests
 
 - **One command.** `bun test` at the root, and the same command inside any
-  package. Two packages here had no test config at all, so the `bun test` their
-  own `package.json` documented failed 38 tests for no reason.
+  package — every workspace carries a `bunfig.toml` pointing at the one setup.
+  Two packages had none and failed 38 tests for no reason; three more had none
+  and passed only because they happen not to need a DOM, which is luck, not
+  configuration.
 - **One shared setup** — the environment lives in `test/setup.ts`, not in a copy
   per package.
 - **Name a test file after what it tests.** `react.test.tsx` and `host.test.ts`
@@ -192,10 +194,19 @@ uniform, so a reader can tell "not supported here" from "not implemented yet".
 
 Comment the **why**, never the what. The code says what.
 
-Good comments here explain a decision a reader would otherwise undo: why a
-`ref` and not state, why `deny` outranks a remembered `allow`, why a yield has
-to come before an await. If a comment describes a hazard, prefer removing the
-hazard — a documented footgun is still a footgun.
+Good comments here explain a decision a reader would otherwise undo: why the
+composer's text is mirrored into a ref, why `deny` outranks a remembered
+`allow`, why a plugin's id cannot be its function's name.
+
+**If a comment describes a hazard, remove the hazard instead.** The docs used to
+explain that plugin ids came from array position and that you should name your
+function to avoid it — a documented footgun is still a footgun, and that one
+did not even work in a build. Prefer a shape that cannot be held wrong.
+
+**And a comment can be wrong.** Three of the worst defects found in this repo
+were comments asserting the opposite of the code, stated confidently enough that
+readers believed them over what they could see. Treat a comment as a claim to
+check, not a fact.
 
 ---
 

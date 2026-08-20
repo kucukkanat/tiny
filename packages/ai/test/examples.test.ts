@@ -4,6 +4,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 // against a live OpenAI-compatible server and then assert the README embeds it
 // verbatim, so a snippet cannot rot into something that no longer executes.
 
+// Every example here is run, so the snippet a reader copies is one that works.
+// That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
+// over every `path=` fence in the repo — READMEs included.
 const sse = (payloads: unknown[]): string =>
   payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
 
@@ -41,8 +44,6 @@ const server = Bun.serve({
 afterAll(() => server.stop(true));
 
 const examples = new URL("../examples/", import.meta.url).pathname;
-const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
-
 /** Run one example exactly as a reader would, pointed at the local server. */
 const run = async (name: string): Promise<string> => {
   const process_ = Bun.spawn(["bun", "run", `${examples}${name}`], {
@@ -64,17 +65,6 @@ const run = async (name: string): Promise<string> => {
   expect({ name, exitCode, stderr }).toEqual({ name, exitCode: 0, stderr: "" });
   return stdout;
 };
-
-const EXAMPLES = [
-  "stream-chat.ts",
-  "system-prompt.ts",
-  "cancel-a-stream.ts",
-  "list-models.ts",
-  "handle-errors.ts",
-  "extension-terse.ts",
-  "extension-hooks.ts",
-  "drop-to-pi.ts",
-] as const;
 
 describe("examples run", () => {
   test("stream-chat prints reasoning and answer deltas", async () => {
@@ -118,15 +108,4 @@ describe("examples run", () => {
   test("drop-to-pi reaches usage the facade does not surface", async () => {
     expect(await run("drop-to-pi.ts")).toContain("tokens");
   });
-});
-
-describe("README", () => {
-  for (const name of EXAMPLES) {
-    test(`embeds ${name} verbatim`, async () => {
-      const source = await Bun.file(`${examples}${name}`).text();
-      expect(readme).toContain(source.trim());
-      // The file is named next to its snippet, so a reader can run it.
-      expect(readme).toContain(`examples/${name}`);
-    });
-  }
 });

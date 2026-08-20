@@ -29,7 +29,7 @@ to execute rather than merely to look right.
 
 Stream a chat completion — `examples/stream-chat.ts`:
 
-```ts
+```ts path=packages/ai/examples/stream-chat.ts
 import { streamChat } from "@tiny/ai";
 
 const endpoint = {
@@ -55,7 +55,7 @@ the answer.
 Messages with `role: "system"` are hoisted into the request's system prompt, so
 ordinary chat history works unchanged — `examples/system-prompt.ts`:
 
-```ts
+```ts path=packages/ai/examples/system-prompt.ts
 import { streamChat } from "@tiny/ai";
 
 const endpoint = {
@@ -81,7 +81,7 @@ console.log(reply);
 
 Cancel a stream with a standard `AbortSignal` — `examples/cancel-a-stream.ts`:
 
-```ts
+```ts path=packages/ai/examples/cancel-a-stream.ts
 import { streamChat } from "@tiny/ai";
 
 const endpoint = {
@@ -112,7 +112,7 @@ try {
 
 List models — `examples/list-models.ts`:
 
-```ts
+```ts path=packages/ai/examples/list-models.ts
 import { listModels } from "@tiny/ai";
 
 const endpoint = {
@@ -133,7 +133,7 @@ response this package reads itself (model listing); for streaming failures pi-ai
 already folded the status into the message, so `status` is `undefined` there. Use
 `describeError` to render either case — `examples/handle-errors.ts`:
 
-```ts
+```ts path=packages/ai/examples/handle-errors.ts
 import { ChatApiError, describeError, listModels } from "@tiny/ai";
 
 const baseUrl = process.env.AI_BASE_URL ?? "https://api.openai.com/v1";
@@ -165,7 +165,7 @@ Extensions follow the shape of pi's own extension SDK
 named lifecycle events, whose handlers return a patch object or nothing. If you have
 written a pi extension, you already know this API. `examples/extension-terse.ts`:
 
-```ts
+```ts path=packages/ai/examples/extension-terse.ts
 import type { ExtensionAPI } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 
@@ -238,7 +238,7 @@ provider streams, not just what this facade turns into deltas.
 
 All of it together, in `examples/extension-hooks.ts`:
 
-```ts
+```ts path=packages/ai/examples/extension-hooks.ts
 import type { ExtensionAPI } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 
@@ -361,7 +361,7 @@ When a hook is not enough — you want the raw stream rather than a view of it �
 anything this facade does not expose — tool calls, token usage, cost — is one call
 away through pi's own API module. `examples/drop-to-pi.ts`:
 
-```ts
+```ts path=packages/ai/examples/drop-to-pi.ts
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { endpointModel } from "@tiny/ai";
 

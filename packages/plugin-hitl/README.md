@@ -45,7 +45,7 @@ Asking about everything gets old fast. Name the tools you trust:
 
 `examples/readsAreFree.ts`
 
-```ts
+```ts path=packages/plugin-hitl/examples/readsAreFree.ts
 import type { Plugin } from "@tiny/plugin";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 
@@ -67,7 +67,7 @@ was asked to do*, use `decide` — the only rule handed the arguments:
 
 `examples/decideOnArguments.ts`
 
-```ts
+```ts path=packages/plugin-hitl/examples/decideOnArguments.ts
 import type { Plugin } from "@tiny/plugin";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 
@@ -94,7 +94,7 @@ And the default, for completeness:
 
 `examples/askForEverything.ts`
 
-```ts
+```ts path=packages/plugin-hitl/examples/askForEverything.ts
 import type { Plugin } from "@tiny/plugin";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 
@@ -176,7 +176,7 @@ the import line.
 
 `examples/piPermissionGate.ts`
 
-```ts
+```ts path=packages/plugin-hitl/examples/piPermissionGate.ts
 /**
  * Permission Gate Extension
  *
@@ -230,7 +230,7 @@ pi's other gate needs no dialog at all:
 
 `examples/piProtectedPaths.ts`
 
-```ts
+```ts path=packages/plugin-hitl/examples/piProtectedPaths.ts
 /**
  * Protected Paths Extension
  *

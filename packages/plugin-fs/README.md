@@ -13,7 +13,7 @@ without confirmation: the worst they can reach is data this app wrote.
 
 Add it to the registry — `examples/register.ts`:
 
-```ts
+```ts path=packages/plugin-fs/examples/register.ts
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
 
@@ -52,7 +52,7 @@ correct itself instead of the turn dying.
 
 All five in one run — `examples/tools-in-action.ts`:
 
-```ts
+```ts path=packages/plugin-fs/examples/tools-in-action.ts
 import { endpointModel, toolText } from "@tiny/ai";
 import { fileSystemTools } from "@tiny/plugin-fs";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
@@ -95,7 +95,7 @@ console.log(await call("fs_delete", { path: "/notes" }));
 
 `root` is a resolver, so the sandbox can be narrowed — `examples/scoped-root.ts`:
 
-```ts
+```ts path=packages/plugin-fs/examples/scoped-root.ts
 import { endpointModel } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";

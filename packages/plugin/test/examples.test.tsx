@@ -11,9 +11,9 @@ import type { Plugin } from "../src/pi.ts";
 import { emptyRegistry, loadPlugins } from "../src/registry.ts";
 import { Slot, Widgets } from "../src/Slot.tsx";
 
-// Every README snippet is a real plugin under examples/. Running each one proves
-// the snippet compiles and works, and the README is then asserted to embed the
-// file verbatim so a snippet cannot rot into something that does not.
+// Every example under examples/ is a real plugin, run here so the snippet a
+// reader copies is one that works. That it *is* the snippet is asserted by
+// apps/docs/test/examples.test.ts, over every `path=` fence in the repo.
 
 afterEach(() => {
   cleanup();
@@ -43,18 +43,6 @@ const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => 
     expect(host?.registry).not.toBe(emptyRegistry);
   });
 };
-
-const EXAMPLES = [
-  "greet.ts",
-  "copyButton.tsx",
-  "clearChat.ts",
-  "tokenMeter.ts",
-  "savedPrompts.tsx",
-  "groqProvider.ts",
-  "anthropicProvider.ts",
-] as const;
-
-const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
 
 describe("examples run", () => {
   test("greet registers the command the quickstart promises", async () => {
@@ -142,15 +130,4 @@ describe("examples run", () => {
     await act(async () => screen.getByTestId("dialog-option-Summarise this.").click());
     await waitFor(() => expect(host?.editorText).toBe("Summarise this."));
   });
-});
-
-describe("README", () => {
-  for (const name of EXAMPLES) {
-    test(`embeds ${name} verbatim`, async () => {
-      const source = await Bun.file(new URL(`../examples/${name}`, import.meta.url)).text();
-      expect(readme).toContain(source.trim());
-      // The file is named next to its snippet, so a reader can find it.
-      expect(readme).toContain(`examples/${name}`);
-    });
-  }
 });

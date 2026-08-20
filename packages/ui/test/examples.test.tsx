@@ -12,20 +12,11 @@ import { StreamTextExample } from "../examples/StreamTextExample.tsx";
 // proves the snippet compiles and runs, and the README is then asserted to
 // embed the file verbatim so a snippet cannot rot into something that does not.
 
+// Every example here is run, so the snippet a reader copies is one that works.
+// That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
+// over every `path=` fence in the repo — READMEs included.
 // bun:test hooks aren't globals, so testing-library can't auto-register this.
 afterEach(cleanup);
-
-const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
-
-const EXAMPLES = [
-  "StreamTextExample.tsx",
-  "ReasoningTraceExample.tsx",
-  "LoaderExample.tsx",
-  "PromptBarExample.tsx",
-  "SidebarExample.tsx",
-  "GlideMenuExample.tsx",
-  "ApprovalCardExample.tsx",
-] as const;
 
 describe("examples render", () => {
   test("ApprovalCardExample sends only once a choice is made", async () => {
@@ -80,15 +71,4 @@ describe("examples render", () => {
     const { container } = render(<GlideMenuExample />);
     expect(container.querySelectorAll("[data-row]").length).toBe(3);
   });
-});
-
-describe("README", () => {
-  for (const name of EXAMPLES) {
-    test(`embeds ${name} verbatim`, async () => {
-      const source = await Bun.file(new URL(`../examples/${name}`, import.meta.url)).text();
-      expect(readme).toContain(source.trim());
-      // The file is named next to its snippet, so a reader can find it.
-      expect(readme).toContain(`examples/${name}`);
-    });
-  }
 });

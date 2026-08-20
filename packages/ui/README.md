@@ -29,7 +29,7 @@ each word still resolves out of blur as it arrives and the caret blinks until
 `done`. Raw HTML in the text is left as text, since model output is untrusted.
 `examples/StreamTextExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/StreamTextExample.tsx
 import { StreamText } from "@tiny/ui";
 import { useEffect, useState } from "react";
 
@@ -69,7 +69,7 @@ export function StreamTextExample() {
 Expandable reasoning trace — shimmers while `working`, then settles into
 "Thought for Ns" and stays expandable. `examples/ReasoningTraceExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/ReasoningTraceExample.tsx
 import { ReasoningTrace } from "@tiny/ui";
 import { useEffect, useState } from "react";
 
@@ -105,7 +105,7 @@ there is something to send. Choosing arms the arrow rather than sending on a
 timer, unlike the original: this is a permission gate, and a mis-click should not
 be able to spend money. `examples/ApprovalCardExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/ApprovalCardExample.tsx
 import { ApprovalCard } from "@tiny/ui";
 import { useState } from "react";
 
@@ -144,7 +144,7 @@ export function ApprovalCardExample() {
 
 Pixel-grid loader with its own elapsed timer. `examples/LoaderExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/LoaderExample.tsx
 import { Loader } from "@tiny/ui";
 import { useEffect, useState } from "react";
 
@@ -166,7 +166,7 @@ export function LoaderExample() {
 Composer with model picker; Enter sends, Shift+Enter breaks the line, and the
 send button becomes stop while `busy`. `examples/PromptBarExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/PromptBarExample.tsx
 import { PromptBar } from "@tiny/ui";
 import { useRef, useState } from "react";
 
@@ -220,7 +220,7 @@ export function PromptBarExample() {
 Collapsible chat rail — new chat, history, settings.
 `examples/SidebarExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/SidebarExample.tsx
 import { Sidebar, type SidebarChat } from "@tiny/ui";
 import { useState } from "react";
 
@@ -260,7 +260,7 @@ export function SidebarExample() {
 The gliding hover highlight, standalone — wrap rows marked `data-row`.
 `examples/GlideMenuExample.tsx`:
 
-```tsx
+```tsx path=packages/ui/examples/GlideMenuExample.tsx
 import { GlideMenu } from "@tiny/ui";
 
 const ACTIONS = ["Rename", "Duplicate", "Delete"] as const;

@@ -12,16 +12,9 @@ import { cardIsOpen, createServer, forgetHost, mount, reply } from "./harness.ts
 // the snippet works, and the README is then asserted to embed the file verbatim
 // so a snippet cannot rot into something that does not.
 
-const EXAMPLES = [
-  "askForEverything.ts",
-  "readsAreFree.ts",
-  "decideOnArguments.ts",
-  "piPermissionGate.ts",
-  "piProtectedPaths.ts",
-] as const;
-
-const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
-
+// Every example here is run, so the snippet a reader copies is one that works.
+// That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
+// over every `path=` fence in the repo — READMEs included.
 const ran: string[] = [];
 
 /** One stand-in per tool the examples name, recording that it actually ran. */
@@ -96,15 +89,4 @@ describe("examples run", () => {
       content: "That path is off limits — pick somewhere under /scratch.",
     });
   });
-});
-
-describe("README", () => {
-  for (const name of EXAMPLES) {
-    test(`embeds ${name} verbatim`, async () => {
-      const source = await Bun.file(new URL(`../examples/${name}`, import.meta.url)).text();
-      expect(readme).toContain(source.trim());
-      // The file is named next to its snippet, so a reader can open it.
-      expect(readme).toContain(`examples/${name}`);
-    });
-  }
 });

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Glob } from "bun";
 import { pages } from "../src/site.ts";
 
 const contentDir = join(import.meta.dir, "..", "content");
@@ -8,18 +9,42 @@ const repoRoot = join(import.meta.dir, "..", "..", "..");
 
 type Embedded = { readonly page: string; readonly path: string; readonly code: string };
 
+/** Every markdown file in the repo that may quote source: the site, and every README. */
+const sources = async (): Promise<readonly { name: string; markdown: string }[]> => {
+  const site = await Promise.all(
+    pages.map(async (page) => ({
+      name: page.file,
+      markdown: await readFile(join(contentDir, page.file), "utf8"),
+    })),
+  );
+  const readmes = await Promise.all(
+    [...new Glob("**/README.md").scanSync({ cwd: repoRoot })]
+      .filter((file) => !file.includes("node_modules"))
+      .map(async (file) => ({
+        name: file,
+        markdown: await readFile(join(repoRoot, file), "utf8"),
+      })),
+  );
+  return [...site, ...readmes];
+};
+
 /**
  * Fenced blocks annotated ```lang path=<repo-relative file> claim to be that
- * file. Collecting them here is what lets the assertion below hold the docs to
+ * file. Collecting them here is what lets the assertion below hold the prose to
  * it, so a snippet cannot rot into something that no longer compiles or runs.
+ *
+ * READMEs are included deliberately: they drifted from the code precisely
+ * because only the site was checked.
  */
 const embedded = async (): Promise<readonly Embedded[]> => {
   const found: Embedded[] = [];
-  for (const page of pages) {
-    const markdown = await readFile(join(contentDir, page.file), "utf8");
-    const fences = markdown.matchAll(/^```[a-z]+ path=(\S+)\n([\s\S]*?)^```$/gm);
+  for (const { name, markdown } of await sources()) {
+    // Four-backtick blocks quote the annotation itself while explaining it, so
+    // what is inside them is an illustration rather than a claim.
+    const prose = markdown.replace(/^````[\s\S]*?^````$/gm, "");
+    const fences = prose.matchAll(/^```[a-z]+ path=(\S+)\n([\s\S]*?)^```$/gm);
     for (const [, path, code] of fences)
-      found.push({ page: page.file, path: path ?? "", code: code ?? "" });
+      found.push({ page: name, path: path ?? "", code: code ?? "" });
   }
   return found;
 };

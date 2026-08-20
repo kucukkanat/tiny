@@ -4,10 +4,9 @@ import { describe, expect, test } from "bun:test";
 // subprocess and its output checked, and the README is then asserted to embed
 // the file verbatim — so a snippet cannot rot into something that no longer runs.
 
-const EXAMPLES = ["register.ts", "tools-in-action.ts", "scoped-root.ts"] as const;
-
-const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
-
+// Every example here is run, so the snippet a reader copies is one that works.
+// That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
+// over every `path=` fence in the repo — READMEs included.
 const run = async (name: string) => {
   const path = new URL(`../examples/${name}`, import.meta.url).pathname;
   const proc = Bun.spawn(["bun", "run", path], { stdout: "pipe", stderr: "pipe" });
@@ -41,15 +40,4 @@ describe("examples run", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toContain("/workspace/notes/todo.md → buy milk");
   });
-});
-
-describe("README", () => {
-  for (const name of EXAMPLES) {
-    test(`embeds ${name} verbatim`, async () => {
-      const source = await Bun.file(new URL(`../examples/${name}`, import.meta.url)).text();
-      expect(readme).toContain(source.trim());
-      // The file is named next to its snippet, so a reader can find it.
-      expect(readme).toContain(`examples/${name}`);
-    });
-  }
 });

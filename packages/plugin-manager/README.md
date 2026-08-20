@@ -89,7 +89,7 @@ Each block is a real file under [`examples/`](examples), run by the test suite.
 
 `examples/install-from-source.ts`:
 
-```ts
+```ts path=packages/plugin-manager/examples/install-from-source.ts
 import { loadPlugins } from "@tiny/plugin";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { openInstalled, pluginManager } from "@tiny/plugin-manager";
@@ -145,7 +145,7 @@ disabled: plugins
 
 `examples/install-from-url.ts`:
 
-```ts
+```ts path=packages/plugin-manager/examples/install-from-url.ts
 import { loadPlugins } from "@tiny/plugin";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";

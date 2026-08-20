@@ -1,5 +1,4 @@
-import { describe, expect, test } from "bun:test";
-import type { Endpoint } from "@tiny/ai";
+import { afterAll, describe, expect, test } from "bun:test";
 import { endpointModel, toolOutput, toolText } from "@tiny/ai";
 import { createEvents } from "../src/events.ts";
 import type { Plugin } from "../src/pi.ts";
@@ -95,8 +94,12 @@ describe("registerProvider", () => {
 });
 
 describe("provider resolution", () => {
-  const listModels = (endpoint: Endpoint) =>
-    Promise.resolve([`from:${endpoint.baseUrl}`, `key:${endpoint.apiKey}`]);
+  // A real server, so `modelsOf`'s fallback path is the one the app takes.
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => Response.json({ data: [{ id: "served-a" }, { id: "served-b" }] }),
+  });
+  afterAll(() => server.stop(true));
 
   test("resolves an apiKey thunk, so a key need not sit in the registry", async () => {
     const resolved = await endpointOf({
@@ -115,27 +118,26 @@ describe("provider resolution", () => {
   });
 
   test("uses a static model list as given", async () => {
-    const models = await modelsOf(
-      { name: "X", baseUrl: "https://a.example/v1", models: ["one", "two"] },
-      listModels,
-    );
+    const models = await modelsOf({
+      name: "X",
+      baseUrl: "https://a.example/v1",
+      models: ["one", "two"],
+    });
     expect(models).toEqual(["one", "two"]);
   });
 
   test("calls a model lookup when one is supplied", async () => {
-    const models = await modelsOf(
-      { name: "X", baseUrl: "https://a.example/v1", models: () => Promise.resolve(["dynamic"]) },
-      listModels,
-    );
+    const models = await modelsOf({
+      name: "X",
+      baseUrl: "https://a.example/v1",
+      models: () => Promise.resolve(["dynamic"]),
+    });
     expect(models).toEqual(["dynamic"]);
   });
 
   test("falls back to the endpoint's own /models route", async () => {
-    const models = await modelsOf(
-      { name: "X", baseUrl: "https://a.example/v1", apiKey: "k" },
-      listModels,
-    );
-    expect(models).toEqual(["from:https://a.example/v1", "key:k"]);
+    const models = await modelsOf({ name: "X", baseUrl: server.url.origin, apiKey: "k" });
+    expect(models).toEqual(["served-a", "served-b"]);
   });
 });
 

@@ -8,7 +8,7 @@ import {
   readFile,
   segments,
   writeFile,
-} from "./opfs.ts";
+} from "./paths.ts";
 
 /** Resolves the root lazily so a page that never calls a tool never touches OPFS. */
 export type RootResolver = () => Promise<FileSystemDirectoryHandle>;

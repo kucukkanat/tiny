@@ -1,7 +1,7 @@
 import type { Plugin } from "@tiny/plugin";
 import { fileSystemTools, type RootResolver } from "./tools.ts";
 
-export { FsError } from "./opfs.ts";
+export { FsError } from "./paths.ts";
 export type { RootResolver } from "./tools.ts";
 export { fileSystemTools } from "./tools.ts";
 

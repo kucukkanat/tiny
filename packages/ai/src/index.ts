@@ -10,9 +10,6 @@ export type {
 } from "@earendil-works/pi-ai";
 export type { ApiType } from "./apis.ts";
 export { API_TYPES, apiFor, DEFAULT_API, isApiType } from "./apis.ts";
-export { listModels, streamChat } from "./client.ts";
-export type { ModelSpec } from "./endpoint.ts";
-export { endpointModel, fetchModelIds, PROVIDER_ID } from "./endpoint.ts";
 export type {
   BeforeAgentStartEvent,
   BeforeAgentStartEventResult,
@@ -30,6 +27,9 @@ export type {
   ToolCallEventResult,
 } from "./extension.ts";
 export { BLOCKED_MESSAGE, firesEvent } from "./extension.ts";
+export type { ModelSpec } from "./models.ts";
+export { endpointModel, fetchModelIds, PROVIDER_ID } from "./models.ts";
+export { listModels, streamChat } from "./streamChat.ts";
 export type {
   ChatMessage,
   ChatRole,

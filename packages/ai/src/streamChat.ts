@@ -10,7 +10,6 @@ import type {
   Usage,
 } from "@earendil-works/pi-ai";
 import { type ApiType, apiFor } from "./apis.ts";
-import { endpointModel, fetchModelIds, type ModelSpec } from "./endpoint.ts";
 import {
   BLOCKED_MESSAGE,
   type Extension,
@@ -22,6 +21,7 @@ import {
   loadExtensions,
   notify,
 } from "./extension.ts";
+import { endpointModel, fetchModelIds, type ModelSpec } from "./models.ts";
 import {
   ChatApiError,
   type ChatMessage,

@@ -6,8 +6,8 @@ import {
   newConversationId,
   putConversation,
   titleFrom,
-} from "../src/storage/conversations.ts";
-import { loadSettings, saveSettings, settingsComplete } from "../src/storage/settings.ts";
+} from "../src/conversations.ts";
+import { loadSettings, saveSettings, settingsComplete } from "../src/settings.ts";
 
 describe("titleFrom", () => {
   test("uses the first line", () => {

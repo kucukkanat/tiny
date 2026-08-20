@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { copyButton } from "../examples/CopyButtonExample.tsx";
 import { clearChat } from "../examples/clearChat.ts";
-import { savedPrompts } from "../examples/SavedPromptsExample.tsx";
+import { copyButton } from "../examples/copyButton.tsx";
+import { savedPrompts } from "../examples/savedPrompts.tsx";
 import { tokenMeter } from "../examples/tokenMeter.ts";
 import { usePluginHost } from "../src/hooks.ts";
 import { PluginHost } from "../src/PluginHost.tsx";
@@ -44,10 +44,10 @@ const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => 
 };
 
 const EXAMPLES = [
-  "CopyButtonExample.tsx",
+  "copyButton.tsx",
   "clearChat.ts",
   "tokenMeter.ts",
-  "SavedPromptsExample.tsx",
+  "savedPrompts.tsx",
   "groqProvider.ts",
   "anthropicProvider.ts",
 ] as const;

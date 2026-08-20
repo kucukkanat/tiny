@@ -16,22 +16,22 @@ import {
 import { type ModelOption, PromptBar, Sidebar } from "@tiny/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Thread } from "./components/Thread.tsx";
-import { useChat } from "./hooks/useChat.ts";
 import {
   type Conversation,
   deleteConversation,
   getConversation,
   listConversations,
   putConversation,
-} from "./storage/conversations.ts";
+} from "./conversations.ts";
 import {
   loadSettings,
   OWN_ENDPOINT,
   type Settings,
   saveSettings,
   settingsComplete,
-} from "./storage/settings.ts";
+} from "./settings.ts";
+import { Thread } from "./Thread.tsx";
+import { useChat } from "./useChat.ts";
 
 /**
  * A picker entry addresses a model *and* the endpoint it lives on, because the
@@ -115,8 +115,7 @@ export function App() {
     let live = true;
     Promise.all(
       providers.map(
-        async (entry) =>
-          [entry.id, await modelsOf(entry.config, listModels).catch(() => [])] as const,
+        async (entry) => [entry.id, await modelsOf(entry.config).catch(() => [])] as const,
       ),
     ).then((pairs) => {
       if (live) setProviderModels(new Map(pairs));

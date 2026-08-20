@@ -6,7 +6,6 @@ import { hrefFrom, type Page, pages, type SearchEntry } from "./site.ts";
 
 const here = new URL(".", import.meta.url).pathname;
 const appRoot = join(here, "..");
-const repoRoot = join(appRoot, "..", "..");
 
 /** Home is `index.html`; everything else is a directory index, so URLs stay bare. */
 const outputPath = (page: Page): string =>
@@ -100,15 +99,16 @@ export const build = async (outDir: string, base = "/"): Promise<readonly string
   await write(join(outDir, "assets", "search.json"), JSON.stringify(index));
 
   // One source of truth for colour: the very file the chat app renders against.
+  // Resolved through the package export rather than by path, so moving the file
+  // is @tiny/ui's business and this build follows it.
   await write(
     join(outDir, "assets", "tokens.css"),
-    await readFile(join(repoRoot, "packages", "ui", "src", "tokens.css")),
+    await readFile(Bun.resolveSync("@tiny/ui/tokens.css", appRoot)),
   );
   await write(join(outDir, "assets", "docs.css"), await readFile(join(here, "docs.css")));
-  await write(
-    join(outDir, "assets", "icon.svg"),
-    await readFile(join(repoRoot, "apps", "chat", "public", "icon.svg")),
-  );
+  // The docs keep their own copy of the mark. A little copying beats reaching
+  // across into another app's public/ folder, which no import graph would show.
+  await write(join(outDir, "assets", "icon.svg"), await readFile(join(here, "icon.svg")));
 
   const client = await Bun.build({
     entrypoints: [join(here, "browser.ts")],

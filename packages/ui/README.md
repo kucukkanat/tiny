@@ -64,17 +64,17 @@ export function StreamTextExample() {
 }
 ```
 
-### Thinking
+### ReasoningTrace
 
 Expandable reasoning trace — shimmers while `working`, then settles into
-"Thought for Ns" and stays expandable. `examples/ThinkingExample.tsx`:
+"Thought for Ns" and stays expandable. `examples/ReasoningTraceExample.tsx`:
 
 ```tsx
-import { Thinking } from "@tiny/ui";
+import { ReasoningTrace } from "@tiny/ui";
 import { useEffect, useState } from "react";
 
 /** Shimmers while the model reasons, then settles into "Thought for Ns". */
-export function ThinkingExample() {
+export function ReasoningTraceExample() {
   const [seconds, setSeconds] = useState(0);
   const working = seconds < 4;
 
@@ -85,7 +85,7 @@ export function ThinkingExample() {
   }, [working]);
 
   return (
-    <Thinking
+    <ReasoningTrace
       working={working}
       seconds={seconds}
       text={"Checking what makes the sky blue.\nRayleigh scattering, most likely."}
@@ -285,7 +285,7 @@ export function GlideMenuExample() {
 ```
 
 `ShimmerLabel` is exported too — the shimmering text used by `Loader` and
-`Thinking`, if you need it on its own.
+`ReasoningTrace`, if you need it on its own.
 
 ## Test
 

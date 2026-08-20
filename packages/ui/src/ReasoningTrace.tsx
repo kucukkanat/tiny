@@ -4,7 +4,7 @@ import { ShimmerLabel } from "./Loader.tsx";
 /* Expandable reasoning trace: shimmering "Thinking" while the model reasons,
  * settling into "Thought for Ns" that stays expandable. Auto-expands while
  * working; the reader can toggle it any time. */
-export function Thinking({
+export function ReasoningTrace({
   working,
   seconds,
   text,

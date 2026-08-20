@@ -25,8 +25,8 @@ type SlotName =
 | `app.overlays` | modals and palettes, above everything | `apps/chat/src/App.tsx` |
 | `composer.actions` | inline beside the model picker | `apps/chat/src/App.tsx` |
 | `sidebar.footer` | below the sidebar's settings row | `apps/chat/src/App.tsx` |
-| `message.actions` | under each finished assistant reply | `apps/chat/src/components/Thread.tsx` |
-| `message.pending` | inside the reply still being written | `apps/chat/src/components/Thread.tsx` |
+| `message.actions` | under each finished assistant reply | `apps/chat/src/Thread.tsx` |
+| `message.pending` | inside the reply still being written | `apps/chat/src/Thread.tsx` |
 
 The union is closed on purpose. A slot is a promise the app makes about where
 something will appear and what props it will receive; adding one is an app change,
@@ -64,7 +64,7 @@ A contributed component is rendered inside the host, so it can call
 `usePluginContext()` for the [full context](context.md) — namespaced to your
 plugin — and re-renders when chat state moves.
 
-```tsx path=packages/plugin/examples/SavedPromptsExample.tsx
+```tsx path=packages/plugin/examples/savedPrompts.tsx
 import type { Plugin } from "@tiny/plugin";
 import { usePluginContext } from "@tiny/plugin";
 

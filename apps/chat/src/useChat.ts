@@ -1,11 +1,4 @@
-import type {
-  ChatMessage,
-  Endpoint,
-  Extension,
-  ModelSpec,
-  ToolDefinition,
-  ToolStatus,
-} from "@tiny/ai";
+import type { ChatMessage, Endpoint, Extension, ModelSpec, ToolDefinition } from "@tiny/ai";
 import { describeError, streamChat } from "@tiny/ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -14,23 +7,16 @@ import {
   newConversationId,
   putConversation,
   type StoredMessage,
+  type StoredToolRun,
   titleFrom,
-} from "../storage/conversations.ts";
-
-/** One tool call the model made during a reply. */
-export type ToolRun = {
-  readonly id: string;
-  readonly name: string;
-  readonly status: ToolStatus;
-  readonly summary: string;
-};
+} from "./conversations.ts";
 
 /** The in-flight assistant reply, rendered live while streaming. */
 export type Streaming = {
   readonly reasoning: string;
   readonly text: string;
   readonly reasoningSeconds: number;
-  readonly tools: readonly ToolRun[];
+  readonly tools: readonly StoredToolRun[];
 };
 
 const toChatMessages = (stored: readonly StoredMessage[]): ChatMessage[] =>
@@ -137,7 +123,7 @@ export function useChat({
       let reasoningSeconds = 0;
       // The tool *calls* this reply made, for the UI — distinct from `tools`,
       // the definitions the model may call.
-      let toolRuns: readonly ToolRun[] = [];
+      let toolRuns: readonly StoredToolRun[] = [];
       setStreaming({ reasoning, text: answer, reasoningSeconds, tools: toolRuns });
 
       try {

@@ -9,7 +9,7 @@ import {
   useProvideApp,
 } from "@tiny/plugin";
 import { useMemo, useState } from "react";
-import type { Settings } from "../src/storage/settings.ts";
+import type { Settings } from "../src/settings.ts";
 
 // `registerProvider` is only useful if what a plugin registers reaches the app
 // that has to stream through it. These mount the real host and read what the

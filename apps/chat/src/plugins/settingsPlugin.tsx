@@ -1,8 +1,8 @@
 import type { Plugin } from "@tiny/plugin";
 import { createExternalStore, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
-import { SettingsDialog } from "../components/SettingsDialog.tsx";
-import { settingsComplete } from "../storage/settings.ts";
+import { settingsComplete } from "../settings.ts";
+import { SettingsDialog } from "./SettingsDialog.tsx";
 
 /**
  * Endpoint configuration, shipped as a plugin rather than as app structure.
@@ -13,7 +13,7 @@ import { settingsComplete } from "../storage/settings.ts";
  * `App` keeps no settings state of its own, and `Sidebar`'s gear simply runs
  * the command.
  */
-export const settings = (): Plugin => {
+export const settingsPlugin = (): Plugin => {
   // Open/closed lives in the plugin's own closure: the command handler and the
   // contributed component are separate call sites that need the same switch.
   const open = createExternalStore(false);
@@ -38,7 +38,7 @@ export const settings = (): Plugin => {
     );
   }
 
-  return function settings(pi) {
+  return function settingsPlugin(pi) {
     pi.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),

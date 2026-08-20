@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Loader } from "../src/Loader.tsx";
 import { PromptBar } from "../src/PromptBar.tsx";
+import { ReasoningTrace } from "../src/ReasoningTrace.tsx";
 import { Sidebar } from "../src/Sidebar.tsx";
 import { StreamText } from "../src/StreamText.tsx";
-import { Thinking } from "../src/Thinking.tsx";
 
 // bun:test hooks aren't globals, so testing-library can't auto-register this.
 afterEach(cleanup);
@@ -83,7 +83,7 @@ describe("StreamText", () => {
 
 describe("Thinking", () => {
   test("shows the duration once settled and toggles the trace", () => {
-    render(<Thinking working={false} seconds={4} text="reasoning trace" />);
+    render(<ReasoningTrace working={false} seconds={4} text="reasoning trace" />);
     const toggle = screen.getByRole("button");
     expect(toggle.textContent).toContain("Thought for 4s");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -93,7 +93,7 @@ describe("Thinking", () => {
   });
 
   test("auto-expands and shimmers while working", () => {
-    render(<Thinking working seconds={0} text="…" />);
+    render(<ReasoningTrace working seconds={0} text="…" />);
     expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("Thinking")).toBeTruthy();
   });

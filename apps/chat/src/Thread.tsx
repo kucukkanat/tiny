@@ -1,9 +1,9 @@
 import type { ToolStatus } from "@tiny/ai";
 import { type MarkdownContext, Slot, useMarkdown } from "@tiny/plugin";
-import { Loader, StreamText, Thinking } from "@tiny/ui";
+import { Loader, ReasoningTrace, StreamText } from "@tiny/ui";
 import { useEffect, useMemo, useRef } from "react";
-import type { Streaming } from "../hooks/useChat.ts";
-import type { StoredMessage, StoredToolRun } from "../storage/conversations.ts";
+import type { StoredMessage, StoredToolRun } from "./conversations.ts";
+import type { Streaming } from "./useChat.ts";
 
 const toolTone: Record<ToolStatus, string> = {
   running: "text-ink-3",
@@ -78,7 +78,7 @@ function Assistant({
   return (
     <div className="flex flex-col gap-1">
       {reasoning !== undefined && reasoning !== "" && (
-        <Thinking working={reasoningLive} seconds={reasoningSeconds} text={thinking} />
+        <ReasoningTrace working={reasoningLive} seconds={reasoningSeconds} text={thinking} />
       )}
       <Tools runs={tools} />
       {(content !== "" || done) && <StreamText text={body} done={done} />}

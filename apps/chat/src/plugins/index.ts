@@ -3,12 +3,12 @@ import { fileSystem } from "@tiny/plugin-fs";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 import { pluginManager } from "@tiny/plugin-manager";
 import { historyWindow } from "./historyWindow.ts";
-import { settings } from "./settings.tsx";
+import { settingsPlugin } from "./settingsPlugin.tsx";
 import { streamTrace } from "./streamTrace.ts";
 import { systemPrompt } from "./systemPrompt.ts";
 import { usageLogger } from "./usageLogger.ts";
 
-export { historyWindow, settings, streamTrace, systemPrompt, usageLogger };
+export { historyWindow, settingsPlugin, streamTrace, systemPrompt, usageLogger };
 
 /**
  * The plugins the app runs, in order.
@@ -30,7 +30,7 @@ export { historyWindow, settings, streamTrace, systemPrompt, usageLogger };
 export const plugins: readonly Plugin[] = [
   usageLogger(),
   streamTrace(),
-  settings(),
+  settingsPlugin(),
   // Ask before the model runs a tool. Listed before the plugins that register
   // tools only for readability — `tool_call` fires for every tool in the
   // registry regardless of load order.

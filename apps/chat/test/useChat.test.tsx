@@ -1,7 +1,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { useChat } from "../src/hooks/useChat.ts";
-import { getConversation } from "../src/storage/conversations.ts";
+import { getConversation } from "../src/conversations.ts";
+import { useChat } from "../src/useChat.ts";
 
 // bun:test hooks aren't globals, so testing-library can't auto-register this.
 afterEach(cleanup);

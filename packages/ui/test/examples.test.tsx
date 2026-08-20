@@ -4,9 +4,9 @@ import { ApprovalCardExample } from "../examples/ApprovalCardExample.tsx";
 import { GlideMenuExample } from "../examples/GlideMenuExample.tsx";
 import { LoaderExample } from "../examples/LoaderExample.tsx";
 import { PromptBarExample } from "../examples/PromptBarExample.tsx";
+import { ReasoningTraceExample } from "../examples/ReasoningTraceExample.tsx";
 import { SidebarExample } from "../examples/SidebarExample.tsx";
 import { StreamTextExample } from "../examples/StreamTextExample.tsx";
-import { ThinkingExample } from "../examples/ThinkingExample.tsx";
 
 // Every README snippet is a real component under examples/. Rendering each one
 // proves the snippet compiles and runs, and the README is then asserted to
@@ -19,7 +19,7 @@ const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
 
 const EXAMPLES = [
   "StreamTextExample.tsx",
-  "ThinkingExample.tsx",
+  "ReasoningTraceExample.tsx",
   "LoaderExample.tsx",
   "PromptBarExample.tsx",
   "SidebarExample.tsx",
@@ -48,8 +48,8 @@ describe("examples render", () => {
     await waitFor(() => expect(container.querySelector("h3")?.textContent).toContain("Why"));
   });
 
-  test("ThinkingExample shimmers before it settles", () => {
-    render(<ThinkingExample />);
+  test("ReasoningTraceExample shimmers before it settles", () => {
+    render(<ReasoningTraceExample />);
     expect(screen.getByText("Thinking")).toBeTruthy();
     expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("true");
   });

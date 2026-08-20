@@ -1,4 +1,5 @@
 import type { ApiType, Endpoint, ModelSpec } from "@tiny/ai";
+import { listModels } from "@tiny/ai";
 import { createExternalStore } from "./externalStore.ts";
 
 /* ------------------------------------------------------------------ *
@@ -135,7 +136,6 @@ export const modelSpec = (config: ProviderConfig, id: string): ModelSpec => {
  */
 export const modelsOf = async (
   config: ProviderConfig,
-  listModels: (endpoint: Endpoint) => Promise<readonly string[]>,
   signal?: AbortSignal,
 ): Promise<readonly string[]> => {
   if (Array.isArray(config.models)) return config.models.map(modelId);

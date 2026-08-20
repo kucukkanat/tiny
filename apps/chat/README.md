@@ -32,7 +32,10 @@ Conversations persist locally; switch or delete them from the sidebar
 ## Structure
 
 - `src/App.tsx` — layout: sidebar, thread, composer, plugin slots
-- `src/hooks/useChat.ts` — streaming state machine + persistence
+- `src/Thread.tsx` — the transcript: messages, the reply in flight, tool lines
+- `src/useChat.ts` — one conversation: streaming state machine and persistence
+- `src/conversations.ts` — chat history, in IndexedDB
+- `src/settings.ts` — the saved endpoint, key and model, in localStorage
 - `src/plugins/` — the plugins and the registry the app runs; add one here.
   A plugin that only subscribes to events is an `@tiny/ai` extension (see
   "Extensions" in [`packages/ai`](../../packages/ai/README.md)); one that adds UI
@@ -41,5 +44,4 @@ Conversations persist locally; switch or delete them from the sidebar
   plugin, which is what keeps the API honest, and
   [`@tiny/plugin-manager`](../../packages/plugin-manager/README.md) lets the user
   install more at runtime without a rebuild.
-- `src/storage/` — IndexedDB conversations, localStorage settings
 - `public/` — manifest, icon, service worker

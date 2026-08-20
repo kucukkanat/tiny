@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { Plugin } from "@tiny/plugin";
 import { PluginHost } from "@tiny/plugin";
-import { Thread } from "../src/components/Thread.tsx";
-import type { Streaming } from "../src/hooks/useChat.ts";
+import { Thread } from "../src/Thread.tsx";
+import type { Streaming } from "../src/useChat.ts";
 
 // `message.pending` is where a run parks a question it is waiting on — an
 // approval, usually. It has to appear whenever a reply is in flight, including

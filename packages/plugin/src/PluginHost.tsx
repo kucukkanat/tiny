@@ -1,9 +1,9 @@
 import type { Extension } from "@tiny/ai";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Dialog, type DialogRequest, type Toast, Toasts } from "./Dialogs.tsx";
 import { createEvents } from "./events.ts";
 import { type AppBridge, HostContext, type HostValue, type Widget } from "./hooks.ts";
 import { matchesKey } from "./keys.ts";
+import { Dialog, type DialogRequest, type Toast, Toasts } from "./Overlays.tsx";
 import type {
   CommandInfo,
   ContextUsage,

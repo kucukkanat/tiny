@@ -3,7 +3,7 @@ import { endpointModel, toolText } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem, fileSystemTools } from "../src/index.ts";
 import { memoryRoot } from "../src/inMemoryRoot.ts";
-import { segments } from "../src/opfs.ts";
+import { segments } from "../src/paths.ts";
 
 // Every test drives the real `execute` against a real in-memory filesystem —
 // the tools are never stubbed, only the OPFS handle they walk is supplied.

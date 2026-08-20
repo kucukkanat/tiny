@@ -64,10 +64,10 @@ component changes. Type `/greet` in the composer.
 ## Add a button
 
 `ctx` is available to commands and shortcuts as an argument, and to React through
-`usePluginContext()`. This is `packages/plugin/examples/CopyButtonExample.tsx`,
+`usePluginContext()`. This is `packages/plugin/examples/copyButton.tsx`,
 run by the test suite:
 
-```tsx path=packages/plugin/examples/CopyButtonExample.tsx
+```tsx path=packages/plugin/examples/copyButton.tsx
 import type { Plugin } from "@tiny/plugin";
 import { usePluginContext } from "@tiny/plugin";
 

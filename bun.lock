@@ -40,6 +40,9 @@
     "apps/docs": {
       "name": "@tiny/docs",
       "version": "0.1.0",
+      "dependencies": {
+        "@tiny/ui": "workspace:*",
+      },
       "devDependencies": {
         "marked": "^16.0.0",
         "shiki": "^3.0.0",

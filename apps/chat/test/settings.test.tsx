@@ -3,8 +3,8 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { loadPlugins, PluginHost, Slot, usePluginHost, useProvideApp } from "@tiny/plugin";
 import { useMemo, useState } from "react";
 import { plugins } from "../src/plugins/index.ts";
-import { settings as settingsPlugin } from "../src/plugins/settings.tsx";
-import type { Settings } from "../src/storage/settings.ts";
+import { settingsPlugin } from "../src/plugins/settingsPlugin.tsx";
+import type { Settings } from "../src/settings.ts";
 
 // Settings ships as a plugin, so the dialog reaches the screen through
 // `app.overlays` and opens through a registered command. These drive the real

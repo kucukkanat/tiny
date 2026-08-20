@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { API_TYPES, DEFAULT_API, isApiType } from "../src/apis.ts";
-import { endpointModel, fetchModelIds } from "../src/endpoint.ts";
+import { endpointModel, fetchModelIds } from "../src/models.ts";
 
 // pi ships nine streaming implementations; six reach a browser. These check the
 // six load, and that model listing speaks each family's own dialect.

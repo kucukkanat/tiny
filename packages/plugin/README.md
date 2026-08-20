@@ -43,7 +43,7 @@ export type Plugin = (pi: PluginAPI) => void | Promise<void>;
 
 ## Usage
 
-Add a button to every finished reply — `examples/CopyButtonExample.tsx`:
+Add a button to every finished reply — `examples/copyButton.tsx`:
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";
@@ -150,7 +150,7 @@ export const tokenMeter = (): Plugin =>
   };
 ```
 
-Persist your own state and push text at the composer — `examples/SavedPromptsExample.tsx`:
+Persist your own state and push text at the composer — `examples/savedPrompts.tsx`:
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";

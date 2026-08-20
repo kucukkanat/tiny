@@ -1,4 +1,11 @@
-import type { ChatMessage, Endpoint, Extension, ToolDefinition, ToolStatus } from "@tiny/ai";
+import type {
+  ChatMessage,
+  Endpoint,
+  Extension,
+  ModelOptions,
+  ToolDefinition,
+  ToolStatus,
+} from "@tiny/ai";
 import { describeError, streamChat } from "@tiny/ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -46,6 +53,8 @@ export function useChat(
   extensions: readonly Extension[] = [],
   /** Tools the model may call, also collected by the plugin host. */
   toolDefinitions: readonly ToolDefinition[] = [],
+  /** What a provider knows about this model that its endpoint cannot publish. */
+  modelOptions: ModelOptions = {},
 ) {
   const [messages, setMessages] = useState<readonly StoredMessage[]>([]);
   const [streaming, setStreaming] = useState<Streaming | undefined>(undefined);
@@ -117,6 +126,7 @@ export function useChat(
           signal: controller.signal,
           extensions,
           tools: toolDefinitions,
+          model: modelOptions,
         })) {
           if (delta.kind === "reasoning") {
             reasoningStarted ??= Date.now();
@@ -159,6 +169,7 @@ export function useChat(
       model,
       extensions,
       toolDefinitions,
+      modelOptions,
       messages,
       onConversationCreated,
       streaming,

@@ -112,7 +112,7 @@ straight port.
 
 | | What survives |
 | --- | --- |
-| `pi.registerProvider(id, config)` | base URL, authentication and a model list. pi's credential store, generation-checked catalog persistence and native `pi-ai` `Provider` have nowhere to live, and `@tiny/ai` streams to an endpoint directly rather than through pi-ai's registry — see [Providers](providers.md) |
+| `pi.registerProvider(id, config)` | base URL, authentication, api type and a model list — including pi's per-model `api` override. Six of pi's nine api types work in a browser; `openai-codex-responses`, `google-vertex` and `bedrock-converse-stream` cannot. pi's credential store, generation-checked catalog persistence and native `pi-ai` `Provider` have nowhere to live — see [Providers](providers.md) |
 | `pi.registerMarkdownTransformer(fn)` | the transformer's context has `messageType` and `isStreaming`, but not pi's `availableWidth`: a browser has no column count |
 | `pi.sendUserMessage(content)` | the message is sent; pi's `{ deliverAs: "followUp" }` has no queue to deliver into |
 | `ctx.ui.pasteToEditor(text)` | appends rather than inserting at a cursor with collapse handling. pi's RPC mode degrades this further, to a plain replace |

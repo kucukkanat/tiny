@@ -432,11 +432,62 @@ export const groq = (): Plugin => (pi) => {
 };
 ```
 
+### API types
+
+`api` is pi's api type identifier, and it chooses the streaming implementation.
+Set it on the provider and override it per model, as pi allows —
+`examples/anthropicProvider.ts`:
+
+```ts
+import type { Plugin } from "@tiny/plugin";
+
+/**
+ * A provider that is not OpenAI-shaped.
+ *
+ * `api` is pi's api type identifier, and it decides which streaming
+ * implementation the request goes through. It may be set for the whole endpoint
+ * and overridden per model, exactly as pi allows.
+ *
+ * pi-ai already configures the Anthropic SDK for browser use — it sends
+ * `anthropic-dangerous-direct-browser-access`, without which Anthropic refuses a
+ * cross-origin request outright — so this works from a page with no proxy.
+ */
+export const anthropic =
+  (apiKey: () => string): Plugin =>
+  (pi) => {
+    pi.registerProvider("anthropic", {
+      name: "Anthropic",
+      // No `/v1`: the Anthropic implementation appends its own.
+      baseUrl: "https://api.anthropic.com",
+      api: "anthropic-messages",
+      apiKey,
+      // A bare model id is enough. An object says what the endpoint's own model
+      // route cannot: that this one reasons, and how much context it has — which
+      // is what makes `ctx.getContextUsage()` report a real window rather than 0.
+      models: [
+        "claude-haiku-4-5",
+        { id: "claude-opus-4-6", reasoning: true, contextWindow: 200_000 },
+      ],
+    });
+  };
+```
+
+Six of pi's nine implementations reach a browser and are offered:
+`openai-completions` (the default), `openai-responses`, `azure-openai-responses`,
+`anthropic-messages`, `mistral-conversations` and `google-generative-ai`. The other three
+cannot run in a page and are left out rather than failing at runtime:
+`openai-codex-responses` imports `node:zlib`, `google-vertex` signs a service-account JWT
+through `GoogleAuth`, and `bedrock-converse-stream` transports over
+`@smithy/node-http-handler`.
+
+Each implementation sits behind its own dynamic import, so a bundler with code splitting
+downloads only the one an endpoint actually uses.
+
 pi's config also carries credential storage, catalog persistence and a native `pi-ai`
 provider; none has anywhere to live here, and `@tiny/ai` streams to an endpoint directly
-rather than through pi-ai's registry. What remains is what travels: the base URL, how to
-authenticate, and which models exist. Registering after the factory has returned takes
-effect immediately, as pi documents — the picker updates without a reload.
+rather than through pi-ai's registry. What remains is what travels: the api, the base URL,
+how to authenticate, and which models exist. Registering after the factory has returned
+takes effect immediately, as pi documents — the picker updates without a reload.
 
 ## Adding one to the chat app
 

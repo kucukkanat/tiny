@@ -45,6 +45,7 @@ const EXAMPLES = [
   "tokenMeter.ts",
   "SavedPromptsExample.tsx",
   "groqProvider.ts",
+  "anthropicProvider.ts",
 ] as const;
 
 const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();

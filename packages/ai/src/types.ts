@@ -1,3 +1,5 @@
+import type { ApiType } from "./apis.ts";
+
 export type ChatRole = "system" | "user" | "assistant";
 
 export type ChatMessage = {
@@ -5,11 +7,16 @@ export type ChatMessage = {
   readonly content: string;
 };
 
-/** Connection details for any OpenAI-compatible endpoint. */
+/** Connection details for one endpoint. */
 export type Endpoint = {
   /** e.g. "https://api.openai.com/v1" — with or without trailing slash. */
   readonly baseUrl: string;
   readonly apiKey: string;
+  /**
+   * Which pi streaming implementation the endpoint speaks. Defaults to
+   * `openai-completions`, so an endpoint that omits it behaves as it always did.
+   */
+  readonly api?: ApiType | undefined;
 };
 
 /** One block of tool output. pi carries more kinds; text is what a chat reads. */

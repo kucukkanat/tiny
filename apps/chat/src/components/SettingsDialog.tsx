@@ -1,9 +1,35 @@
-import { ChatApiError, describeError, listModels } from "@tiny/ai";
+import { API_TYPES, type ApiType, ChatApiError, describeError, listModels } from "@tiny/ai";
 import { useState } from "react";
 import type { Settings } from "../storage/settings.ts";
 
 const field =
   "h-8 w-full rounded-control bg-field px-2.5 text-[13px] text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
+
+/** pi's api type identifiers, with the names people know them by. */
+const API_LABELS: Record<ApiType, string> = {
+  "openai-completions": "OpenAI Chat Completions (and compatibles)",
+  "openai-responses": "OpenAI Responses",
+  "azure-openai-responses": "Azure OpenAI Responses",
+  "anthropic-messages": "Anthropic Messages",
+  "mistral-conversations": "Mistral",
+  "google-generative-ai": "Google Generative AI",
+};
+
+/**
+ * What each family expects in the base URL, so the field is not a guess.
+ *
+ * Note which ones carry the version and which do not: the Anthropic and Mistral
+ * implementations append their own `/v1`, so including it here would produce
+ * `/v1/v1/messages`.
+ */
+const BASE_URL_HINTS: Record<ApiType, string> = {
+  "openai-completions": "https://api.openai.com/v1",
+  "openai-responses": "https://api.openai.com/v1",
+  "azure-openai-responses": "https://<resource>.openai.azure.com/openai/v1",
+  "anthropic-messages": "https://api.anthropic.com",
+  "mistral-conversations": "https://api.mistral.ai",
+  "google-generative-ai": "https://generativelanguage.googleapis.com/v1beta",
+};
 
 /* Endpoint configuration. Saving verifies the endpoint by listing its models
  * and picks the first one when none is chosen yet. */
@@ -18,6 +44,7 @@ export function SettingsDialog({
 }) {
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? "");
   const [apiKey, setApiKey] = useState(initial?.apiKey ?? "");
+  const [api, setApi] = useState<ApiType>(initial?.api ?? "openai-completions");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -25,7 +52,7 @@ export function SettingsDialog({
     setError(undefined);
     setChecking(true);
     try {
-      const endpoint = { baseUrl: baseUrl.trim(), apiKey: apiKey.trim() };
+      const endpoint = { baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), api };
       const models = await listModels(endpoint);
       const model =
         initial !== undefined && models.includes(initial.model)
@@ -54,7 +81,7 @@ export function SettingsDialog({
       >
         <h2 className="text-[14px] font-semibold text-ink">Settings</h2>
         <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
-          Any OpenAI-compatible endpoint. Your key stays in this browser and is only sent to the
+          Any endpoint pi can stream from. Your key stays in this browser and is only sent to the
           base URL below.
         </p>
         <form
@@ -65,11 +92,26 @@ export function SettingsDialog({
           }}
         >
           <label className="flex flex-col gap-1 text-[12px] font-medium text-ink-2">
+            API
+            <select
+              value={api}
+              data-testid="api-type"
+              onChange={(event) => setApi(event.target.value as ApiType)}
+              className={field}
+            >
+              {API_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {API_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] font-medium text-ink-2">
             Base URL
             <input
               value={baseUrl}
               onChange={(event) => setBaseUrl(event.target.value)}
-              placeholder="https://api.openai.com/v1"
+              placeholder={BASE_URL_HINTS[api]}
               className={field}
             />
           </label>

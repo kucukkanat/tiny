@@ -8,7 +8,10 @@ export type {
   Model,
   Usage,
 } from "@earendil-works/pi-ai";
+export type { ApiType } from "./apis.ts";
+export { API_TYPES, apiFor, DEFAULT_API, isApiType } from "./apis.ts";
 export { listModels, streamChat } from "./client.ts";
+export type { ModelOptions } from "./endpoint.ts";
 export { endpointModel, fetchModelIds, PROVIDER_ID } from "./endpoint.ts";
 export type {
   BeforeAgentStartEvent,

@@ -1,7 +1,11 @@
-import { cp } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import tailwind from "bun-plugin-tailwind";
 
 const root = new URL("..", import.meta.url).pathname;
+
+// Chunk names are content-hashed, so without this a rebuild leaves every
+// previous build's chunks behind and they ship with the next deploy.
+await rm(`${root}dist`, { recursive: true, force: true });
 
 const result = await Bun.build({
   entrypoints: [`${root}index.html`],

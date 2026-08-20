@@ -1,4 +1,5 @@
 import type {
+  ApiType,
   BeforeAgentStartEvent,
   BeforeAgentStartEventResult,
   ContextEvent,
@@ -7,6 +8,7 @@ import type {
   MessageEndEvent,
   MessageStartEvent,
   MessageUpdateEvent,
+  ModelOptions,
   ToolDefinition,
 } from "@tiny/ai";
 import type { ComponentType, ReactNode } from "react";
@@ -383,15 +385,25 @@ export type ProviderConfig = {
   /** A key, or a thunk so a plugin can prompt for one instead of storing it. */
   readonly apiKey?: string | (() => string | Promise<string>) | undefined;
   /**
+   * Which pi streaming implementation this endpoint speaks. Defaults to
+   * `openai-completions`. As in pi, a model may override it.
+   */
+  readonly api?: ApiType | undefined;
+  /**
    * pi's `fetchModels`, narrowed: a fixed list or a lookup. Omit it and the
-   * endpoint's own `/models` route is used, which is what an OpenAI-compatible
-   * server publishes.
+   * endpoint's own models route is used, which is what most servers publish.
+   *
+   * An entry may be a bare id, or an object carrying what the endpoint cannot
+   * publish about it — its api, whether it reasons, its window.
    */
   readonly models?:
-    | readonly string[]
-    | ((signal: AbortSignal | undefined) => Promise<readonly string[]>)
+    | readonly ProviderModel[]
+    | ((signal: AbortSignal | undefined) => Promise<readonly ProviderModel[]>)
     | undefined;
 };
+
+/** A model id, or an id with the metadata a bare `/models` route cannot carry. */
+export type ProviderModel = string | ({ readonly id: string } & ModelOptions);
 
 export type ProviderEntry = {
   readonly id: string;

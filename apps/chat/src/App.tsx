@@ -1,7 +1,8 @@
-import type { Endpoint } from "@tiny/ai";
+import type { Endpoint, ModelOptions } from "@tiny/ai";
 import { listModels } from "@tiny/ai";
 import {
   endpointOf,
+  modelOptions,
   modelsOf,
   Slot,
   StatusBar,
@@ -78,6 +79,19 @@ export function App() {
     [navigate, refreshChats],
   );
 
+  /**
+   * What the selected model speaks. A provider may declare an api for the whole
+   * endpoint and override it per model, as pi allows; the user's own endpoint
+   * carries its api on the settings object.
+   */
+  const selectedOptions = useMemo<ModelOptions>(() => {
+    const providerId = settings?.providerId;
+    if (providerId === undefined || providerId === OWN_ENDPOINT)
+      return settings?.api === undefined ? {} : { api: settings.api };
+    const entry = providers.find((candidate) => candidate.id === providerId);
+    return entry === undefined ? {} : modelOptions(entry.config, settings?.model ?? "");
+  }, [settings, providers]);
+
   const chat = useChat(
     id,
     endpoint,
@@ -85,6 +99,7 @@ export function App() {
     onConversationCreated,
     usePluginExtensions(),
     usePluginTools(),
+    selectedOptions,
   );
 
   // Populate the model picker from the configured endpoint; a failure here is
@@ -122,7 +137,11 @@ export function App() {
     if (providerId === undefined || providerId === OWN_ENDPOINT)
       return setEndpoint(
         settingsComplete(settings)
-          ? { baseUrl: settings.baseUrl, apiKey: settings.apiKey }
+          ? {
+              baseUrl: settings.baseUrl,
+              apiKey: settings.apiKey,
+              ...(settings.api === undefined ? {} : { api: settings.api }),
+            }
           : undefined,
       );
 

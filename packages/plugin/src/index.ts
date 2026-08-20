@@ -25,7 +25,7 @@ export { emptyRegistry, loadPlugins, transformMarkdown } from "./host.ts";
 export { matchesKey } from "./keys.ts";
 export { PluginHost } from "./PluginHost.tsx";
 export type { ProviderStore } from "./providers.ts";
-export { createProviderStore, endpointOf, modelsOf } from "./providers.ts";
+export { createProviderStore, endpointOf, modelId, modelOptions, modelsOf } from "./providers.ts";
 export { Slot, StatusBar, Widgets } from "./Slot.tsx";
 export { identityTheme } from "./theme.ts";
 export type {
@@ -50,6 +50,7 @@ export type {
   PluginUIContext,
   ProviderConfig,
   ProviderEntry,
+  ProviderModel,
   ShortcutOptions,
   SlotName,
   SlotProps,

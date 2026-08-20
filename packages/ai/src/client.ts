@@ -9,8 +9,8 @@ import type {
   ToolCall,
   Usage,
 } from "@earendil-works/pi-ai";
-import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
-import { endpointModel, fetchModelIds } from "./endpoint.ts";
+import { type ApiType, apiFor } from "./apis.ts";
+import { endpointModel, fetchModelIds, type ModelOptions } from "./endpoint.ts";
 import {
   type Extension,
   type ExtensionContext,
@@ -29,13 +29,6 @@ import {
   type ToolUpdate,
   toolText,
 } from "./types.ts";
-
-/**
- * The OpenAI-compatible implementation, behind pi-ai's lazy wrapper: the SDK is
- * pulled in by a dynamic import on the first request, so a bundler with code
- * splitting keeps it out of the initial payload.
- */
-const api = openAICompletionsApi();
 
 /** Replayed history carries no token accounting of its own. */
 const NO_USAGE: Usage = {
@@ -144,9 +137,14 @@ export async function* streamChat(
     tools?: readonly ToolDefinition[];
     /** How many tool rounds before giving up. Defaults to 10. */
     maxToolTurns?: number;
+    /** Per-model metadata: which api to speak, whether it reasons. */
+    model?: ModelOptions;
   } = {},
 ): AsyncGenerator<StreamDelta> {
-  const descriptor = endpointModel(endpoint, model);
+  const descriptor = endpointModel(endpoint, model, options.model ?? {});
+  // Resolved per request, and only the implementation this endpoint speaks: each
+  // sits behind its own dynamic import, so nothing else is ever downloaded.
+  const api = await apiFor(descriptor.api as ApiType);
   const handlers = await loadExtensions(options.extensions ?? []);
   const ctx: ExtensionContext = { model: descriptor, signal: options.signal };
   const tools = options.tools ?? [];
@@ -172,8 +170,9 @@ export async function* streamChat(
       ...(tools.length > 0 ? { tools: tools.map(toPiTool) } : {}),
     };
 
-    // The API implementation is called directly: this app has exactly one endpoint,
-    // so pi-ai's provider registry and auth resolution would add nothing but weight.
+    // The API implementation is called directly: an endpoint here carries its own
+    // key, so pi-ai's provider registry and auth resolution would add nothing but
+    // weight.
     const events = api.stream(descriptor, context, {
       apiKey: endpoint.apiKey,
       ...(options.signal ? { signal: options.signal } : {}),

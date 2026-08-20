@@ -1,5 +1,5 @@
-import type { Endpoint } from "@tiny/ai";
-import type { ProviderConfig, ProviderEntry } from "./types.ts";
+import type { Endpoint, ModelOptions } from "@tiny/ai";
+import type { ProviderConfig, ProviderEntry, ProviderModel } from "./types.ts";
 
 /**
  * The registered providers, as live state rather than a snapshot.
@@ -67,7 +67,32 @@ export const createProviderStore = (): ProviderStore => {
 export const endpointOf = async (config: ProviderConfig): Promise<Endpoint> => ({
   baseUrl: config.baseUrl,
   apiKey: typeof config.apiKey === "function" ? await config.apiKey() : (config.apiKey ?? ""),
+  ...(config.api === undefined ? {} : { api: config.api }),
 });
+
+/** The bare id of a model entry, whichever form it was declared in. */
+export const modelId = (model: ProviderModel): string =>
+  typeof model === "string" ? model : model.id;
+
+/**
+ * What `streamChat` needs to know about one model beyond its id.
+ *
+ * pi lets `api` be set on the provider and overridden per model; the same rule
+ * applies here, with the model's own value winning.
+ */
+export const modelOptions = (config: ProviderConfig, id: string): ModelOptions => {
+  const declared = Array.isArray(config.models)
+    ? config.models.find((model) => modelId(model) === id)
+    : undefined;
+  // A bare string carries no metadata of its own; only the object form does.
+  const own = typeof declared === "object" ? declared : undefined;
+  return {
+    api: own?.api ?? config.api,
+    ...(own?.reasoning === undefined ? {} : { reasoning: own.reasoning }),
+    ...(own?.contextWindow === undefined ? {} : { contextWindow: own.contextWindow }),
+    ...(own?.maxTokens === undefined ? {} : { maxTokens: own.maxTokens }),
+  };
+};
 
 /**
  * A provider's models. `models` may be a list or a lookup; omitting it falls
@@ -79,7 +104,7 @@ export const modelsOf = async (
   listModels: (endpoint: Endpoint) => Promise<readonly string[]>,
   signal?: AbortSignal,
 ): Promise<readonly string[]> => {
-  if (Array.isArray(config.models)) return config.models;
-  if (typeof config.models === "function") return config.models(signal);
+  if (Array.isArray(config.models)) return config.models.map(modelId);
+  if (typeof config.models === "function") return (await config.models(signal)).map(modelId);
   return listModels(await endpointOf(config));
 };

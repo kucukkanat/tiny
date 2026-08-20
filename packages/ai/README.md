@@ -384,6 +384,24 @@ console.log(`\n${message.usage.totalTokens} tokens, $${message.usage.cost.total}
 are re-exported from this package, so consumers need no direct pi-ai dependency —
 including when typing an extension's hooks.
 
+## API types
+
+`Endpoint.api` picks pi's streaming implementation; it defaults to
+`openai-completions`, so an endpoint that omits it behaves exactly as before.
+
+| Supported | Left out, and why |
+| --- | --- |
+| `openai-completions`, `openai-responses`, `azure-openai-responses`, `anthropic-messages`, `mistral-conversations`, `google-generative-ai` | `openai-codex-responses` imports `node:zlib`; `google-vertex` signs a service-account JWT through `GoogleAuth`; `bedrock-converse-stream` transports over `@smithy/node-http-handler` |
+
+Each implementation sits behind its own dynamic import in `apis.ts`, so a build
+with code splitting downloads only the one an endpoint actually uses — nothing
+vendor-specific is in the initial payload.
+
+`listModels` speaks each family's own dialect: a bearer token for the OpenAI
+family and Mistral, `x-api-key` plus `anthropic-version` for Anthropic, and a
+query-string key for Google, whose `models/<id>` names are unqualified to the
+bare id.
+
 ## Browser notes
 
 pi-ai runs in the browser, but **import paths matter**:

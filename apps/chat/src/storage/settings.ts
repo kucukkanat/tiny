@@ -1,4 +1,4 @@
-import type { Endpoint } from "@tiny/ai";
+import { type ApiType, type Endpoint, isApiType } from "@tiny/ai";
 
 /**
  * The user's own endpoint, plus which model is selected.
@@ -11,6 +11,8 @@ import type { Endpoint } from "@tiny/ai";
 export type Settings = Endpoint & {
   readonly model: string;
   readonly providerId?: string | undefined;
+  /** What the user's own endpoint speaks; absent means `openai-completions`. */
+  readonly api?: ApiType | undefined;
 };
 
 /** The built-in provider's id — `@tiny/ai` tags its models with the same name. */
@@ -27,10 +29,13 @@ const isSettings = (value: unknown): value is Settings =>
   typeof value.apiKey === "string" &&
   "model" in value &&
   typeof value.model === "string" &&
-  // Absent is the norm; anything present has to be a string to be usable.
+  // Absent is the norm for both; anything present has to be usable.
   (!("providerId" in value) ||
     value.providerId === undefined ||
-    typeof value.providerId === "string");
+    typeof value.providerId === "string") &&
+  // An api this build does not support reads back as unset rather than
+  // poisoning the whole settings object.
+  (!("api" in value) || value.api === undefined || isApiType(value.api));
 
 export function loadSettings(): Settings | undefined {
   const raw = localStorage.getItem(KEY);

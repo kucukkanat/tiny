@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createExternalStore } from "../src/store.ts";
+import { createExternalStore } from "../src/externalStore.ts";
 
 describe("createExternalStore", () => {
   test("hands back the value it was created with", () => {

@@ -2,10 +2,10 @@ import type { Plugin } from "@tiny/plugin";
 import { createExternalStore, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { activate } from "./activate.ts";
-import { ManagerDialog } from "./Manager.tsx";
-import { createStore, type StoreOptions } from "./store.ts";
+import { type InstalledOptions, openInstalled } from "./installed.ts";
+import { ManagerDialog } from "./ManagerDialog.tsx";
 
-export type PluginManagerOptions = StoreOptions;
+export type PluginManagerOptions = InstalledOptions;
 
 /**
  * A plugin that installs other plugins.
@@ -20,7 +20,7 @@ export type PluginManagerOptions = StoreOptions;
  * registrations have no undo of their own.
  */
 export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
-  const store = createStore(options);
+  const store = openInstalled(options);
 
   // Open/closed lives in the factory's closure, the same arrangement the
   // settings plugin uses: the command handler, the sidebar button and the
@@ -55,7 +55,7 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
     );
   }
 
-  return async (pi) => {
+  return async function pluginManager(pi) {
     // Registered before the stored plugins run, so an installed plugin cannot
     // claim the `plugins` command name and push this one to `plugins:2` —
     // leaving the user no way in to remove it.

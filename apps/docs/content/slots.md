@@ -90,7 +90,7 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return (pi) => {
+  return function savedPrompts(pi) {
     pi.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {

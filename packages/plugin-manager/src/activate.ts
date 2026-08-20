@@ -1,6 +1,6 @@
 import type { PluginAPI } from "@tiny/plugin";
 import { compile } from "./compile.ts";
-import type { InstalledPlugin, Store } from "./store.ts";
+import type { Installed, InstalledPlugin } from "./installed.ts";
 
 export type ActivationResult = {
   readonly plugin: InstalledPlugin;
@@ -21,7 +21,7 @@ export type ActivationResult = {
  * the user the others, or the manager UI they need to remove it with.
  */
 export const activate = async (
-  store: Store,
+  store: Installed,
   pi: PluginAPI,
 ): Promise<readonly ActivationResult[]> => {
   const results: ActivationResult[] = [];

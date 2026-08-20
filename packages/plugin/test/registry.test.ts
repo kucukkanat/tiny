@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { Extension, ExtensionAPI } from "@tiny/ai";
-import { loadPlugins } from "../src/host.ts";
 import { matchesKey } from "../src/keys.ts";
+import type { Plugin } from "../src/pi.ts";
+import { loadPlugins } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
-import type { Plugin } from "../src/types.ts";
 
 /** Collect what a synthesised extension registers, the way streamChat would. */
 const replayed = (extensions: readonly Extension[]): string[] => {

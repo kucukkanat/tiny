@@ -106,7 +106,6 @@ extension degrades here precisely as it would over RPC.
 | Method | Returns |
 | --- | --- |
 | `custom()` | `undefined` |
-| `getEditorText()` | `""` |
 | `getToolsExpanded()` | `false` |
 | `getAllThemes()` | `[]` |
 | `getTheme()` | `undefined` |
@@ -170,15 +169,13 @@ Bringing an extension over from `.pi/extensions/`:
    factory? Those calls become no-ops. Replace them with
    [`contribute`](slots.md) or [`ui.open`](context.md#a-react-modal) if the UI
    matters.
-2. Does it read `ctx.ui.getEditorText()`? That returns `""`. Pushing text in is
-   portable; reading it out was never in the RPC surface.
-3. Does it branch on `ctx.mode`? `"react"` is a new member of the union, so a
+2. Does it branch on `ctx.mode`? `"react"` is a new member of the union, so a
    `=== "tui"` guard stays false, and an `!== "tui"` guard now passes. Check the
    latter.
-4. Does it use `ctx.sessionManager`, `ctx.cwd`, `pi.exec`, `pi.appendEntry` or
+3. Does it use `ctx.sessionManager`, `ctx.cwd`, `pi.exec`, `pi.appendEntry` or
    `pi.registerFlag`? Those are absent, not degraded — the extension will not run
    as-is.
-5. Does it call `pi.registerProvider` with credential storage, `refreshModels`
+4. Does it call `pi.registerProvider` with credential storage, `refreshModels`
    persistence or a native `pi-ai` `Provider`? Only the base-URL-and-models part
    is honoured. See [Providers](providers.md).
 6. Does it rely on events other than the six above? They will never fire.

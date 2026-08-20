@@ -8,7 +8,7 @@ export const PROVIDER_ID = "endpoint";
 const trimBase = (baseUrl: string): string => baseUrl.replace(/\/+$/, "");
 
 /** Per-model metadata an endpoint cannot publish and a provider may know. */
-export type ModelOptions = {
+export type ModelSpec = {
   /** Which pi streaming implementation to talk to. */
   readonly api?: ApiType | undefined;
   /**
@@ -26,12 +26,12 @@ export type ModelOptions = {
  * an id, so the metadata below defaults to placeholders: pi-ai uses it for
  * display and cost reporting and never derives request parameters from it
  * (`max_tokens` is only sent when a caller asks for it). A provider that knows
- * better can say so through `ModelOptions`.
+ * better can say so through `ModelSpec`.
  */
 export const endpointModel = (
   endpoint: Endpoint,
   id: string,
-  options: ModelOptions = {},
+  options: ModelSpec = {},
 ): Model<Api> => ({
   id,
   name: id,

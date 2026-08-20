@@ -1,7 +1,7 @@
 import { loadPlugins } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { createStore, fetchSource, pluginManager } from "@tiny/plugin-manager";
-import { memoryManifest } from "@tiny/plugin-manager/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";
+import { memoryManifest } from "@tiny/plugin-manager/testing";
 
 const SOURCE = 'export default (pi) => pi.registerCommand("greet", { handler: () => {} });';
 
@@ -11,7 +11,7 @@ const url = `${server.url.origin}/greet.js`;
 
 const disk = memoryRoot();
 const options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
-const store = createStore(options);
+const store = openInstalled(options);
 
 // Fetching and installing are two steps on purpose: the source is downloaded,
 // shown to the user, and only then stored. What runs later is this copy, not

@@ -1,6 +1,6 @@
 import { Marked, type Tokens } from "marked";
 import { type BundledLanguage, createHighlighter, type Highlighter } from "shiki";
-import { hrefFrom, type Page, pages } from "./site.ts";
+import { escapeHtml, hrefFrom, type Page, pages } from "./site.ts";
 
 export type Heading = { readonly id: string; readonly text: string; readonly depth: 2 | 3 };
 export type Rendered = {
@@ -35,14 +35,6 @@ export const slugify = (text: string): string =>
     .replace(/[`*_]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-
-const escapeHtml = (text: string): string =>
-  text.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
-      character,
-  );
 
 /** `<h2>Foo</h2>` etc. carry no text of their own here, so tags simply go. */
 const stripTags = (html: string): string =>

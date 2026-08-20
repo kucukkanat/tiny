@@ -11,7 +11,7 @@
     "build:site": "bun run scripts/build-site.ts",
     "docs": "bun run --filter @tiny/docs dev",
     "mock": "bun run scripts/mock-endpoint.ts",
-    "test": "bun test packages apps",
+    "test": "bun test",
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit -p tsconfig.json"

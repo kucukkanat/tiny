@@ -1,6 +1,6 @@
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
 
 // The root is a resolver, so the tools can be confined to a subdirectory. In a
 // browser that would be:

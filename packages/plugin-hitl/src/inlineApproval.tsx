@@ -1,4 +1,4 @@
-import { type ApprovalOption, ApprovalCard as Card } from "@tiny/ui";
+import { ApprovalCard, type ApprovalOption } from "@tiny/ui";
 import { useSyncExternalStore } from "react";
 import type { PendingStore } from "./pending.ts";
 
@@ -29,7 +29,7 @@ export const inlineApproval = (store: PendingStore) =>
     if (pending === undefined) return null;
 
     return (
-      <Card
+      <ApprovalCard
         question={`Run ${pending.label ?? pending.call.toolName}?`}
         detail={
           <pre className="max-h-40 overflow-auto rounded-control bg-field p-2 font-mono text-xs leading-[1.5] text-ink-2">

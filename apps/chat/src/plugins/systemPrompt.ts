@@ -7,9 +7,8 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * is never silently overridden by the app-wide default. pi chains this event,
  * so `event.systemPrompt` already reflects any earlier extension.
  */
-export const systemPrompt =
-  (text: string): Extension =>
-  (pi: ExtensionAPI) => {
+export const systemPrompt = (text: string): Extension =>
+  function systemPrompt(pi: ExtensionAPI) {
     pi.on("before_agent_start", (event) =>
       event.systemPrompt === "" ? { systemPrompt: text } : undefined,
     );

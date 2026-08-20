@@ -33,9 +33,8 @@ const originPrivateRoot: RootResolver = () => {
  * export const plugins: readonly Plugin[] = [fileSystem()];
  * ```
  */
-export const fileSystem =
-  (options: FileSystemOptions = {}): Plugin =>
-  (pi) => {
+export const fileSystem = (options: FileSystemOptions = {}): Plugin =>
+  function fileSystem(pi) {
     const tools = fileSystemTools(options.root ?? originPrivateRoot);
     for (const tool of tools) pi.registerTool(tool);
   };

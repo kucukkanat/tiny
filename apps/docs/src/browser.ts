@@ -4,13 +4,7 @@
  * and stay readable with this file blocked.
  */
 
-type Entry = {
-  readonly url: string;
-  readonly title: string;
-  readonly blurb: string;
-  readonly headings: readonly { readonly id: string; readonly text: string }[];
-  readonly text: string;
-};
+import type { SearchEntry } from "./site.ts";
 
 type Hit = { readonly url: string; readonly title: string; readonly detail: string };
 
@@ -21,7 +15,7 @@ const MAX_HITS = 8;
  * matches, and every term must appear somewhere. Substring matching is enough
  * for a site this size and costs nothing to build.
  */
-const score = (entry: Entry, terms: readonly string[]): number => {
+const score = (entry: SearchEntry, terms: readonly string[]): number => {
   const title = entry.title.toLowerCase();
   const headings = entry.headings.map((heading) => heading.text.toLowerCase()).join(" ");
   const body = `${entry.blurb} ${entry.text}`.toLowerCase();
@@ -36,7 +30,7 @@ const score = (entry: Entry, terms: readonly string[]): number => {
 };
 
 /** The first heading a term appears in, so a hit can point at a section. */
-const deepLink = (entry: Entry, terms: readonly string[]): Hit => {
+const deepLink = (entry: SearchEntry, terms: readonly string[]): Hit => {
   const match = entry.headings.find((heading) =>
     terms.some((term) => heading.text.toLowerCase().includes(term)),
   );
@@ -47,12 +41,12 @@ const deepLink = (entry: Entry, terms: readonly string[]): Hit => {
 
 const search = (input: HTMLInputElement, list: HTMLUListElement) => {
   const root = input.dataset.root ?? "./";
-  let entries: readonly Entry[] | undefined;
+  let entries: readonly SearchEntry[] | undefined;
 
-  const load = async (): Promise<readonly Entry[]> => {
+  const load = async (): Promise<readonly SearchEntry[]> => {
     if (entries !== undefined) return entries;
     const response = await fetch(`${root}assets/search.json`);
-    entries = (await response.json()) as readonly Entry[];
+    entries = (await response.json()) as readonly SearchEntry[];
     return entries;
   };
 

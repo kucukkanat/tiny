@@ -1,5 +1,5 @@
 import type { Plugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
-import { inlineApproval, type Verdict } from "./ApprovalCard.tsx";
+import { inlineApproval, type Verdict } from "./inlineApproval.tsx";
 import { createPendingStore } from "./pending.ts";
 import {
   forget,
@@ -10,7 +10,7 @@ import {
   resolve,
 } from "./policy.ts";
 
-export type { Verdict } from "./ApprovalCard.tsx";
+export type { Verdict } from "./inlineApproval.tsx";
 export type { Decision, PendingCall, Policy, Remembered } from "./policy.ts";
 export { forget, remember, resolve } from "./policy.ts";
 
@@ -43,9 +43,8 @@ const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(S
  * export const plugins = [humanInTheLoop({ allow: ["fs_read"] })];
  * ```
  */
-export const humanInTheLoop =
-  (options: HitlOptions = {}): Plugin =>
-  (pi) => {
+export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
+  function humanInTheLoop(pi) {
     // The question lives here rather than in a dialog: the card is contributed
     // into the reply, and this is what the two halves talk through.
     const store = createPendingStore();

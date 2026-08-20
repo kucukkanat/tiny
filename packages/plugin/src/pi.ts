@@ -1,123 +1,10 @@
-import type { ApiType, EventMap, ExtensionContext, ModelOptions, ToolDefinition } from "@tiny/ai";
-import type { ComponentType, ReactNode } from "react";
+import type { EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
+import type { ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
-
-/* ------------------------------------------------------------------ *
- * Keys — pi's `KeyId` shape (@earendil-works/pi-tui `keys.d.ts`).
- * ------------------------------------------------------------------ */
-
-type Letter =
-  | "a"
-  | "b"
-  | "c"
-  | "d"
-  | "e"
-  | "f"
-  | "g"
-  | "h"
-  | "i"
-  | "j"
-  | "k"
-  | "l"
-  | "m"
-  | "n"
-  | "o"
-  | "p"
-  | "q"
-  | "r"
-  | "s"
-  | "t"
-  | "u"
-  | "v"
-  | "w"
-  | "x"
-  | "y"
-  | "z";
-type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-type SymbolKey =
-  | "`"
-  | "-"
-  | "="
-  | "["
-  | "]"
-  | "\\"
-  | ";"
-  | "'"
-  | ","
-  | "."
-  | "/"
-  | "!"
-  | "@"
-  | "#"
-  | "$"
-  | "%"
-  | "^"
-  | "&"
-  | "*"
-  | "("
-  | ")"
-  | "_"
-  | "+"
-  | "|"
-  | "~"
-  | "{"
-  | "}"
-  | ":"
-  | "<"
-  | ">"
-  | "?";
-type SpecialKey =
-  | "escape"
-  | "esc"
-  | "enter"
-  | "return"
-  | "tab"
-  | "space"
-  | "backspace"
-  | "delete"
-  | "insert"
-  | "home"
-  | "end"
-  | "pageUp"
-  | "pageDown"
-  | "up"
-  | "down"
-  | "left"
-  | "right";
-type BaseKey = Letter | Digit | SymbolKey | SpecialKey;
-
-/** pi's modifier set exactly — note there is no `mod`; `super` is Cmd on macOS. */
-type Modifier = "ctrl" | "shift" | "alt" | "super";
-
-/**
- * pi expands modifiers recursively; two levels covers every practical binding
- * without the compiler cost of the full expansion.
- */
-export type KeyId = BaseKey | `${Modifier}+${BaseKey}` | `${Modifier}+${Modifier}+${BaseKey}`;
-
-/* ------------------------------------------------------------------ *
- * Theme — pi's `Theme` class, reduced to the string-in/string-out methods.
- * ------------------------------------------------------------------ */
-
-/**
- * `ctx.ui.theme` is a live property in pi and extensions call it inline
- * (`theme.fg("accent", "●")`). A browser has no ANSI, so every method is the
- * identity — a pi extension styling a string gets its string back unstyled
- * rather than a crash.
- */
-export type ThemeLike = {
-  readonly name?: string | undefined;
-  fg(color: string, text: string): string;
-  bg(color: string, text: string): string;
-  bold(text: string): string;
-  italic(text: string): string;
-  underline(text: string): string;
-  inverse(text: string): string;
-  strikethrough(text: string): string;
-  getFgAnsi(color: string): string;
-  getBgAnsi(color: string): string;
-  getColorMode(): "truecolor" | "256color";
-};
+import type { KeyId } from "./keys.ts";
+import type { ProviderConfig } from "./providers.ts";
+import type { Contribution, SlotName } from "./Slot.tsx";
+import type { ThemeLike } from "./theme.ts";
 
 /* ------------------------------------------------------------------ *
  * UI — pi's `ExtensionUIContext`, split by what RPC mode proves portable.
@@ -163,6 +50,8 @@ export type PluginUIContext = {
   setTitle(title: string): void;
   setEditorText(text: string): void;
   pasteToEditor(text: string): void;
+  /** The composer's current text. Real here — this host owns the composer. */
+  getEditorText(): string;
 
   /* — ours: no portable pi equivalent — */
   /**
@@ -180,7 +69,6 @@ export type PluginUIContext = {
   /* — terminal-only: pi's documented RPC fallbacks — */
   readonly theme: ThemeLike;
   custom<T>(): Promise<T | undefined>;
-  getEditorText(): string;
   getToolsExpanded(): boolean;
   setToolsExpanded(expanded: boolean): void;
   setWorkingMessage(message?: string): void;
@@ -311,28 +199,6 @@ export type ShortcutOptions = {
 };
 
 /**
- * Named regions of the app a plugin can render into.
- *
- * `message.pending` is the one inside a reply still being written — for anything
- * the run is waiting on, which is where an approval belongs: a question about
- * this tool call, asked where the tool call is, rather than over the whole app.
- */
-export type SlotName =
-  | "app.overlays"
-  | "composer.actions"
-  | "sidebar.footer"
-  | "message.actions"
-  | "message.pending";
-
-/** Props a slot passes down; `message.actions` is the only one that carries data. */
-export type SlotProps = {
-  readonly message?: PluginMessage | undefined;
-  readonly index?: number | undefined;
-};
-
-export type Contribution = ComponentType<SlotProps>;
-
-/**
  * What an event handler receives.
  *
  * pi hands event handlers the same context its commands get — `ui` included,
@@ -386,53 +252,6 @@ type UnfiredEvent =
   | "turn_end"
   | "turn_start"
   | "user_bash";
-
-/* ------------------------------------------------------------------ *
- * Providers — pi's `registerProvider`, reduced to what a browser can hold.
- * ------------------------------------------------------------------ */
-
-/**
- * An OpenAI-compatible endpoint a plugin adds to the model picker.
- *
- * pi's `ProviderConfig` also carries credential storage, catalog persistence
- * and a native `Provider` implementation from `pi-ai`; none has anywhere to
- * live here, and `@tiny/ai` streams to an endpoint directly rather than through
- * pi-ai's provider registry. What remains is the part that actually travels:
- * where to send the request, how to authenticate, and which models exist.
- */
-export type ProviderConfig = {
-  /** Shown in the model picker. */
-  readonly name: string;
-  /** e.g. "https://api.groq.com/openai/v1". */
-  readonly baseUrl: string;
-  /** A key, or a thunk so a plugin can prompt for one instead of storing it. */
-  readonly apiKey?: string | (() => string | Promise<string>) | undefined;
-  /**
-   * Which pi streaming implementation this endpoint speaks. Defaults to
-   * `openai-completions`. As in pi, a model may override it.
-   */
-  readonly api?: ApiType | undefined;
-  /**
-   * pi's `fetchModels`, narrowed: a fixed list or a lookup. Omit it and the
-   * endpoint's own models route is used, which is what most servers publish.
-   *
-   * An entry may be a bare id, or an object carrying what the endpoint cannot
-   * publish about it — its api, whether it reasons, its window.
-   */
-  readonly models?:
-    | readonly ProviderModel[]
-    | ((signal: AbortSignal | undefined) => Promise<readonly ProviderModel[]>)
-    | undefined;
-};
-
-/** A model id, or an id with the metadata a bare `/models` route cannot carry. */
-export type ProviderModel = string | ({ readonly id: string } & ModelOptions);
-
-export type ProviderEntry = {
-  readonly id: string;
-  readonly pluginId: string;
-  readonly config: ProviderConfig;
-};
 
 /* ------------------------------------------------------------------ *
  * Markdown

@@ -73,7 +73,7 @@ export const copyButton = (): Plugin => {
     );
   }
 
-  return (pi) => {
+  return function copyButton(pi) {
     pi.contribute("message.actions", CopyAction);
   };
 };
@@ -92,25 +92,26 @@ import type { Plugin } from "@tiny/plugin";
  * Every call here is pi's, with pi's signatures — this file would run
  * unmodified as a pi extension under `.pi/extensions/`.
  */
-export const clearChat = (): Plugin => (pi) => {
-  pi.registerCommand("clear", {
-    description: "Start a new conversation",
-    handler: async (_args, ctx) => {
-      if (ctx.chat.messages.length === 0) {
-        ctx.ui.notify("Nothing to clear", "info");
-        return;
-      }
-      const ok = await ctx.ui.confirm("Clear chat?", "This conversation will be left behind.");
-      if (ok) ctx.navigate("/");
-    },
-  });
+export const clearChat = (): Plugin =>
+  function clearChat(pi) {
+    pi.registerCommand("clear", {
+      description: "Start a new conversation",
+      handler: async (_args, ctx) => {
+        if (ctx.chat.messages.length === 0) {
+          ctx.ui.notify("Nothing to clear", "info");
+          return;
+        }
+        const ok = await ctx.ui.confirm("Clear chat?", "This conversation will be left behind.");
+        if (ok) ctx.navigate("/");
+      },
+    });
 
-  // pi's modifier set is ctrl / shift / alt / super — there is no `mod`.
-  pi.registerShortcut("ctrl+shift+backspace", {
-    description: "Clear the conversation",
-    handler: (ctx) => ctx.runCommand("clear"),
-  });
-};
+    // pi's modifier set is ctrl / shift / alt / super — there is no `mod`.
+    pi.registerShortcut("ctrl+shift+backspace", {
+      description: "Clear the conversation",
+      handler: (ctx) => ctx.runCommand("clear"),
+    });
+  };
 ```
 
 Subscribe to a stream event and draw with plain strings — `examples/tokenMeter.ts`:
@@ -125,27 +126,28 @@ import type { Plugin } from "@tiny/plugin";
  * already use, and `setWidget` carries plain string lines — all the RPC
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
-export const tokenMeter = (): Plugin => (pi) => {
-  let total = 0;
+export const tokenMeter = (): Plugin =>
+  function tokenMeter(pi) {
+    let total = 0;
 
-  pi.on("message_end", (event, _ctx) => {
-    total += event.message.usage.totalTokens;
-  });
+    pi.on("message_end", (event, _ctx) => {
+      total += event.message.usage.totalTokens;
+    });
 
-  pi.registerCommand("tokens", {
-    description: "Show tokens used this session",
-    handler: (_args, ctx) => {
-      ctx.ui.setWidget("tokens", [`${total} tokens this session`], {
-        placement: "aboveEditor",
-      });
-    },
-  });
+    pi.registerCommand("tokens", {
+      description: "Show tokens used this session",
+      handler: (_args, ctx) => {
+        ctx.ui.setWidget("tokens", [`${total} tokens this session`], {
+          placement: "aboveEditor",
+        });
+      },
+    });
 
-  pi.registerCommand("tokens:hide", {
-    description: "Hide the token meter",
-    handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
-  });
-};
+    pi.registerCommand("tokens:hide", {
+      description: "Hide the token meter",
+      handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
+    });
+  };
 ```
 
 Persist your own state and push text at the composer — `examples/SavedPromptsExample.tsx`:
@@ -176,7 +178,7 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return (pi) => {
+  return function savedPrompts(pi) {
     pi.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {
@@ -298,7 +300,6 @@ for full SDK conformance.
 | Method | Returns |
 | --- | --- |
 | `custom()` | `undefined` |
-| `getEditorText()` | `""` |
 | `getToolsExpanded()` | `false` |
 | `getAllThemes()` | `[]` |
 | `getTheme()` | `undefined` |
@@ -430,38 +431,39 @@ import type { Plugin } from "@tiny/plugin";
  * actually travels: where to send the request, how to authenticate, and which
  * models exist.
  */
-export const groq = (): Plugin => (pi) => {
-  pi.registerProvider("groq", {
-    name: "Groq",
-    baseUrl: "https://api.groq.com/openai/v1",
-    // Omitting `models` asks the endpoint's own /models route, which is what an
-    // OpenAI-compatible server publishes.
-    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
-    // A thunk rather than a string, so the key is fetched when a request needs
-    // it instead of sitting in the registry where `ctx.settings` would expose
-    // it to every other plugin.
-    apiKey: () => localStorage.getItem("groq:key") ?? "",
-  });
+export const groq = (): Plugin =>
+  function groq(pi) {
+    pi.registerProvider("groq", {
+      name: "Groq",
+      baseUrl: "https://api.groq.com/openai/v1",
+      // Omitting `models` asks the endpoint's own /models route, which is what an
+      // OpenAI-compatible server publishes.
+      models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+      // A thunk rather than a string, so the key is fetched when a request needs
+      // it instead of sitting in the registry where `ctx.settings` would expose
+      // it to every other plugin.
+      apiKey: () => localStorage.getItem("groq:key") ?? "",
+    });
 
-  pi.registerCommand("groq:key", {
-    description: "Set the Groq API key",
-    handler: async (args, ctx) => {
-      const key = args !== "" ? args : await ctx.ui.input("Groq API key", "gsk_…");
-      if (key === undefined || key === "") return;
-      localStorage.setItem("groq:key", key);
-      ctx.ui.notify("Groq key saved", "info");
-    },
-  });
+    pi.registerCommand("groq:key", {
+      description: "Set the Groq API key",
+      handler: async (args, ctx) => {
+        const key = args !== "" ? args : await ctx.ui.input("Groq API key", "gsk_…");
+        if (key === undefined || key === "") return;
+        localStorage.setItem("groq:key", key);
+        ctx.ui.notify("Groq key saved", "info");
+      },
+    });
 
-  pi.registerCommand("groq:off", {
-    description: "Remove the Groq provider",
-    // Registering and unregistering both work after the factory has returned,
-    // as they do in pi — the picker updates without a reload.
-    handler: (_args, ctx) => {
-      ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
-    },
-  });
-};
+    pi.registerCommand("groq:off", {
+      description: "Remove the Groq provider",
+      // Registering and unregistering both work after the factory has returned,
+      // as they do in pi — the picker updates without a reload.
+      handler: (_args, ctx) => {
+        ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
+      },
+    });
+  };
 ```
 
 ### API types
@@ -484,9 +486,8 @@ import type { Plugin } from "@tiny/plugin";
  * `anthropic-dangerous-direct-browser-access`, without which Anthropic refuses a
  * cross-origin request outright — so this works from a page with no proxy.
  */
-export const anthropic =
-  (apiKey: () => string): Plugin =>
-  (pi) => {
+export const anthropic = (apiKey: () => string): Plugin =>
+  function anthropic(pi) {
     pi.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.

@@ -95,10 +95,8 @@ ctx.ui.setEditorText("Rewrite this more concisely.");  // replace the draft
 ctx.ui.pasteToEditor(" — and cite sources.");          // append to it
 ```
 
-`ui.getEditorText()` returns `""`. It is one of the
-[terminal-only methods](pi-compat.md#degraded) kept present so a ported extension
-degrades instead of throwing — the composer's text lives in the app, and pushing
-into it is portable while reading out of it was never part of the RPC surface.
+`ui.getEditorText()` reads it back. The composer's text lives in the host, so
+unlike the rest of pi's terminal-only surface this one is real here.
 
 ## A React modal
 

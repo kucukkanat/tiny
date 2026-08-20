@@ -119,3 +119,26 @@ export const rootFrom = (page: Page): string => (page.slug === "" ? "" : "../");
 /** The href of `target` as written on `from`, so the site works at any base path. */
 export const hrefFrom = (from: Page, target: Page): string =>
   target.slug === "" ? `${rootFrom(from)}` || "./" : `${rootFrom(from)}${target.slug}/`;
+
+/** Escapes text for interpolation into the HTML this build emits. */
+export const escapeHtml = (text: string): string =>
+  text.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
+      character,
+  );
+
+/**
+ * One page in the search index.
+ *
+ * Declared here because the build writes it and the browser script reads it:
+ * two halves of one format, which must not be described in two places.
+ */
+export type SearchEntry = {
+  readonly url: string;
+  readonly title: string;
+  readonly blurb: string;
+  readonly headings: readonly { readonly id: string; readonly text: string }[];
+  readonly text: string;
+};

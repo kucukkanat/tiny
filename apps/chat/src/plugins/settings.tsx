@@ -38,7 +38,7 @@ export const settings = (): Plugin => {
     );
   }
 
-  return (pi) => {
+  return function settings(pi) {
     pi.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),

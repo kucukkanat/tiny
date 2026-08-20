@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { ManagerDialog } from "../src/Manager.tsx";
-import { memoryManifest } from "../src/memory.ts";
-import { createStore, type Store } from "../src/store.ts";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { memoryManifest } from "../src/inMemoryManifest.ts";
+import { type Installed, openInstalled } from "../src/installed.ts";
+import { ManagerDialog } from "../src/ManagerDialog.tsx";
 
 // The dialog drives a real store over a real in-memory filesystem, so an
 // install in these tests is the same install the app performs.
@@ -14,12 +14,12 @@ afterEach(cleanup);
 const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
 
 let root: FileSystemDirectoryHandle;
-let store: Store;
+let store: Installed;
 let changes: number;
 
 beforeEach(() => {
   root = memoryRoot();
-  store = createStore({ root: () => Promise.resolve(root), manifest: memoryManifest() });
+  store = openInstalled({ root: () => Promise.resolve(root), manifest: memoryManifest() });
   changes = 0;
 });
 

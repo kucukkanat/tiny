@@ -37,25 +37,20 @@ The one exception is a plugin meant to be installed at
 [`@tiny/plugin-manager`](runtime.md) loads installed plugins into the same
 registry.
 
-Each plugin gets an id, used to namespace its storage and to attribute its
-errors:
+A plugin's id is **the name of the function it is**. It namespaces `ctx.storage`
+and labels the plugin's errors, so name the function you return:
 
 ```ts
-const pluginId = (plugin: Plugin, index: number): string =>
-  plugin.name !== "" ? plugin.name : `plugin-${index}`;
-```
-
-That is the *function's* name, so `const greet = (): Plugin => (pi) => {}`
-produces an anonymous inner function and falls back to `plugin-3`. If you want a
-stable storage namespace, give the returned function a name:
-
-```ts
-export const greet = (): Plugin => {
-  return function greet(pi) {
-    // `ctx.storage` is now namespaced under "greet" rather than a positional id
+export const greet = (): Plugin =>
+  function greet(pi) {
+    // ctx.storage for this plugin lives under "greet"
   };
-};
 ```
+
+An anonymous plugin has no stable name to offer, so it falls back to its position
+in the list — and that position moves the moment the list does, taking the user's
+stored data with it. The host warns when this happens. Every plugin in this repo
+names its function; yours should too.
 
 Factories run in an effect, so contributions appear just after first paint rather
 than blocking it.
@@ -120,25 +115,26 @@ import type { Plugin } from "@tiny/plugin";
  * Every call here is pi's, with pi's signatures — this file would run
  * unmodified as a pi extension under `.pi/extensions/`.
  */
-export const clearChat = (): Plugin => (pi) => {
-  pi.registerCommand("clear", {
-    description: "Start a new conversation",
-    handler: async (_args, ctx) => {
-      if (ctx.chat.messages.length === 0) {
-        ctx.ui.notify("Nothing to clear", "info");
-        return;
-      }
-      const ok = await ctx.ui.confirm("Clear chat?", "This conversation will be left behind.");
-      if (ok) ctx.navigate("/");
-    },
-  });
+export const clearChat = (): Plugin =>
+  function clearChat(pi) {
+    pi.registerCommand("clear", {
+      description: "Start a new conversation",
+      handler: async (_args, ctx) => {
+        if (ctx.chat.messages.length === 0) {
+          ctx.ui.notify("Nothing to clear", "info");
+          return;
+        }
+        const ok = await ctx.ui.confirm("Clear chat?", "This conversation will be left behind.");
+        if (ok) ctx.navigate("/");
+      },
+    });
 
-  // pi's modifier set is ctrl / shift / alt / super — there is no `mod`.
-  pi.registerShortcut("ctrl+shift+backspace", {
-    description: "Clear the conversation",
-    handler: (ctx) => ctx.runCommand("clear"),
-  });
-};
+    // pi's modifier set is ctrl / shift / alt / super — there is no `mod`.
+    pi.registerShortcut("ctrl+shift+backspace", {
+      description: "Clear the conversation",
+      handler: (ctx) => ctx.runCommand("clear"),
+    });
+  };
 ```
 
 ## Events
@@ -176,27 +172,28 @@ import type { Plugin } from "@tiny/plugin";
  * already use, and `setWidget` carries plain string lines — all the RPC
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
-export const tokenMeter = (): Plugin => (pi) => {
-  let total = 0;
+export const tokenMeter = (): Plugin =>
+  function tokenMeter(pi) {
+    let total = 0;
 
-  pi.on("message_end", (event, _ctx) => {
-    total += event.message.usage.totalTokens;
-  });
+    pi.on("message_end", (event, _ctx) => {
+      total += event.message.usage.totalTokens;
+    });
 
-  pi.registerCommand("tokens", {
-    description: "Show tokens used this session",
-    handler: (_args, ctx) => {
-      ctx.ui.setWidget("tokens", [`${total} tokens this session`], {
-        placement: "aboveEditor",
-      });
-    },
-  });
+    pi.registerCommand("tokens", {
+      description: "Show tokens used this session",
+      handler: (_args, ctx) => {
+        ctx.ui.setWidget("tokens", [`${total} tokens this session`], {
+          placement: "aboveEditor",
+        });
+      },
+    });
 
-  pi.registerCommand("tokens:hide", {
-    description: "Hide the token meter",
-    handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
-  });
-};
+    pi.registerCommand("tokens:hide", {
+      description: "Hide the token meter",
+      handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
+    });
+  };
 ```
 
 Handlers are recorded during `loadPlugins` and replayed into whatever

@@ -1,12 +1,9 @@
 import { type Extension, type ExtensionContext, firesEvent, type ToolDefinition } from "@tiny/ai";
 import { createEvents, type PluginEvents } from "./events.ts";
-import { createProviderStore, type ProviderStore } from "./providers.ts";
-import { identityTheme } from "./theme.ts";
+import type { KeyId } from "./keys.ts";
 import type {
   CommandInfo,
   CommandOptions,
-  Contribution,
-  KeyId,
   MarkdownContext,
   MarkdownTransformer,
   Plugin,
@@ -14,10 +11,12 @@ import type {
   PluginContext,
   PluginEventContext,
   PluginUIContext,
-  ProviderEntry,
   ShortcutOptions,
-  SlotName,
-} from "./types.ts";
+} from "./pi.ts";
+import type { ProviderEntry } from "./providers.ts";
+import { createProviderStore, type ProviderStore } from "./providers.ts";
+import type { Contribution, SlotName } from "./Slot.tsx";
+import { identityTheme } from "./theme.ts";
 
 export type CommandEntry = {
   /** The name as registered. */
@@ -100,9 +99,27 @@ export const transformMarkdown = (
   return current;
 };
 
-/** Anonymous factories still need a stable key for namespaced storage. */
-const pluginId = (plugin: Plugin, index: number): string =>
-  plugin.name !== "" ? plugin.name : `plugin-${index}`;
+/**
+ * A plugin's identity: the name of the function it is.
+ *
+ * This is the namespace for `ctx.storage` and the label on its errors, so it has
+ * to be stable across loads. An anonymous plugin has nothing stable to offer, so
+ * it falls back to its position in the list — which moves the moment the list
+ * does, taking the user's stored data with it. That is worth a warning rather
+ * than a silent surprise; naming the function fixes it:
+ *
+ * ```ts
+ * export const greet = (): Plugin => function greet(pi) { ... };
+ * ```
+ */
+const pluginId = (plugin: Plugin, index: number): string => {
+  if (plugin.name !== "") return plugin.name;
+  console.warn(
+    `[plugin] the plugin at position ${index} is anonymous, so its storage is namespaced ` +
+      `"plugin-${index}" and moves if the list is reordered. Give the function a name.`,
+  );
+  return `plugin-${index}`;
+};
 
 /**
  * pi keeps every registration of a duplicated command name and disambiguates

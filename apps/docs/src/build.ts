@@ -2,19 +2,11 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { type Heading, renderMarkdown } from "./render.ts";
 import { shell } from "./shell.ts";
-import { hrefFrom, type Page, pages } from "./site.ts";
+import { hrefFrom, type Page, pages, type SearchEntry } from "./site.ts";
 
 const here = new URL(".", import.meta.url).pathname;
 const appRoot = join(here, "..");
 const repoRoot = join(appRoot, "..", "..");
-
-export type SearchEntry = {
-  readonly url: string;
-  readonly title: string;
-  readonly blurb: string;
-  readonly headings: readonly { readonly id: string; readonly text: string }[];
-  readonly text: string;
-};
 
 /** Home is `index.html`; everything else is a directory index, so URLs stay bare. */
 const outputPath = (page: Page): string =>
@@ -119,7 +111,7 @@ export const build = async (outDir: string, base = "/"): Promise<readonly string
   );
 
   const client = await Bun.build({
-    entrypoints: [join(here, "client.ts")],
+    entrypoints: [join(here, "browser.ts")],
     minify: true,
     target: "browser",
     define: { "process.env.NODE_ENV": '"production"' },

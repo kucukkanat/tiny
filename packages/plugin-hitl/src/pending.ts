@@ -1,5 +1,5 @@
 import { createExternalStore } from "@tiny/plugin";
-import type { Verdict } from "./ApprovalCard.tsx";
+import type { Verdict } from "./inlineApproval.tsx";
 import type { PendingCall } from "./policy.ts";
 
 /** One question waiting on the user, and the handler parked on the answer. */

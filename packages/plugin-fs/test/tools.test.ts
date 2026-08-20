@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { toolText } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem, fileSystemTools } from "../src/index.ts";
-import { memoryRoot } from "../src/memory.ts";
+import { memoryRoot } from "../src/inMemoryRoot.ts";
 import { segments } from "../src/opfs.ts";
 
 // Every test drives the real `execute` against a real in-memory filesystem —

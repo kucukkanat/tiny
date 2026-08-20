@@ -11,9 +11,8 @@ import type { Plugin } from "@tiny/plugin";
  * `anthropic-dangerous-direct-browser-access`, without which Anthropic refuses a
  * cross-origin request outright — so this works from a page with no proxy.
  */
-export const anthropic =
-  (apiKey: () => string): Plugin =>
-  (pi) => {
+export const anthropic = (apiKey: () => string): Plugin =>
+  function anthropic(pi) {
     pi.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.

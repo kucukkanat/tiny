@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { createEvents, type PluginEvents } from "./events.ts";
-import type { MarkdownEntry, Registry } from "./host.ts";
-import { emptyRegistry, transformMarkdown } from "./host.ts";
 import type {
   CommandInfo,
   MarkdownContext,
@@ -9,9 +7,11 @@ import type {
   PluginMessage,
   PluginSettings,
   PluginStreaming,
-  ProviderEntry,
   WidgetPlacement,
-} from "./types.ts";
+} from "./pi.ts";
+import type { ProviderEntry } from "./providers.ts";
+import type { MarkdownEntry, Registry } from "./registry.ts";
+import { emptyRegistry, transformMarkdown } from "./registry.ts";
 
 export type Widget = { readonly lines: readonly string[]; readonly placement: WidgetPlacement };
 

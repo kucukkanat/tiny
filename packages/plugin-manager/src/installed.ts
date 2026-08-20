@@ -12,9 +12,6 @@ import { PluginManagerError } from "./errors.ts";
  * file is not enough to get code executed.
  */
 
-/** Structural mirror of `@tiny/plugin-fs`'s resolver; no dependency needed for one line. */
-export type RootResolver = () => Promise<FileSystemDirectoryHandle>;
-
 /** The slice of `Storage` the manifest uses, so a test or script can supply its own. */
 export type ManifestStorage = {
   getItem(key: string): string | null;
@@ -43,9 +40,9 @@ export type InstallInput = {
   readonly url?: string | undefined;
 };
 
-export type StoreOptions = {
+export type InstalledOptions = {
   /** Defaults to the Origin Private File System root. */
-  readonly root?: RootResolver | undefined;
+  readonly root?: (() => Promise<FileSystemDirectoryHandle>) | undefined;
   /** Defaults to `localStorage`. */
   readonly manifest?: ManifestStorage | undefined;
   /** Stamped onto new entries; injectable so examples and tests stay stable. */
@@ -84,7 +81,7 @@ const describe = (error: unknown): string =>
 const notFound = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "NotFoundError";
 
-const originPrivateRoot: RootResolver = () => {
+const originPrivateRoot = (): Promise<FileSystemDirectoryHandle> => {
   if (typeof navigator === "undefined" || navigator.storage?.getDirectory === undefined)
     return Promise.reject(
       new PluginManagerError("The Origin Private File System is unavailable; pass `root` instead"),
@@ -98,7 +95,7 @@ const browserStorage = (): ManifestStorage => {
   return localStorage;
 };
 
-export type Store = {
+export type Installed = {
   /** What the manifest claims, without touching the disk. */
   list(): readonly InstalledPlugin[];
   /** The manifest, each entry checked against the source on disk. */
@@ -113,7 +110,7 @@ export type Store = {
   verifiedSource(entry: InstalledPlugin): Promise<string>;
 };
 
-export const createStore = (options: StoreOptions = {}): Store => {
+export const openInstalled = (options: InstalledOptions = {}): Installed => {
   const root = options.root ?? originPrivateRoot;
   const storage = options.manifest ?? browserStorage();
   const now = options.now ?? (() => new Date().toISOString());

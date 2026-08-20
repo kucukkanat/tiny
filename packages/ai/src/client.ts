@@ -10,7 +10,7 @@ import type {
   Usage,
 } from "@earendil-works/pi-ai";
 import { type ApiType, apiFor } from "./apis.ts";
-import { endpointModel, fetchModelIds, type ModelOptions } from "./endpoint.ts";
+import { endpointModel, fetchModelIds, type ModelSpec } from "./endpoint.ts";
 import {
   BLOCKED_MESSAGE,
   type Extension,
@@ -141,10 +141,10 @@ export async function* streamChat(
     /** How many tool rounds before giving up. Defaults to 10. */
     maxToolTurns?: number;
     /** Per-model metadata: which api to speak, whether it reasons. */
-    model?: ModelOptions;
+    modelSpec?: ModelSpec;
   } = {},
 ): AsyncGenerator<StreamDelta> {
-  const descriptor = endpointModel(endpoint, model, options.model ?? {});
+  const descriptor = endpointModel(endpoint, model, options.modelSpec ?? {});
   // Resolved per request, and only the implementation this endpoint speaks: each
   // sits behind its own dynamic import, so nothing else is ever downloaded.
   const api = await apiFor(descriptor.api as ApiType);

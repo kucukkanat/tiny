@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PluginManagerError } from "./errors.ts";
-import { fetchSource, type InspectedPlugin, type Store, sha256 } from "./store.ts";
+import { fetchSource, type InspectedPlugin, type Installed, sha256 } from "./installed.ts";
 
 const field =
   "w-full rounded-control bg-field px-2.5 py-1.5 text-base text-ink shadow-hairline outline-none placeholder:text-ink-3 focus:shadow-[0_0_0_1px_var(--line-strong)]";
@@ -35,7 +35,7 @@ const statusTone: Record<InspectedPlugin["status"], string> = {
 /**
  * The whole manager UI: what is installed, and the two ways to add more.
  *
- * Deliberately context-free — it takes a `Store` and reports changes through
+ * Deliberately context-free — it takes a `Installed` and reports changes through
  * `onChanged`, so it can be rendered and driven in a test without a host. The
  * plugin wires `onChanged` to `ctx.reload()`.
  */
@@ -44,7 +44,7 @@ export function ManagerDialog({
   onChanged,
   onClose,
 }: {
-  store: Store;
+  store: Installed;
   onChanged: () => Promise<void> | void;
   onClose: () => void;
 }) {

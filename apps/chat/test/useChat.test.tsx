@@ -37,15 +37,22 @@ afterAll(() => server.stop(true));
 
 /** `useChat` takes the endpoint and the model separately, so a conversation can
  *  run through a plugin-registered provider rather than the saved settings. */
-const settingsFor = (path: string) =>
-  [{ baseUrl: `http://localhost:${server.port}${path}`, apiKey: "sk-test" }, "test-model"] as const;
+const against = (path: string) => ({
+  conversationId: undefined,
+  endpoint: { baseUrl: `http://localhost:${server.port}${path}`, apiKey: "sk-test" },
+  model: "test-model",
+  onConversationCreated: () => {},
+});
 
 describe("useChat", () => {
   test("streams a reply, persists the conversation, and reports the new id", async () => {
     let createdId: string | undefined;
     const { result } = renderHook(() =>
-      useChat(undefined, ...settingsFor("/v1"), (id) => {
-        createdId = id;
+      useChat({
+        ...against("/v1"),
+        onConversationCreated: (id) => {
+          createdId = id;
+        },
       }),
     );
 
@@ -71,19 +78,22 @@ describe("useChat", () => {
   test("loads an existing conversation by id", async () => {
     let createdId: string | undefined;
     const first = renderHook(() =>
-      useChat(undefined, ...settingsFor("/v1"), (id) => {
-        createdId = id;
+      useChat({
+        ...against("/v1"),
+        onConversationCreated: (id) => {
+          createdId = id;
+        },
       }),
     );
     await act(() => first.result.current.send("hello again"));
     first.unmount();
 
-    const second = renderHook(() => useChat(createdId, ...settingsFor("/v1"), () => {}));
+    const second = renderHook(() => useChat({ ...against("/v1"), conversationId: createdId }));
     await waitFor(() => expect(second.result.current.messages).toHaveLength(2));
   });
 
   test("surfaces API errors but keeps the user message", async () => {
-    const { result } = renderHook(() => useChat(undefined, ...settingsFor("/broken"), () => {}));
+    const { result } = renderHook(() => useChat(against("/broken")));
     await act(() => result.current.send("hi"));
     expect(result.current.error).toContain("401");
     expect(result.current.error).toContain("nope");
@@ -93,14 +103,17 @@ describe("useChat", () => {
   test("runs the extensions it is given against the real request", async () => {
     let tokens: number | undefined;
     const { result } = renderHook(() =>
-      useChat(undefined, ...settingsFor("/v1"), () => {}, [
-        (pi) => {
-          pi.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
-          pi.on("message_end", (event) => {
-            tokens = event.message.usage.totalTokens;
-          });
-        },
-      ]),
+      useChat({
+        ...against("/v1"),
+        extensions: [
+          (pi) => {
+            pi.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
+            pi.on("message_end", (event) => {
+              tokens = event.message.usage.totalTokens;
+            });
+          },
+        ],
+      }),
     );
 
     await act(() => result.current.send("hello"));
@@ -112,7 +125,14 @@ describe("useChat", () => {
   });
 
   test("does nothing without a resolved endpoint", async () => {
-    const { result } = renderHook(() => useChat(undefined, undefined, "", () => {}));
+    const { result } = renderHook(() =>
+      useChat({
+        conversationId: undefined,
+        endpoint: undefined,
+        model: "",
+        onConversationCreated: () => {},
+      }),
+    );
     await act(() => result.current.send("hi"));
     expect(result.current.messages).toEqual([]);
   });

@@ -15,8 +15,15 @@ export type Settings = Endpoint & {
   readonly api?: ApiType | undefined;
 };
 
-/** The built-in provider's id — `@tiny/ai` tags its models with the same name. */
-export const OWN_ENDPOINT = "endpoint";
+/**
+ * The built-in provider's id.
+ *
+ * Re-exported rather than restated: `@tiny/ai` stamps this same id onto every
+ * model descriptor it builds, and `App` routes on the two being equal. Two
+ * copies of the literal would let them drift, and the symptom — every
+ * conversation silently losing its endpoint — points nowhere near the cause.
+ */
+export { PROVIDER_ID as OWN_ENDPOINT } from "@tiny/ai";
 
 const KEY = "tiny-chat:settings";
 

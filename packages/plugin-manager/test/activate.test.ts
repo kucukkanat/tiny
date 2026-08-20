@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { loadPlugins } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { memoryManifest } from "../src/memory.ts";
-import { pluginManager } from "../src/pluginManager.tsx";
-import { createStore, type Store, type StoreOptions } from "../src/store.ts";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { memoryManifest } from "../src/inMemoryManifest.ts";
+import { type Installed, type InstalledOptions, openInstalled } from "../src/installed.ts";
+import { pluginManager } from "../src/plugin.tsx";
 
 /*
  * The point of the package, end to end: source installed at runtime is loaded
@@ -22,13 +22,13 @@ const TOOLED = `export default (pi) =>
 const EXPLODES = 'export default () => { throw new Error("boom"); };';
 
 let root: FileSystemDirectoryHandle;
-let options: StoreOptions;
-let store: Store;
+let options: InstalledOptions;
+let store: Installed;
 
 beforeEach(() => {
   root = memoryRoot();
   options = { root: () => Promise.resolve(root), manifest: memoryManifest() };
-  store = createStore(options);
+  store = openInstalled(options);
 });
 
 const registry = () => loadPlugins([pluginManager(options)]);

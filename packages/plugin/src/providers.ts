@@ -1,6 +1,52 @@
-import type { Endpoint, ModelOptions } from "@tiny/ai";
-import { createExternalStore } from "./store.ts";
-import type { ProviderConfig, ProviderEntry, ProviderModel } from "./types.ts";
+import type { ApiType, Endpoint, ModelSpec } from "@tiny/ai";
+import { createExternalStore } from "./externalStore.ts";
+
+/* ------------------------------------------------------------------ *
+ * Providers — pi's `registerProvider`, reduced to what a browser can hold.
+ * ------------------------------------------------------------------ */
+
+/**
+ * An OpenAI-compatible endpoint a plugin adds to the model picker.
+ *
+ * pi's `ProviderConfig` also carries credential storage, catalog persistence
+ * and a native `Provider` implementation from `pi-ai`; none has anywhere to
+ * live here, and `@tiny/ai` streams to an endpoint directly rather than through
+ * pi-ai's provider registry. What remains is the part that actually travels:
+ * where to send the request, how to authenticate, and which models exist.
+ */
+export type ProviderConfig = {
+  /** Shown in the model picker. */
+  readonly name: string;
+  /** e.g. "https://api.groq.com/openai/v1". */
+  readonly baseUrl: string;
+  /** A key, or a thunk so a plugin can prompt for one instead of storing it. */
+  readonly apiKey?: string | (() => string | Promise<string>) | undefined;
+  /**
+   * Which pi streaming implementation this endpoint speaks. Defaults to
+   * `openai-completions`. As in pi, a model may override it.
+   */
+  readonly api?: ApiType | undefined;
+  /**
+   * pi's `fetchModels`, narrowed: a fixed list or a lookup. Omit it and the
+   * endpoint's own models route is used, which is what most servers publish.
+   *
+   * An entry may be a bare id, or an object carrying what the endpoint cannot
+   * publish about it — its api, whether it reasons, its window.
+   */
+  readonly models?:
+    | readonly ProviderModel[]
+    | ((signal: AbortSignal | undefined) => Promise<readonly ProviderModel[]>)
+    | undefined;
+};
+
+/** A model id, or an id with the metadata a bare `/models` route cannot carry. */
+export type ProviderModel = string | ({ readonly id: string } & ModelSpec);
+
+export type ProviderEntry = {
+  readonly id: string;
+  readonly pluginId: string;
+  readonly config: ProviderConfig;
+};
 
 /**
  * The registered providers, as live state rather than a snapshot.
@@ -68,7 +114,7 @@ export const modelId = (model: ProviderModel): string =>
  * pi lets `api` be set on the provider and overridden per model; the same rule
  * applies here, with the model's own value winning.
  */
-export const modelOptions = (config: ProviderConfig, id: string): ModelOptions => {
+export const modelSpec = (config: ProviderConfig, id: string): ModelSpec => {
   const declared = Array.isArray(config.models)
     ? config.models.find((model) => modelId(model) === id)
     : undefined;

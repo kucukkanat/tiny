@@ -8,9 +8,8 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * turns — so it always survives the trim. Older turns are dropped from the
  * *request* only; the conversation on disk is untouched.
  */
-export const historyWindow =
-  (turns: number): Extension =>
-  (pi: ExtensionAPI) => {
+export const historyWindow = (turns: number): Extension =>
+  function historyWindow(pi: ExtensionAPI) {
     pi.on("context", (event) =>
       event.messages.length <= turns ? undefined : { messages: event.messages.slice(-turns) },
     );

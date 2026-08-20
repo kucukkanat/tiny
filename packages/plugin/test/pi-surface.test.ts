@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { Endpoint } from "@tiny/ai";
 import { toolOutput, toolText } from "@tiny/ai";
 import { createEvents } from "../src/events.ts";
-import { type HostActions, loadPlugins, transformMarkdown } from "../src/host.ts";
+import type { Plugin } from "../src/pi.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
-import type { Plugin } from "../src/types.ts";
+import { type HostActions, loadPlugins, transformMarkdown } from "../src/registry.ts";
 
 describe("registerProvider", () => {
   test("collects an endpoint a plugin adds", async () => {

@@ -9,9 +9,8 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * whole extension is a no-op in production (`process.env.NODE_ENV` is inlined
  * by the bundler).
  */
-export const streamTrace =
-  (log: (message: string) => void = console.debug): Extension =>
-  (pi: ExtensionAPI) => {
+export const streamTrace = (log: (message: string) => void = console.debug): Extension =>
+  function streamTrace(pi: ExtensionAPI) {
     if (process.env.NODE_ENV === "production") return;
 
     // One extension instance serves every request, so the tally resets on start.

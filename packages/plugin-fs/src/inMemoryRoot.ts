@@ -6,7 +6,7 @@
  * `apps/chat`. This is an implementation, not a stub: the tools are never
  * replaced, only the filesystem they walk.
  *
- * Shipped as `@tiny/plugin-fs/memory` so anyone integrating these tools can
+ * Shipped as `@tiny/plugin-fs/testing` so anyone integrating these tools can
  * test against it too.
  */
 

@@ -2,7 +2,7 @@ import type {
   ChatMessage,
   Endpoint,
   Extension,
-  ModelOptions,
+  ModelSpec,
   ToolDefinition,
   ToolStatus,
 } from "@tiny/ai";
@@ -36,26 +36,43 @@ export type Streaming = {
 const toChatMessages = (stored: readonly StoredMessage[]): ChatMessage[] =>
   stored.map(({ role, content }) => ({ role, content }));
 
-export function useChat(
-  conversationId: string | undefined,
+export type ChatOptions = {
+  readonly conversationId: string | undefined;
   /**
    * Where this conversation streams from — the user's own endpoint, or one a
    * plugin registered with `pi.registerProvider`. Resolved by `App`, because
    * only it can see both the settings and the provider registry.
    */
-  endpoint: Endpoint | undefined,
-  model: string,
-  onConversationCreated: (id: string) => void,
+  readonly endpoint: Endpoint | undefined;
+  readonly model: string;
+  onConversationCreated(id: string): void;
   /**
    * Supplied by the plugin host, which is the one place plugin factories run.
-   * Defaults to none so a screen or a test can drive the hook on its own.
+   * Optional so a screen or a test can drive the hook on its own.
    */
-  extensions: readonly Extension[] = [],
+  readonly extensions?: readonly Extension[];
   /** Tools the model may call, also collected by the plugin host. */
-  toolDefinitions: readonly ToolDefinition[] = [],
+  readonly tools?: readonly ToolDefinition[];
   /** What a provider knows about this model that its endpoint cannot publish. */
-  modelOptions: ModelOptions = {},
-) {
+  readonly modelSpec?: ModelSpec;
+};
+
+/**
+ * One conversation: its messages, the reply in flight, and how to send.
+ *
+ * Named options rather than positional arguments — `extensions` and `tools` are
+ * both arrays arriving from the same place, and at a call site nothing but
+ * position would tell them apart.
+ */
+export function useChat({
+  conversationId,
+  endpoint,
+  model,
+  onConversationCreated,
+  extensions = [],
+  tools = [],
+  modelSpec = {},
+}: ChatOptions) {
   const [messages, setMessages] = useState<readonly StoredMessage[]>([]);
   const [streaming, setStreaming] = useState<Streaming | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -118,15 +135,17 @@ export function useChat(
       let answer = "";
       let reasoningStarted: number | undefined;
       let reasoningSeconds = 0;
-      let tools: readonly ToolRun[] = [];
-      setStreaming({ reasoning, text: answer, reasoningSeconds, tools });
+      // The tool *calls* this reply made, for the UI — distinct from `tools`,
+      // the definitions the model may call.
+      let toolRuns: readonly ToolRun[] = [];
+      setStreaming({ reasoning, text: answer, reasoningSeconds, tools: toolRuns });
 
       try {
         for await (const delta of streamChat(endpoint, model, toChatMessages(history), {
           signal: controller.signal,
           extensions,
-          tools: toolDefinitions,
-          model: modelOptions,
+          tools,
+          modelSpec,
         })) {
           if (delta.kind === "reasoning") {
             reasoningStarted ??= Date.now();
@@ -135,27 +154,27 @@ export function useChat(
             // A call is announced as "running" and then replaced in place, so
             // the row updates rather than the list growing twice per call.
             const { id, name, status, summary } = delta;
-            tools = tools.some((run) => run.id === id)
-              ? tools.map((run) => (run.id === id ? { id, name, status, summary } : run))
-              : [...tools, { id, name, status, summary }];
+            toolRuns = toolRuns.some((run) => run.id === id)
+              ? toolRuns.map((run) => (run.id === id ? { id, name, status, summary } : run))
+              : [...toolRuns, { id, name, status, summary }];
           } else {
             if (reasoningStarted !== undefined && reasoningSeconds === 0)
               reasoningSeconds = Math.max(1, Math.round((Date.now() - reasoningStarted) / 1000));
             answer += delta.text;
           }
-          setStreaming({ reasoning, text: answer, reasoningSeconds, tools });
+          setStreaming({ reasoning, text: answer, reasoningSeconds, tools: toolRuns });
         }
       } catch (caught) {
         if (!controller.signal.aborted) setError(describeError(caught));
       } finally {
         abortRef.current = undefined;
         setStreaming(undefined);
-        if (reasoning !== "" || answer !== "" || tools.length > 0) {
+        if (reasoning !== "" || answer !== "" || toolRuns.length > 0) {
           const assistant: StoredMessage = {
             role: "assistant",
             content: answer,
             ...(reasoning !== "" ? { reasoning, reasoningSeconds } : {}),
-            ...(tools.length > 0 ? { tools } : {}),
+            ...(toolRuns.length > 0 ? { tools: toolRuns } : {}),
           };
           const all = [...history, assistant];
           setMessages(all);
@@ -168,8 +187,8 @@ export function useChat(
       endpoint,
       model,
       extensions,
-      toolDefinitions,
-      modelOptions,
+      tools,
+      modelSpec,
       messages,
       onConversationCreated,
       streaming,

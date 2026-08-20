@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { compile } from "../src/compile.ts";
 import { PluginManagerError } from "../src/errors.ts";
-import { memoryManifest } from "../src/memory.ts";
-import { createStore, fetchSource, type Store, sha256 } from "../src/store.ts";
+import { memoryManifest } from "../src/inMemoryManifest.ts";
+import { fetchSource, type Installed, openInstalled, sha256 } from "../src/installed.ts";
 
 // The store runs against a real in-memory OPFS and a real manifest — nothing is
 // stubbed, and `compile` really imports the source as a module.
@@ -11,11 +11,11 @@ import { createStore, fetchSource, type Store, sha256 } from "../src/store.ts";
 const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
 
 let root: FileSystemDirectoryHandle;
-let store: Store;
+let store: Installed;
 
 beforeEach(() => {
   root = memoryRoot();
-  store = createStore({
+  store = openInstalled({
     root: () => Promise.resolve(root),
     manifest: memoryManifest(),
     now: () => "2026-08-20T00:00:00.000Z",
@@ -96,13 +96,13 @@ describe("inspect", () => {
   test("survives a manifest that is not an array", async () => {
     const manifest = memoryManifest();
     manifest.setItem("tiny:plugins", '"nonsense"');
-    expect(createStore({ root: () => Promise.resolve(root), manifest }).list()).toEqual([]);
+    expect(openInstalled({ root: () => Promise.resolve(root), manifest }).list()).toEqual([]);
   });
 
   test("survives a manifest that is not JSON", () => {
     const manifest = memoryManifest();
     manifest.setItem("tiny:plugins", "{oops");
-    expect(createStore({ root: () => Promise.resolve(root), manifest }).list()).toEqual([]);
+    expect(openInstalled({ root: () => Promise.resolve(root), manifest }).list()).toEqual([]);
   });
 });
 

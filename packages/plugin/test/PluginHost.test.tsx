@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { usePluginContext, usePluginHost, useProvideApp } from "../src/context.ts";
+import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
 
 const noop = () => {};
 const STABLE_MESSAGES: readonly [] = [];
 
-import { emptyRegistry } from "../src/host.ts";
 import { PluginHost } from "../src/PluginHost.tsx";
+import type { Plugin, PluginContext } from "../src/pi.ts";
+import { emptyRegistry } from "../src/registry.ts";
 import { Slot, StatusBar, Widgets } from "../src/Slot.tsx";
-import type { Plugin, PluginContext } from "../src/types.ts";
 
 afterEach(() => {
   cleanup();
@@ -180,6 +180,26 @@ describe("ctx.ui fire-and-forget", () => {
 
     await runCommand("say");
     await waitFor(() => expect(screen.getByTestId("plugin-toast").textContent).toBe("Copied"));
+  });
+
+  test("getEditorText reads back what setEditorText and pasteToEditor put there", async () => {
+    let seen: string | undefined;
+    const plugin: Plugin = (pi) => {
+      pi.registerCommand("write", { handler: (_a, ctx) => ctx.ui.setEditorText("hello") });
+      pi.registerCommand("append", { handler: (_a, ctx) => ctx.ui.pasteToEditor(" there") });
+      pi.registerCommand("read", {
+        handler: (_a, ctx) => {
+          seen = ctx.ui.getEditorText();
+        },
+      });
+    };
+    await mount([plugin]);
+
+    await runCommand("write");
+    await runCommand("append");
+    await runCommand("read");
+
+    expect(seen).toBe("hello there");
   });
 
   test("setWidget renders string lines at the requested placement", async () => {

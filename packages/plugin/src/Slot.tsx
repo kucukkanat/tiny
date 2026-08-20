@@ -1,6 +1,28 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
-import { PluginIdContext, usePluginHost } from "./context.ts";
-import type { PluginMessage, SlotName, WidgetPlacement } from "./types.ts";
+import { Component, type ComponentType, type ErrorInfo, type ReactNode } from "react";
+import { PluginIdContext, usePluginHost } from "./hooks.ts";
+import type { PluginMessage, WidgetPlacement } from "./pi.ts";
+
+/**
+ * Named regions of the app a plugin can render into.
+ *
+ * `message.pending` is the one inside a reply still being written — for anything
+ * the run is waiting on, which is where an approval belongs: a question about
+ * this tool call, asked where the tool call is, rather than over the whole app.
+ */
+export type SlotName =
+  | "app.overlays"
+  | "composer.actions"
+  | "sidebar.footer"
+  | "message.actions"
+  | "message.pending";
+
+/** Props a slot passes down; `message.actions` is the only one that carries data. */
+export type SlotProps = {
+  readonly message?: PluginMessage | undefined;
+  readonly index?: number | undefined;
+};
+
+export type Contribution = ComponentType<SlotProps>;
 
 /**
  * `@tiny/ai` catches nothing by design — right for a request, wrong for a

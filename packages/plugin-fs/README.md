@@ -55,7 +55,7 @@ All five in one run — `examples/tools-in-action.ts`:
 ```ts
 import { toolText } from "@tiny/ai";
 import { fileSystemTools } from "@tiny/plugin-fs";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
 
 // In the browser the root is OPFS — `navigator.storage.getDirectory()`, which
 // `fileSystem()` uses by default. Here it is the in-memory filesystem the
@@ -95,7 +95,7 @@ console.log(await call("fs_delete", { path: "/notes" }));
 ```ts
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
 
 // The root is a resolver, so the tools can be confined to a subdirectory. In a
 // browser that would be:
@@ -128,7 +128,7 @@ console.log(`/workspace/notes/todo.md → ${await file.text()}`);
 
 ## Testing against these tools
 
-`@tiny/plugin-fs/memory` exports `memoryRoot()`, a real in-memory implementation of the
+`@tiny/plugin-fs/testing` exports `memoryRoot()`, a real in-memory implementation of the
 slice of OPFS the tools use. Neither Bun nor happy-dom provides
 `navigator.storage.getDirectory()`, so a test needs a root of its own — the same
 arrangement as `fake-indexeddb` elsewhere in this repo. It is an implementation, not a

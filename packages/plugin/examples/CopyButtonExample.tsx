@@ -25,7 +25,7 @@ export const copyButton = (): Plugin => {
     );
   }
 
-  return (pi) => {
+  return function copyButton(pi) {
     pi.contribute("message.actions", CopyAction);
   };
 };

@@ -1,8 +1,8 @@
-import type { Endpoint, ModelOptions } from "@tiny/ai";
+import type { Endpoint, ModelSpec } from "@tiny/ai";
 import { listModels } from "@tiny/ai";
 import {
   endpointOf,
-  modelOptions,
+  modelSpec,
   modelsOf,
   Slot,
   StatusBar,
@@ -84,23 +84,23 @@ export function App() {
    * endpoint and override it per model, as pi allows; the user's own endpoint
    * carries its api on the settings object.
    */
-  const selectedOptions = useMemo<ModelOptions>(() => {
+  const selectedSpec = useMemo<ModelSpec>(() => {
     const providerId = settings?.providerId;
     if (providerId === undefined || providerId === OWN_ENDPOINT)
       return settings?.api === undefined ? {} : { api: settings.api };
     const entry = providers.find((candidate) => candidate.id === providerId);
-    return entry === undefined ? {} : modelOptions(entry.config, settings?.model ?? "");
+    return entry === undefined ? {} : modelSpec(entry.config, settings?.model ?? "");
   }, [settings, providers]);
 
-  const chat = useChat(
-    id,
+  const chat = useChat({
+    conversationId: id,
     endpoint,
-    settings?.model ?? "",
+    model: settings?.model ?? "",
     onConversationCreated,
-    usePluginExtensions(),
-    usePluginTools(),
-    selectedOptions,
-  );
+    extensions: usePluginExtensions(),
+    tools: usePluginTools(),
+    modelSpec: selectedSpec,
+  });
 
   // Populate the model picker from the configured endpoint; a failure here is
   // non-fatal (the saved model still works), so it only empties the list.

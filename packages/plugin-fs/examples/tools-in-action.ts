@@ -1,6 +1,6 @@
 import { toolText } from "@tiny/ai";
 import { fileSystemTools } from "@tiny/plugin-fs";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
 
 // In the browser the root is OPFS — `navigator.storage.getDirectory()`, which
 // `fileSystem()` uses by default. Here it is the in-memory filesystem the

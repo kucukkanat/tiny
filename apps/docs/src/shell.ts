@@ -1,15 +1,7 @@
 import type { Heading } from "./render.ts";
-import { hrefFrom, type Page, pages, rootFrom, sections } from "./site.ts";
+import { escapeHtml, hrefFrom, type Page, pages, rootFrom, sections } from "./site.ts";
 
 export const REPO_URL = "https://github.com/kucukkanat/tiny";
-
-const escapeHtml = (text: string): string =>
-  text.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
-      character,
-  );
 
 const sidebar = (current: Page): string =>
   sections

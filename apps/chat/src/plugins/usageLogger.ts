@@ -8,9 +8,8 @@ import type { Extension, ExtensionAPI } from "@tiny/ai";
  * publishes no price table (`endpointModel` sets every rate to zero), so cost
  * is reported only when the endpoint actually priced the call.
  */
-export const usageLogger =
-  (log: (message: string) => void = console.info): Extension =>
-  (pi: ExtensionAPI) => {
+export const usageLogger = (log: (message: string) => void = console.info): Extension =>
+  function usageLogger(pi: ExtensionAPI) {
     pi.on("message_end", (event) => {
       const { input, output, totalTokens, cost } = event.message.usage;
       const price = cost.total > 0 ? ` · $${cost.total.toFixed(4)}` : "";

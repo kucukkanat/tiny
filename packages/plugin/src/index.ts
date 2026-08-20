@@ -1,4 +1,8 @@
-export type { AppBridge } from "./context.ts";
+export type { PluginEvents } from "./events.ts";
+export { createEvents } from "./events.ts";
+export type { ExternalStore } from "./externalStore.ts";
+export { createExternalStore } from "./externalStore.ts";
+export type { AppBridge } from "./hooks.ts";
 export {
   useMarkdown,
   usePluginContext,
@@ -8,36 +12,16 @@ export {
   usePluginProviders,
   usePluginTools,
   useProvideApp,
-} from "./context.ts";
-export type { PluginEvents } from "./events.ts";
-export { createEvents } from "./events.ts";
-export type {
-  CommandEntry,
-  ContributionEntry,
-  HostActions,
-  LoadOptions,
-  MarkdownEntry,
-  Registry,
-  ShortcutEntry,
-  ToolEntry,
-} from "./host.ts";
-export { emptyRegistry, loadPlugins, transformMarkdown } from "./host.ts";
+} from "./hooks.ts";
+export type { KeyId } from "./keys.ts";
 export { matchesKey } from "./keys.ts";
 export { PluginHost } from "./PluginHost.tsx";
-export type { ProviderStore } from "./providers.ts";
-export { createProviderStore, endpointOf, modelId, modelOptions, modelsOf } from "./providers.ts";
-export { Slot, StatusBar, Widgets } from "./Slot.tsx";
-export type { ExternalStore } from "./store.ts";
-export { createExternalStore } from "./store.ts";
-export { identityTheme } from "./theme.ts";
 export type {
   AutocompleteItem,
   CommandInfo,
   CommandOptions,
   ContextUsage,
-  Contribution,
   DialogOptions,
-  KeyId,
   MarkdownContext,
   MarkdownTransformer,
   NotifyLevel,
@@ -52,13 +36,24 @@ export type {
   PluginStorage,
   PluginStreaming,
   PluginUIContext,
-  ProviderConfig,
-  ProviderEntry,
-  ProviderModel,
   ShortcutOptions,
-  SlotName,
-  SlotProps,
-  ThemeLike,
   WidgetOptions,
   WidgetPlacement,
-} from "./types.ts";
+} from "./pi.ts";
+export type { ProviderConfig, ProviderEntry, ProviderModel, ProviderStore } from "./providers.ts";
+export { createProviderStore, endpointOf, modelId, modelSpec, modelsOf } from "./providers.ts";
+export type {
+  CommandEntry,
+  ContributionEntry,
+  HostActions,
+  LoadOptions,
+  MarkdownEntry,
+  Registry,
+  ShortcutEntry,
+  ToolEntry,
+} from "./registry.ts";
+export { emptyRegistry, loadPlugins, transformMarkdown } from "./registry.ts";
+export type { Contribution, SlotName, SlotProps } from "./Slot.tsx";
+export { Slot, StatusBar, Widgets } from "./Slot.tsx";
+export type { ThemeLike } from "./theme.ts";
+export { identityTheme } from "./theme.ts";

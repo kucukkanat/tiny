@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { build, type SearchEntry } from "../src/build.ts";
-import { pages } from "../src/site.ts";
+import { build } from "../src/build.ts";
+import { pages, type SearchEntry } from "../src/site.ts";
 
 let out = "";
 const html = new Map<string, string>();

@@ -65,9 +65,9 @@ module without that export is rejected before anything is stored.
 Everything the dialog uses is exported, so you can drive installs from code:
 
 ```ts
-import { createStore, fetchSource } from "@tiny/plugin-manager";
+import { openInstalled, fetchSource } from "@tiny/plugin-manager";
 
-const store = createStore(); // localStorage + OPFS by default
+const store = openInstalled(); // localStorage + OPFS by default
 
 await store.install({ name: "Greet", source: await fetchSource(url), url });
 await store.inspect(); // entries with status: "ok" | "modified" | "missing"
@@ -76,8 +76,8 @@ await store.update(id); // re-fetch a URL-installed plugin
 await store.remove(id);
 ```
 
-`createStore({ root, manifest, now })` swaps the OPFS root, the manifest storage
-and the clock — `@tiny/plugin-manager/memory` and `@tiny/plugin-fs/memory` give
+`openInstalled({ root, manifest, now })` swaps the OPFS root, the manifest storage
+and the clock — `@tiny/plugin-manager/testing` and `@tiny/plugin-fs/testing` give
 you in-memory implementations of the first two, which is how the examples below
 run outside a browser.
 
@@ -91,9 +91,9 @@ Each block is a real file under [`examples/`](examples), run by the test suite.
 
 ```ts
 import { loadPlugins } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { createStore, pluginManager } from "@tiny/plugin-manager";
-import { memoryManifest } from "@tiny/plugin-manager/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { openInstalled, pluginManager } from "@tiny/plugin-manager";
+import { memoryManifest } from "@tiny/plugin-manager/testing";
 
 // In a browser both stores default to the real thing: the manifest to
 // localStorage and the source to OPFS. Here they are in memory, so the example
@@ -101,7 +101,7 @@ import { memoryManifest } from "@tiny/plugin-manager/memory";
 const disk = memoryRoot();
 const options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
 
-const store = createStore(options);
+const store = openInstalled(options);
 
 // This is what the dialog does once the user approves the source it showed
 // them. Anything that is not a loadable module exporting a function is
@@ -147,9 +147,9 @@ disabled: plugins
 
 ```ts
 import { loadPlugins } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { createStore, fetchSource, pluginManager } from "@tiny/plugin-manager";
-import { memoryManifest } from "@tiny/plugin-manager/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";
+import { memoryManifest } from "@tiny/plugin-manager/testing";
 
 const SOURCE = 'export default (pi) => pi.registerCommand("greet", { handler: () => {} });';
 
@@ -159,7 +159,7 @@ const url = `${server.url.origin}/greet.js`;
 
 const disk = memoryRoot();
 const options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
-const store = createStore(options);
+const store = openInstalled(options);
 
 // Fetching and installing are two steps on purpose: the source is downloaded,
 // shown to the user, and only then stored. What runs later is this copy, not

@@ -32,7 +32,7 @@ jobs:
       # checks that guard it pass first.
       - run: bun run lint
       - run: bun run typecheck
-      - run: bun test
+      - run: bun run test
 
       # `--base` is used by the 404 page alone; every other URL is relative, so
       # the site works at this sub-path with no other configuration.

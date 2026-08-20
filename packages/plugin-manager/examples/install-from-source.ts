@@ -1,7 +1,7 @@
 import { loadPlugins } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { createStore, pluginManager } from "@tiny/plugin-manager";
-import { memoryManifest } from "@tiny/plugin-manager/memory";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { openInstalled, pluginManager } from "@tiny/plugin-manager";
+import { memoryManifest } from "@tiny/plugin-manager/testing";
 
 // In a browser both stores default to the real thing: the manifest to
 // localStorage and the source to OPFS. Here they are in memory, so the example
@@ -9,7 +9,7 @@ import { memoryManifest } from "@tiny/plugin-manager/memory";
 const disk = memoryRoot();
 const options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
 
-const store = createStore(options);
+const store = openInstalled(options);
 
 // This is what the dialog does once the user approves the source it showed
 // them. Anything that is not a loadable module exporting a function is

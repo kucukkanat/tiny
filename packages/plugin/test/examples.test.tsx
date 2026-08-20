@@ -4,11 +4,11 @@ import { copyButton } from "../examples/CopyButtonExample.tsx";
 import { clearChat } from "../examples/clearChat.ts";
 import { savedPrompts } from "../examples/SavedPromptsExample.tsx";
 import { tokenMeter } from "../examples/tokenMeter.ts";
-import { usePluginHost } from "../src/context.ts";
-import { emptyRegistry, loadPlugins } from "../src/host.ts";
+import { usePluginHost } from "../src/hooks.ts";
 import { PluginHost } from "../src/PluginHost.tsx";
+import type { Plugin } from "../src/pi.ts";
+import { emptyRegistry, loadPlugins } from "../src/registry.ts";
 import { Slot, Widgets } from "../src/Slot.tsx";
-import type { Plugin } from "../src/types.ts";
 
 // Every README snippet is a real plugin under examples/. Running each one proves
 // the snippet compiles and works, and the README is then asserted to embed the
@@ -117,7 +117,7 @@ describe("examples run", () => {
     await act(async () => {
       await host?.runCommand("prompts:add", "Summarise this.");
     });
-    expect(localStorage.getItem("tiny-plugin:plugin-0:saved")).toBe('["Summarise this."]');
+    expect(localStorage.getItem("tiny-plugin:savedPrompts:saved")).toBe('["Summarise this."]');
 
     // The composer button opens the picker through the registered command.
     // Synchronous `act`: the handler parks on the dialog, so awaiting it would

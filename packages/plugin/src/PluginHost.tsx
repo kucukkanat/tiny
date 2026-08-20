@@ -1,17 +1,9 @@
 import type { Extension } from "@tiny/ai";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type AppBridge, HostContext, type HostValue, type Widget } from "./context.ts";
 import { Dialog, type DialogRequest, type Toast, Toasts } from "./Dialogs.tsx";
 import { createEvents } from "./events.ts";
-import {
-  emptyRegistry,
-  type HostActions,
-  loadPlugins,
-  type Registry,
-  terminalFallbacks,
-} from "./host.ts";
+import { type AppBridge, HostContext, type HostValue, type Widget } from "./hooks.ts";
 import { matchesKey } from "./keys.ts";
-import { createProviderStore, type ProviderStore } from "./providers.ts";
 import type {
   CommandInfo,
   ContextUsage,
@@ -19,9 +11,17 @@ import type {
   Plugin,
   PluginContext,
   PluginUIContext,
-  ProviderEntry,
   WidgetOptions,
-} from "./types.ts";
+} from "./pi.ts";
+import type { ProviderEntry } from "./providers.ts";
+import { createProviderStore, type ProviderStore } from "./providers.ts";
+import {
+  emptyRegistry,
+  type HostActions,
+  loadPlugins,
+  type Registry,
+  terminalFallbacks,
+} from "./registry.ts";
 
 const newId = () => crypto.randomUUID();
 
@@ -56,6 +56,10 @@ export function PluginHost({
   const [widgets, setWidgets] = useState<ReadonlyMap<string, Widget>>(new Map());
   const [statuses, setStatuses] = useState<ReadonlyMap<string, string>>(new Map());
   const [editorText, setEditorText] = useState("");
+  // Read by `ui.getEditorText()`, which is built once and must still see the
+  // text as it is now rather than as it was when the memo ran.
+  const editorTextRef = useRef(editorText);
+  editorTextRef.current = editorText;
 
   // State, not a ref: contributed components read chat state through the
   // context and must re-render when it moves.
@@ -238,6 +242,11 @@ export function PluginHost({
 
       /* — terminal-only: pi's documented RPC fallbacks — */
       ...terminalFallbacks,
+
+      // Overrides one of those fallbacks: this host *does* own the composer's
+      // text, so a plugin reading the draft gets the draft. Through a ref
+      // because `ui` is memoised and the text changes on every keystroke.
+      getEditorText: () => editorTextRef.current,
     }),
     [ask],
   );
@@ -432,21 +441,19 @@ const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {
   return entries;
 };
 
-const BRIDGE_KEYS = [
-  "messages",
-  "streaming",
-  "settings",
-  "signal",
-  "send",
-  "stop",
-  "updateSettings",
-  "navigate",
-  "sessionName",
-  "setSessionName",
-] as const satisfies readonly (keyof AppBridge)[];
-
-const sameBridge = (a: AppBridge, b: AppBridge): boolean =>
-  BRIDGE_KEYS.every((key) => Object.is(a[key], b[key]));
+/**
+ * Whether two bridges hold the same values, field by field.
+ *
+ * Read off the objects rather than from a list of field names: a list would have
+ * to be updated by hand every time `AppBridge` gains a field, and — because
+ * `satisfies readonly (keyof AppBridge)[]` accepts a list that is merely valid,
+ * not complete — forgetting would compile clean and silently stop republishing
+ * that field to plugins.
+ */
+const sameBridge = (a: AppBridge, b: AppBridge): boolean => {
+  const keys = Object.keys(a) as (keyof AppBridge)[];
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.is(a[key], b[key]));
+};
 
 /** Per-plugin localStorage, so a plugin cannot reach the app's own keys. */
 const namespacedStorage = (pluginId: string) => {

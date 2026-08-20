@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PluginHost, Slot, usePluginHost } from "@tiny/plugin";
-import { memoryRoot } from "@tiny/plugin-fs/memory";
-import { memoryManifest } from "../src/memory.ts";
-import { pluginManager } from "../src/pluginManager.tsx";
-import { createStore, type Store, type StoreOptions } from "../src/store.ts";
+import { memoryRoot } from "@tiny/plugin-fs/testing";
+import { memoryManifest } from "../src/inMemoryManifest.ts";
+import { type Installed, type InstalledOptions, openInstalled } from "../src/installed.ts";
+import { pluginManager } from "../src/plugin.tsx";
 
 // End to end, in the host the app uses: open the dialog from the sidebar,
 // install source, and watch the command it registers become live — no page
@@ -23,13 +23,13 @@ function Probe() {
   return null;
 }
 
-let options: StoreOptions;
-let store: Store;
+let options: InstalledOptions;
+let store: Installed;
 
 beforeEach(() => {
   const disk = memoryRoot();
   options = { root: () => Promise.resolve(disk), manifest: memoryManifest() };
-  store = createStore(options);
+  store = openInstalled(options);
   host = undefined;
 });
 

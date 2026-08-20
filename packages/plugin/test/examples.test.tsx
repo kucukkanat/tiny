@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { clearChat } from "../examples/clearChat.ts";
 import { copyButton } from "../examples/copyButton.tsx";
+import { greet } from "../examples/greet.ts";
 import { savedPrompts } from "../examples/savedPrompts.tsx";
 import { tokenMeter } from "../examples/tokenMeter.ts";
 import { usePluginHost } from "../src/hooks.ts";
@@ -44,6 +45,7 @@ const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => 
 };
 
 const EXAMPLES = [
+  "greet.ts",
   "copyButton.tsx",
   "clearChat.ts",
   "tokenMeter.ts",
@@ -55,6 +57,18 @@ const EXAMPLES = [
 const readme = await Bun.file(new URL("../README.md", import.meta.url)).text();
 
 describe("examples run", () => {
+  test("greet registers the command the quickstart promises", async () => {
+    await mount([greet()]);
+
+    expect(host?.commands.map((command) => command.name)).toEqual(["greet"]);
+    await act(async () => {
+      await host?.runCommand("greet", "there");
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("plugin-toast").textContent).toBe("Hello, there"),
+    );
+  });
+
   test("copyButton renders on a message and notifies when clicked", async () => {
     await mount(
       [copyButton()],

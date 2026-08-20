@@ -1,12 +1,15 @@
-import { createContext, useContext, useEffect } from "react";
-import type { Registry } from "./host.ts";
-import { emptyRegistry } from "./host.ts";
+import { createContext, useContext, useEffect, useMemo } from "react";
+import { createEvents, type PluginEvents } from "./events.ts";
+import type { MarkdownEntry, Registry } from "./host.ts";
+import { emptyRegistry, transformMarkdown } from "./host.ts";
 import type {
   CommandInfo,
+  MarkdownContext,
   PluginContext,
   PluginMessage,
   PluginSettings,
   PluginStreaming,
+  ProviderEntry,
   WidgetPlacement,
 } from "./types.ts";
 
@@ -26,6 +29,13 @@ export type AppBridge = {
   stop(): void;
   updateSettings(next: PluginSettings): void;
   navigate(path: string): void;
+  /**
+   * The current conversation's name, behind `pi.getSessionName()`. Optional
+   * because not every host that mounts this has named sessions; where it is
+   * absent the pi methods report as much rather than pretending.
+   */
+  readonly sessionName?: string | undefined;
+  setSessionName?(name: string): void;
 };
 
 export type HostValue = {
@@ -33,6 +43,12 @@ export type HostValue = {
   readonly widgets: ReadonlyMap<string, Widget>;
   readonly statuses: ReadonlyMap<string, string>;
   readonly commands: readonly CommandInfo[];
+  /** Live, because pi allows registering a provider after the factory returns. */
+  readonly providers: readonly ProviderEntry[];
+  /** The tool names currently enabled — `pi.getActiveTools()`. */
+  readonly activeTools: readonly string[];
+  /** The bus behind `pi.events`. */
+  readonly events: PluginEvents;
   /** Text pushed at the composer by `ctx.ui.setEditorText`. */
   readonly editorText: string;
   setEditorText(text: string): void;
@@ -48,6 +64,9 @@ export const HostContext = createContext<HostValue>({
   widgets: new Map(),
   statuses: new Map(),
   commands: [],
+  providers: [],
+  activeTools: [],
+  events: createEvents(),
   editorText: "",
   setEditorText: noop,
   runCommand: async () => {},
@@ -76,9 +95,40 @@ export function usePluginExtensions() {
   return usePluginHost().registry.extensions;
 }
 
-/** The tools plugins registered, for `useChat` to hand to `streamChat`. */
+/**
+ * The tools plugins registered, for `useChat` to hand to `streamChat` — minus
+ * any that `pi.setActiveTools` switched off.
+ */
 export function usePluginTools() {
-  return usePluginHost().registry.tools;
+  const { registry, activeTools } = usePluginHost();
+  return useMemo(
+    () => registry.tools.filter((tool) => activeTools.includes(tool.name)),
+    [registry, activeTools],
+  );
+}
+
+/** The endpoints plugins registered with `pi.registerProvider`. */
+export function usePluginProviders(): readonly ProviderEntry[] {
+  return usePluginHost().providers;
+}
+
+/** The bus behind `pi.events`, for a component that wants to join in. */
+export function usePluginEvents(): PluginEvents {
+  return usePluginHost().events;
+}
+
+/**
+ * Runs the registered markdown transformers over one message.
+ *
+ * A hook rather than a plain call so a component re-renders when a plugin that
+ * registers one is added or removed.
+ */
+export function useMarkdown(markdown: string, context: MarkdownContext): string {
+  const entries: readonly MarkdownEntry[] = usePluginHost().registry.markdown;
+  return useMemo(
+    () => (entries.length === 0 ? markdown : transformMarkdown(entries, markdown, context)),
+    [entries, markdown, context],
+  );
 }
 
 /**

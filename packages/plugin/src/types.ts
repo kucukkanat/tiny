@@ -10,6 +10,7 @@ import type {
   ToolDefinition,
 } from "@tiny/ai";
 import type { ComponentType, ReactNode } from "react";
+import type { PluginEvents } from "./events.ts";
 
 /* ------------------------------------------------------------------ *
  * Keys — pi's `KeyId` shape (@earendil-works/pi-tui `keys.d.ts`).
@@ -219,6 +220,8 @@ export type PluginSettings = {
   readonly baseUrl: string;
   readonly apiKey: string;
   readonly model: string;
+  /** Which registered provider `model` belongs to; the user's own endpoint when absent. */
+  readonly providerId?: string | undefined;
 };
 
 /** Namespaced per plugin, so a plugin can persist state without touching app data. */
@@ -233,6 +236,15 @@ export type PluginChat = {
   readonly streaming: PluginStreaming | undefined;
   send(text: string): void;
   stop(): void;
+};
+
+/** pi's `ContextUsage`, over what a bring-your-own endpoint actually reports. */
+export type ContextUsage = {
+  readonly input: number;
+  readonly output: number;
+  readonly totalTokens: number;
+  /** 0 when the endpoint publishes no window, which is the usual case. */
+  readonly contextWindow: number;
 };
 
 /**
@@ -253,11 +265,22 @@ export type PluginContext = {
   readonly storage: PluginStorage;
   runCommand(name: string, args?: string): Promise<void>;
   readonly commands: readonly CommandInfo[];
+
+  /** Abort the reply in flight, as `ctx.abort()` does in pi. */
+  abort(): void;
+  /** False while a reply is streaming. */
+  isIdle(): boolean;
+  hasPendingMessages(): boolean;
+  /** Tokens and window for the conversation so far. */
+  getContextUsage(): ContextUsage;
+  /** Start a fresh conversation, as pi's `ctx.newSession()` does. */
+  newSession(): void;
+
   /**
-   * Ours: re-run every plugin factory and rebuild the registry, resolving once
-   * the new one is live. pi has no equivalent — it discovers extensions from
-   * disk at startup — but a plugin that installs other plugins needs a way to
-   * apply the change without a page reload.
+   * pi's, adapted: pi re-runs `/reload` over extensions discovered on disk,
+   * this re-runs every plugin factory and rebuilds the registry. Both resolve
+   * once the new runtime is live, and in both a plugin that no longer registers
+   * is gone. Ours is also how a plugin installed at runtime is applied.
    */
   reload(): Promise<void>;
 };
@@ -324,6 +347,7 @@ type UnfiredEvent =
   | "session_before_switch"
   | "session_before_tree"
   | "session_compact"
+  | "session_compact_failed"
   | "session_info_changed"
   | "session_shutdown"
   | "session_start"
@@ -338,6 +362,56 @@ type UnfiredEvent =
   | "turn_start"
   | "user_bash";
 
+/* ------------------------------------------------------------------ *
+ * Providers — pi's `registerProvider`, reduced to what a browser can hold.
+ * ------------------------------------------------------------------ */
+
+/**
+ * An OpenAI-compatible endpoint a plugin adds to the model picker.
+ *
+ * pi's `ProviderConfig` also carries credential storage, catalog persistence
+ * and a native `Provider` implementation from `pi-ai`; none has anywhere to
+ * live here, and `@tiny/ai` streams to an endpoint directly rather than through
+ * pi-ai's provider registry. What remains is the part that actually travels:
+ * where to send the request, how to authenticate, and which models exist.
+ */
+export type ProviderConfig = {
+  /** Shown in the model picker. */
+  readonly name: string;
+  /** e.g. "https://api.groq.com/openai/v1". */
+  readonly baseUrl: string;
+  /** A key, or a thunk so a plugin can prompt for one instead of storing it. */
+  readonly apiKey?: string | (() => string | Promise<string>) | undefined;
+  /**
+   * pi's `fetchModels`, narrowed: a fixed list or a lookup. Omit it and the
+   * endpoint's own `/models` route is used, which is what an OpenAI-compatible
+   * server publishes.
+   */
+  readonly models?:
+    | readonly string[]
+    | ((signal: AbortSignal | undefined) => Promise<readonly string[]>)
+    | undefined;
+};
+
+export type ProviderEntry = {
+  readonly id: string;
+  readonly pluginId: string;
+  readonly config: ProviderConfig;
+};
+
+/* ------------------------------------------------------------------ *
+ * Markdown
+ * ------------------------------------------------------------------ */
+
+export type MarkdownContext = {
+  readonly messageType: "user" | "assistant" | "assistant-thinking";
+  /** True for partial assistant updates; false for finalized and restored text. */
+  readonly isStreaming: boolean;
+};
+
+/** pi's transformer, minus `availableWidth` — a browser has no column count. */
+export type MarkdownTransformer = (markdown: string, context: MarkdownContext) => string;
+
 export interface PluginAPI {
   /** Subscribe to a lifecycle event `@tiny/ai` fires. */
   on<K extends keyof EventMap>(
@@ -350,11 +424,38 @@ export interface PluginAPI {
   registerCommand(name: string, options: CommandOptions): void;
   registerShortcut(shortcut: KeyId, options: ShortcutOptions): void;
   /**
-   * Register a tool the model may call. pi's name and shape, except that
-   * `parameters` is a plain JSON Schema object rather than a typebox `TSchema`
-   * — see `ToolDefinition` in `@tiny/ai` for why.
+   * Register a tool the model may call. pi's shape, including `execute`'s
+   * positional arguments and content-block result, except that `parameters` is
+   * a plain JSON Schema object rather than a typebox `TSchema` — see
+   * `ToolDefinition` in `@tiny/ai` for why.
    */
   registerTool(tool: ToolDefinition): void;
+  /** Every command available to `runCommand`, in invocation order. */
+  getCommands(): readonly CommandInfo[];
+
+  /** Transform the markdown of a message before it is displayed. */
+  registerMarkdownTransformer(transformer: MarkdownTransformer): void;
+
+  /** Add an endpoint to the model picker. A repeat id replaces the earlier one. */
+  registerProvider(id: string, config: ProviderConfig): void;
+  /** Remove one. Returns whether there was anything to remove. */
+  unregisterProvider(id: string): boolean;
+
+  /** The tools the model may call this turn, and which of them are enabled. */
+  getAllTools(): readonly string[];
+  getActiveTools(): readonly string[];
+  setActiveTools(names: readonly string[]): void;
+
+  /** Switch the model the next request uses. */
+  setModel(model: string): void;
+  /** Send a message as the user. */
+  sendUserMessage(content: string): void;
+  /** The current conversation's title. */
+  getSessionName(): string | undefined;
+  setSessionName(name: string): void;
+
+  /** The bus plugins talk to each other over — not the lifecycle events above. */
+  readonly events: PluginEvents;
 
   /** Ours: render a React component into a named slot. */
   contribute(slot: SlotName, component: Contribution): void;

@@ -1,15 +1,20 @@
+import type { Extension } from "@tiny/ai";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type AppBridge, HostContext, type HostValue, type Widget } from "./context.ts";
 import { Dialog, type DialogRequest, type Toast, Toasts } from "./Dialogs.tsx";
-import { emptyRegistry, loadPlugins, type Registry } from "./host.ts";
+import { createEvents } from "./events.ts";
+import { emptyRegistry, type HostActions, loadPlugins, type Registry } from "./host.ts";
 import { matchesKey } from "./keys.ts";
+import { createProviderStore, type ProviderStore } from "./providers.ts";
 import { identityTheme } from "./theme.ts";
 import type {
   CommandInfo,
+  ContextUsage,
   DialogOptions,
   Plugin,
   PluginContext,
   PluginUIContext,
+  ProviderEntry,
   WidgetOptions,
 } from "./types.ts";
 
@@ -58,6 +63,32 @@ export function PluginHost({
   const [nonce, setNonce] = useState(0);
   const reloading = useRef<(() => void)[]>([]);
 
+  // Providers and the event bus outlive one load: pi allows `registerProvider`
+  // long after the factory returns, and a bus that reset on reload would drop
+  // subscriptions mid-conversation.
+  const providerStore = useRef<ProviderStore>(undefined);
+  providerStore.current ??= createProviderStore();
+  const providers = useProviders(providerStore.current);
+  const events = useRef(createEvents()).current;
+
+  // `undefined` means "everything the registry has"; pi's `setActiveTools`
+  // replaces that with an explicit list.
+  const [activeNames, setActiveNames] = useState<readonly string[] | undefined>(undefined);
+
+  // Recorded by an extension this host adds itself, so `ctx.getContextUsage()`
+  // works without the app having to track or publish token counts.
+  const usage = useRef<ContextUsage>({ input: 0, output: 0, totalTokens: 0, contextWindow: 0 });
+
+  // pi's `ctx.getContextUsage()` reads the harness's own accounting. This host
+  // has none of its own, so it subscribes like any other extension — which also
+  // means the app needs no change to support it.
+  const usageRecorder = useRef<Extension>((pi) => {
+    pi.on("message_end", (event, context) => {
+      const { input, output, totalTokens } = event.message.usage;
+      usage.current = { input, output, totalTokens, contextWindow: context.model.contextWindow };
+    });
+  }).current;
+
   // Factories may be async, so the registry arrives after first paint; the app
   // renders immediately and contributions appear when they are ready.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the reload trigger — the effect re-runs on it rather than reading it
@@ -66,10 +97,16 @@ export function PluginHost({
     const settleReloads = () => {
       for (const done of reloading.current.splice(0)) done();
     };
-    loadPlugins(plugins).then(
+    loadPlugins(plugins, {
+      providers: providerStore.current,
+      events,
+      host: () => hostActions.current,
+    }).then(
       (loaded) => {
         if (!live) return;
-        setRegistry(loaded);
+        // Appended rather than registered as a plugin: it is the host's own
+        // bookkeeping, and must not show up in anything plugins can enumerate.
+        setRegistry({ ...loaded, extensions: [...loaded.extensions, usageRecorder] });
         settleReloads();
       },
       (error: unknown) => {
@@ -82,7 +119,7 @@ export function PluginHost({
     return () => {
       live = false;
     };
-  }, [plugins, nonce]);
+  }, [plugins, nonce, events, usageRecorder]);
 
   /** Re-run every factory, resolving once the new registry is in place. */
   const reload = useCallback(
@@ -221,6 +258,14 @@ export function PluginHost({
     [registry],
   );
 
+  const allTools = useMemo(() => registry.tools.map((tool) => tool.name), [registry]);
+  const activeTools = useMemo(
+    // An unset list means every tool, so a plugin that never calls
+    // `setActiveTools` sees exactly what it registered.
+    () => (activeNames === undefined ? allTools : allTools.filter((n) => activeNames.includes(n))),
+    [allTools, activeNames],
+  );
+
   const contextFor = useCallback(
     (pluginId: string): PluginContext => ({
       ui,
@@ -239,6 +284,13 @@ export function PluginHost({
       storage: namespacedStorage(pluginId),
       runCommand: (name, args) => runCommandRef.current(name, args),
       commands,
+      abort: bridge.stop,
+      // Nothing is queued here — a reply is either streaming or it is not — so
+      // pi's two questions have the same answer, from opposite directions.
+      isIdle: () => bridge.streaming === undefined,
+      hasPendingMessages: () => bridge.streaming !== undefined,
+      getContextUsage: () => usage.current,
+      newSession: () => bridge.navigate("/"),
       reload,
     }),
     [ui, commands, bridge, reload],
@@ -298,19 +350,57 @@ export function PluginHost({
     setBridge((current) => (sameBridge(current, next) ? current : next));
   }, []);
 
+  // Read through a ref because `loadPlugins` captures the getter once, while a
+  // pi method may be called from a handler running long afterwards.
+  const hostActions = useRef<HostActions>(undefined as unknown as HostActions);
+  hostActions.current = {
+    getCommands: () => commands,
+    getAllTools: () => allTools,
+    getActiveTools: () => activeTools,
+    setActiveTools: (names) => setActiveNames([...names]),
+    setModel: (model) => {
+      if (bridge.settings === undefined) return;
+      bridge.updateSettings({ ...bridge.settings, model });
+    },
+    sendUserMessage: (content) => bridge.send(content),
+    getSessionName: () => bridge.sessionName,
+    setSessionName: (name) => {
+      if (bridge.setSessionName === undefined) {
+        console.error("[plugin] pi.setSessionName() is not supported by this app");
+        return;
+      }
+      bridge.setSessionName(name);
+    },
+  };
+
   const value = useMemo<HostValue>(
     () => ({
       registry,
       widgets,
       statuses,
       commands,
+      providers,
+      activeTools,
+      events,
       editorText,
       setEditorText,
       runCommand,
       contextFor,
       publish,
     }),
-    [registry, widgets, statuses, commands, editorText, runCommand, contextFor, publish],
+    [
+      registry,
+      widgets,
+      statuses,
+      commands,
+      providers,
+      activeTools,
+      events,
+      editorText,
+      runCommand,
+      contextFor,
+      publish,
+    ],
   );
 
   const current = dialogs[0];
@@ -330,6 +420,20 @@ export function PluginHost({
   );
 }
 
+/**
+ * Subscribes to the provider store, which is mutable state outside React —
+ * `pi.registerProvider` may be called from a command handler at any time, so the
+ * host cannot read it once and hold the result.
+ */
+const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {
+  const [entries, setEntries] = useState<readonly ProviderEntry[]>(() => store.list());
+  useEffect(() => {
+    setEntries(store.list());
+    return store.subscribe(() => setEntries(store.list()));
+  }, [store]);
+  return entries;
+};
+
 const BRIDGE_KEYS = [
   "messages",
   "streaming",
@@ -339,6 +443,8 @@ const BRIDGE_KEYS = [
   "stop",
   "updateSettings",
   "navigate",
+  "sessionName",
+  "setSessionName",
 ] as const satisfies readonly (keyof AppBridge)[];
 
 const sameBridge = (a: AppBridge, b: AppBridge): boolean =>

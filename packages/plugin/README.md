@@ -245,6 +245,17 @@ for full SDK conformance.
 | `pi.on(event, handler)` | for the five events above |
 | `pi.registerCommand(name, { description, getArgumentCompletions, handler })` | `handler(args, ctx)` |
 | `pi.registerShortcut(key, { description, handler })` | pi's `KeyId` format; modifiers are `ctrl` / `shift` / `alt` / `super` |
+| `pi.registerTool(tool)` | pi's `execute(toolCallId, params, signal, onUpdate, ctx)` and content-block result; `parameters` is plain JSON Schema |
+| `pi.getCommands()` | extension commands, in invocation order |
+| `pi.registerMarkdownTransformer(fn)` | chained in load order; pi's `availableWidth` has no meaning here and is omitted |
+| `pi.events` | the shared bus between plugins — `on` / `once` / `off` / `emit` |
+| `pi.getAllTools / getActiveTools / setActiveTools` | over the registry's tools |
+| `pi.setModel(model)` | writes through to the app's settings |
+| `pi.setSessionName / getSessionName` | the conversation's title |
+| `ctx.abort()`, `ctx.isIdle()`, `ctx.hasPendingMessages()` | one reply at a time, so the last two are opposites |
+| `ctx.getContextUsage()` | tokens for the turn; `contextWindow` is 0 unless the endpoint publishes one |
+| `ctx.newSession()` | starts a fresh conversation |
+| `ctx.reload()` | pi's `/reload` flow, over plugin factories rather than files on disk |
 | `ctx.ui.select / confirm / input` | including `{ timeout, signal }` and pi's dismissal values |
 | `ctx.ui.editor(title, prefill)` | pi takes no options here, so neither do we |
 | `ctx.ui.notify / setStatus / setWidget / setTitle / setEditorText / pasteToEditor` | fire-and-forget |
@@ -267,11 +278,23 @@ for full SDK conformance.
 
 | pi has | Why not here |
 | --- | --- |
-| `registerTool`, `registerProvider`, `registerFlag` | no agent loop, tool executor, provider registry or CLI |
+| `registerFlag`, `getFlag` | no CLI to parse flags from |
+| `exec` | no shell in a browser |
+| `sendMessage`, `appendEntry`, `setLabel` | no session entries to append or label |
 | `registerMessageRenderer`, `registerEntryRenderer` | they return `pi-tui` components; the concept ports, the signature does not |
-| `ctx.sessionManager`, `ctx.cwd`, `ctx.modelRegistry` | no session store, filesystem or provider registry |
-| `pi.sendMessage`, `pi.appendEntry`, `pi.exec` | no session entries and no shell |
-| Auto-discovery from `~/.pi/agent/extensions/` | plugins are listed in the app's registry |
+| `sendUserMessage(content, { deliverAs })` | `pi.sendUserMessage(content)` exists; there is no follow-up queue to deliver into |
+| `getThinkingLevel`, `setThinkingLevel`, `ctx.scopedModels` | no thinking-level or scoped-model concept behind a bare endpoint |
+| `ctx.sessionManager`, `ctx.cwd`, `ctx.modelRegistry`, `ctx.model` | no session store, filesystem or pi-ai model registry |
+| Auto-discovery from `~/.pi/agent/extensions/` | plugins are listed in the app's registry, or installed at runtime |
+| `ctx.compact`, `waitForIdle`, `fork`, `navigateTree`, `switchSession`, `shutdown`, `isProjectTrusted` | no compaction, session tree or project trust here |
+
+**Reduced** — pi's name and intent, with less behind it:
+
+| | What survives |
+| --- | --- |
+| `pi.registerProvider(id, config)` | base URL, auth and a model list. pi's credential store, catalog persistence and native `pi-ai` `Provider` have nowhere to live, and `@tiny/ai` streams to an endpoint directly rather than through pi-ai's registry |
+| `pi.unregisterProvider(id)` | complete |
+| `ctx.ui.pasteToEditor` | appends rather than inserting at a cursor; pi's RPC mode degrades this further, to a plain replace |
 
 **Ours** — no pi equivalent:
 
@@ -279,14 +302,14 @@ for full SDK conformance.
 | --- | --- |
 | `pi.contribute(slot, Component)` | React components into named regions |
 | `ctx.ui.open(render)` | a React component as a modal, resolving when it closes |
-| `ctx.reload()` | re-run every factory and rebuild the registry, resolving when the new one is live |
 | `ctx.chat`, `ctx.settings`, `ctx.navigate`, `ctx.storage`, `ctx.runCommand`, `ctx.commands` | the app's own state and actions |
 
-`ctx.reload()` exists because pi discovers extensions from disk at startup and this host
-does not: a plugin that installs other plugins — see
-[`@tiny/plugin-manager`](../plugin-manager/README.md) — needs a way to apply the change
-without a page reload. It is also how a plugin is *unloaded*: registrations have no undo,
-so the registry is rebuilt from scratch and whatever no longer registers is simply gone.
+`ctx.reload()` is **pi's**, adapted rather than invented: pi runs the `/reload` flow over
+extensions discovered on disk, and this re-runs every plugin factory and rebuilds the
+registry. Both resolve once the new runtime is live, and in both a plugin that no longer
+registers is simply gone — registrations have no undo of their own, so unloading *is*
+rebuilding. Here it is additionally how a plugin installed at runtime is applied; see
+[`@tiny/plugin-manager`](../plugin-manager/README.md).
 
 One further deviation worth stating: **`@tiny/ai` catches nothing, and this package
 catches deliberately.** That is right for a request and wrong for a render — one throwing
@@ -334,15 +357,86 @@ pi.registerTool({
 });
 ```
 
-pi's name and shape, with one deliberate difference: `parameters` is a plain JSON Schema
-object rather than a typebox `TSchema`. A typebox schema *is* a JSON Schema object at
-runtime, so definitions port unchanged — and typebox stays out of the browser bundle,
-which the "Browser notes" in [`@tiny/ai`](../ai) explains is not optional here.
+`execute` takes pi's positional arguments and returns pi's content blocks, so a tool
+written for pi runs here unmodified:
+
+```ts
+execute(toolCallId, params, signal, onUpdate, ctx): Promise<ToolResult> | ToolResult
+```
+
+`toolOutput(text, rest?)` builds that result from a string, and `toolText(result)` reads
+one back. `onUpdate` pushes progress while a long tool runs, and it shows up as the tool's
+summary line. `label`, `promptSnippet`, `promptGuidelines`, `prepareArguments`, `details`
+and `terminate` are all pi's, with pi's meanings — prompt fields are folded into the system
+prompt before `before_agent_start` fires, and `terminate` ends the turn only when every
+result in the batch asks for it.
+
+One deliberate difference remains: `parameters` is a plain JSON Schema object rather than a
+typebox `TSchema`. A typebox schema *is* a JSON Schema object at runtime, so definitions
+port unchanged — and typebox stays out of the browser bundle, which the "Browser notes" in
+[`@tiny/ai`](../ai) explains is not optional here.
 
 Throwing from `execute` is normal control flow: the message becomes an error result the
 model reads and can correct, rather than failing the turn. Tool names must be unique
 across all plugins — unlike commands, a duplicate cannot be suffixed, so the first
 registration wins and the clash is logged.
+
+## Adding an endpoint
+
+`registerProvider` puts another OpenAI-compatible endpoint in the model picker —
+`examples/groqProvider.ts`:
+
+```ts
+import type { Plugin } from "@tiny/plugin";
+
+/**
+ * An endpoint added to the model picker — pi's `registerProvider`, reduced to
+ * the part that survives a browser.
+ *
+ * pi's version also carries credential storage, catalog persistence and a
+ * native `pi-ai` provider; none has anywhere to live here. What remains is what
+ * actually travels: where to send the request, how to authenticate, and which
+ * models exist.
+ */
+export const groq = (): Plugin => (pi) => {
+  pi.registerProvider("groq", {
+    name: "Groq",
+    baseUrl: "https://api.groq.com/openai/v1",
+    // Omitting `models` asks the endpoint's own /models route, which is what an
+    // OpenAI-compatible server publishes.
+    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+    // A thunk rather than a string, so the key is fetched when a request needs
+    // it instead of sitting in the registry where `ctx.settings` would expose
+    // it to every other plugin.
+    apiKey: () => localStorage.getItem("groq:key") ?? "",
+  });
+
+  pi.registerCommand("groq:key", {
+    description: "Set the Groq API key",
+    handler: async (args, ctx) => {
+      const key = args !== "" ? args : await ctx.ui.input("Groq API key", "gsk_…");
+      if (key === undefined || key === "") return;
+      localStorage.setItem("groq:key", key);
+      ctx.ui.notify("Groq key saved", "info");
+    },
+  });
+
+  pi.registerCommand("groq:off", {
+    description: "Remove the Groq provider",
+    // Registering and unregistering both work after the factory has returned,
+    // as they do in pi — the picker updates without a reload.
+    handler: (_args, ctx) => {
+      ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
+    },
+  });
+};
+```
+
+pi's config also carries credential storage, catalog persistence and a native `pi-ai`
+provider; none has anywhere to live here, and `@tiny/ai` streams to an endpoint directly
+rather than through pi-ai's registry. What remains is what travels: the base URL, how to
+authenticate, and which models exist. Registering after the factory has returned takes
+effect immediately, as pi documents — the picker updates without a reload.
 
 ## Adding one to the chat app
 

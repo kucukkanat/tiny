@@ -15,13 +15,10 @@ There is no runtime-plugin subsystem in the host. `@tiny/plugin-manager` is an
 
 ```ts
 export const plugins: readonly Plugin[] = [
-  usageLogger(),
-  streamTrace(),
-  settings(),
-  fileSystem(),
+  // …the plugins that ship with the build…
+
   // Lets the user install further plugins at runtime, from a URL or pasted
-  // source. It must come after the plugins that ship with the app so those own
-  // their command names.
+  // source. Last, so the plugins that shipped claim their command names first.
   pluginManager(),
 ];
 ```

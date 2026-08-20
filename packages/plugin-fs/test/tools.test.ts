@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { toolText } from "@tiny/ai";
+import { endpointModel, toolText } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem, fileSystemTools } from "../src/index.ts";
 import { memoryRoot } from "../src/inMemoryRoot.ts";
@@ -18,7 +18,12 @@ const call = async (name: string, args: Record<string, unknown>) => toolText(awa
 const raw = (name: string, args: Record<string, unknown>) => {
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) throw new Error(`no tool named ${name}`);
-  return Promise.resolve(tool.execute("call-1", args, undefined, undefined, { signal: undefined }));
+  return Promise.resolve(
+    tool.execute("call-1", args, undefined, undefined, {
+      signal: undefined,
+      model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "test-model"),
+    }),
+  );
 };
 
 beforeEach(() => {
@@ -178,7 +183,10 @@ describe("the plugin", () => {
     // Bun has no OPFS, so the default resolver reports rather than crashing oddly.
     expect(
       Promise.resolve(
-        read?.execute("call-1", { path: "/a" }, undefined, undefined, { signal: undefined }),
+        read?.execute("call-1", { path: "/a" }, undefined, undefined, {
+          signal: undefined,
+          model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "test-model"),
+        }),
       ),
     ).rejects.toThrow("Origin Private File System is unavailable");
   });

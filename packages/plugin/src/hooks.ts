@@ -90,7 +90,15 @@ export function usePluginContext(): PluginContext {
   return host.contextFor(useContext(PluginIdContext));
 }
 
-/** The `@tiny/ai` extensions collected from the registry, for `useChat`. */
+/**
+ * What to hand `streamChat` as its `extensions`.
+ *
+ * Not one extension per plugin: every `pi.on(...)` call made by every plugin is
+ * recorded during load and replayed through a *single* bridge extension, which
+ * is what lets `@tiny/ai` stay unaware of plugins. The host appends one more of
+ * its own for token accounting. So this is 0, 1 or 2 entries regardless of how
+ * many plugins are loaded — see `loadPlugins` in registry.ts.
+ */
 export function usePluginExtensions() {
   return usePluginHost().registry.extensions;
 }

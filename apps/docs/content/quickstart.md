@@ -40,15 +40,16 @@ export const greet = (): Plugin => (pi) => {
 };
 ```
 
-Add it to the registry in `apps/chat/src/plugins/index.ts`:
+Add it to the registry in `apps/chat/src/plugins/index.ts` — an import and one
+line in the list:
 
 ```ts
+import { greet } from "./greet.ts";        // specifiers carry the extension;
+                                           // a plugin that renders React is .tsx
+
 export const plugins: readonly Plugin[] = [
-  usageLogger(),
-  streamTrace(),
-  settings(),
+  // …the plugins already there…
   greet(),
-  pluginManager(),
 ];
 ```
 

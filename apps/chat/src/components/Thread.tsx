@@ -81,8 +81,6 @@ function Assistant({
         <Thinking working={reasoningLive} seconds={reasoningSeconds} text={thinking} />
       )}
       <Tools runs={tools} />
-      {/* Only the live reply can be waiting on anyone. */}
-      {!done && <Slot name="message.pending" />}
       {(content !== "" || done) && <StreamText text={body} done={done} />}
       {/* Only finished replies carry actions — there is nothing to copy or
           retry while the tokens are still arriving. */}
@@ -147,16 +145,26 @@ export function Thread({
       )}
       {/* biome-ignore-end lint/suspicious/noArrayIndexKey: see above */}
 
-      {streaming !== undefined && waiting && <Loader label="Waiting for model" />}
-      {streaming !== undefined && !waiting && (
-        <Assistant
-          content={streaming.text}
-          reasoning={streaming.reasoning}
-          reasoningSeconds={streaming.reasoningSeconds}
-          done={false}
-          reasoningLive={streaming.text === ""}
-          tools={streaming.tools}
-        />
+      {streaming !== undefined && (
+        <>
+          {waiting ? (
+            <Loader label="Waiting for model" />
+          ) : (
+            <Assistant
+              content={streaming.text}
+              reasoning={streaming.reasoning}
+              reasoningSeconds={streaming.reasoningSeconds}
+              done={false}
+              reasoningLive={streaming.text === ""}
+              tools={streaming.tools}
+            />
+          )}
+          {/* Outside the branch above on purpose: a reply can be waiting on the
+              user before any delta has arrived, and a question the run is parked
+              on must render either way. Inside `Assistant` it would depend on
+              `streamChat` happening to yield a tool delta first. */}
+          <Slot name="message.pending" />
+        </>
       )}
 
       {error !== undefined && (

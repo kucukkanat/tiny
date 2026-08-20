@@ -1,3 +1,4 @@
+import { endpointModel } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
@@ -22,6 +23,7 @@ await write?.execute(
   undefined,
   {
     signal: undefined,
+    model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "test-model"),
   },
 );
 

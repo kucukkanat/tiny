@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Endpoint } from "@tiny/ai";
-import { toolOutput, toolText } from "@tiny/ai";
+import { endpointModel, toolOutput, toolText } from "@tiny/ai";
 import { createEvents } from "../src/events.ts";
 import type { Plugin } from "../src/pi.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
@@ -339,6 +339,7 @@ describe("registerTool", () => {
     expect(tool?.label).toBe("Echo");
     const result = await tool?.execute("call-7", { value: "hi" }, undefined, undefined, {
       signal: undefined,
+      model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "m"),
     });
     expect(toolText(result ?? { content: [] })).toBe("echoed:hi");
     expect(result?.details).toEqual({ ok: true });

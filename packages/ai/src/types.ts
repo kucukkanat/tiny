@@ -1,3 +1,4 @@
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ApiType } from "./apis.ts";
 
 export type ChatRole = "system" | "user" | "assistant";
@@ -81,13 +82,17 @@ export type ToolDefinition = {
 };
 
 /**
- * What a tool's `execute` receives as `ctx`. pi hands tools an
- * `ExtensionContext` rather than the richer command context, and the host that
- * owns the surrounding UI decides what that is — hence the open shape.
+ * What a tool's `execute` receives as `ctx`. This, and nothing else.
+ *
+ * pi hands tools its `ExtensionContext` rather than the richer context commands
+ * get, and so does `streamChat`. It is spelled out rather than left open on
+ * purpose: an index signature here would let `ctx.storage.get(...)` compile in a
+ * tool that then crashes at runtime, because no host puts `storage` on it. If
+ * your tool needs more than this, capture it in the closure that built the tool.
  */
 export type ToolExecuteContext = {
   readonly signal: AbortSignal | undefined;
-  readonly [key: string]: unknown;
+  readonly model: Model<Api>;
 };
 
 /** The text of a result, as the model receives it. */

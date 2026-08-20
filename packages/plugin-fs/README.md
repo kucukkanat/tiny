@@ -53,7 +53,7 @@ correct itself instead of the turn dying.
 All five in one run — `examples/tools-in-action.ts`:
 
 ```ts
-import { toolText } from "@tiny/ai";
+import { endpointModel, toolText } from "@tiny/ai";
 import { fileSystemTools } from "@tiny/plugin-fs";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
 
@@ -69,7 +69,10 @@ const call = async (name: string, args: Record<string, unknown>) => {
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) throw new Error(`no tool named ${name}`);
   return toolText(
-    await tool.execute("example-1", args, undefined, undefined, { signal: undefined }),
+    await tool.execute("example-1", args, undefined, undefined, {
+      signal: undefined,
+      model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "test-model"),
+    }),
   );
 };
 
@@ -93,6 +96,7 @@ console.log(await call("fs_delete", { path: "/notes" }));
 `root` is a resolver, so the sandbox can be narrowed — `examples/scoped-root.ts`:
 
 ```ts
+import { endpointModel } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
@@ -117,6 +121,7 @@ await write?.execute(
   undefined,
   {
     signal: undefined,
+    model: endpointModel({ baseUrl: "https://example.test/v1", apiKey: "" }, "test-model"),
   },
 );
 

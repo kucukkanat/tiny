@@ -327,37 +327,22 @@ app deliberately does not have.
 ### Adding one to the chat app
 
 The app owns its extensions; this package only runs them. Write the extension in
-`apps/chat/src/plugins/`, then list it in that folder's registry, which is
-this file in full:
+`apps/chat/src/plugins/`, then list it in that folder's registry,
+[`apps/chat/src/plugins/index.ts`](../../apps/chat/src/plugins/index.ts):
 
 ```ts
-import type { Extension } from "@tiny/ai";
-import { historyWindow } from "./historyWindow.ts";
-import { streamTrace } from "./streamTrace.ts";
-import { systemPrompt } from "./systemPrompt.ts";
-import { usageLogger } from "./usageLogger.ts";
+import { beTerse } from "./beTerse.ts";
 
-export { historyWindow, streamTrace, systemPrompt, usageLogger };
-
-/**
- * The extensions every request runs through, in order.
- *
- * To add one: write a pi-shaped extension beside this file — a factory that
- * takes `ExtensionAPI` and calls `pi.on(...)` — and list it here. Nothing in
- * `@tiny/ai`, `useChat` or the UI needs to change. See the "Extensions"
- * section of `packages/ai/README.md`.
- *
- * Only observers are enabled by default: neither can alter what is sent or what
- * the UI renders. The two below them rewrite the request, so they are left
- * opt-in rather than quietly changing how every conversation behaves.
- */
-export const extensions: readonly Extension[] = [
-  usageLogger(),
-  streamTrace(),
-  // systemPrompt("You are Tiny, a concise and friendly assistant."),
-  // historyWindow(40),
+export const plugins: readonly Plugin[] = [
+  // …the plugins already there…
+  beTerse(),
 ];
 ```
+
+The list is typed `Plugin` — `@tiny/plugin`'s richer type — because the app runs
+a plugin host. **An extension that only subscribes to events already *is* a
+`Plugin`**, so a factory written against `ExtensionAPI` drops straight in with no
+adapter. That containment is the whole relationship between the two packages.
 
 The built-ins take their configuration as arguments and return an `Extension`, so
 the registry reads as a list of configured extensions. Uncommenting a line is the

@@ -529,12 +529,16 @@ That is the whole wiring — nothing in `@tiny/ai`, `@tiny/plugin`, `useChat` or
 component changes:
 
 ```ts
+import { greet } from "./greet.ts";
+
 export const plugins: readonly Plugin[] = [
-  usageLogger(),
-  streamTrace(),
-  settings(),
+  // …the plugins already there…
+  greet(),
 ];
 ```
+
+The list itself lives in [`apps/chat/src/plugins/index.ts`](../../apps/chat/src/plugins/index.ts);
+it is the one place that decides what the app runs, so it is not repeated here.
 
 `settings()` is the app's own endpoint dialog, shipped as a plugin rather than as app
 structure — it reaches the screen through `app.overlays`, opens through a registered

@@ -451,8 +451,11 @@ const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {
  * that field to plugins.
  */
 const sameBridge = (a: AppBridge, b: AppBridge): boolean => {
-  const keys = Object.keys(a) as (keyof AppBridge)[];
-  return keys.length === Object.keys(b).length && keys.every((key) => Object.is(a[key], b[key]));
+  // The union of both key sets, so an absent optional field and one present as
+  // `undefined` still compare equal — an app that only sometimes spreads
+  // `sessionName` in must not re-publish on every render because of it.
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof AppBridge>;
+  return [...keys].every((key) => Object.is(a[key], b[key]));
 };
 
 /** Per-plugin localStorage, so a plugin cannot reach the app's own keys. */

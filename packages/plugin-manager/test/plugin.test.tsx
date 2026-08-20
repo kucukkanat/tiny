@@ -15,7 +15,7 @@ afterEach(() => {
   host = undefined;
 });
 
-const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
+const HELLO = 'export default (tiny) => tiny.registerCommand("hello", { handler: () => {} });';
 
 let host: ReturnType<typeof usePluginHost> | undefined;
 function Probe() {

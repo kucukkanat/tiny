@@ -12,9 +12,9 @@ import { usePluginHost, useProvideApp } from "../src/hooks.ts";
 import { Panels } from "../src/Panels.tsx";
 import { PluginHost } from "../src/PluginHost.tsx";
 import { PluginPage } from "../src/PluginPage.tsx";
-import type { Plugin, PluginMessage } from "../src/pi.ts";
 import { emptyRegistry, loadPlugins } from "../src/registry.ts";
 import { Slot, Widgets } from "../src/Slot.tsx";
+import type { Plugin, PluginMessage } from "../src/tiny.ts";
 
 // Every example under examples/ is a real plugin, run here so the snippet a
 // reader copies is one that works. That it *is* the snippet is asserted by

@@ -42,7 +42,7 @@ useProvideApp(
       stop: chat.stop,
       updateSettings,
       navigate: (path: string) => navigate(path),
-      // Optional: `pi.getSessionName` / `setSessionName` report they are
+      // Optional: `tiny.getSessionName` / `setSessionName` report they are
       // unsupported when a host has no named sessions.
       sessionName,
       setSessionName,
@@ -203,7 +203,7 @@ const chat = useChat({
 | `usePluginProviders()` | the endpoints registered with [`registerProvider`](providers.md) |
 | `usePluginPanels()` | the [panels](panels.md) registered, in tab order — empty means no rail |
 | `usePluginRoutes()` | the [pages](panels.md#pages) registered, for your router |
-| `usePluginEvents()` | the bus behind `pi.events` |
+| `usePluginEvents()` | the bus behind `tiny.events` |
 | `useMarkdown(text, context)` | that text after every registered transformer |
 | `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `setEditorText`, `commands`, `activeTools`, `ready`, the registry |
 
@@ -238,7 +238,7 @@ registry.extensions;    // [Extension] — one, replaying every `on()` call
 await loadPlugins(plugins, {
   providers,           // a ProviderStore, so late registrations survive
   events,              // the shared bus, so subscriptions survive a reload
-  host: () => actions, // resolved per call, for pi methods that drive the app
+  host: () => actions, // resolved per call, for tiny methods that drive the app
 });
 ```
 
@@ -247,8 +247,8 @@ called long after the factory returns. `PluginHost` subscribes to the store
 instead and exposes the live list through `usePluginProviders()`; a bare
 `loadPlugins` caller should hold the store itself.
 
-`host` supplies what `pi.getCommands`, `pi.setModel`, `pi.sendUserMessage`,
-`pi.setSessionName` and `pi.get/setActiveTools` reach. Omit it and each reports
+`host` supplies what `tiny.getCommands`, `tiny.setModel`, `tiny.sendUserMessage`,
+`tiny.setSessionName` and `tiny.get/setActiveTools` reach. Omit it and each reports
 that no host is mounted rather than throwing, which is what makes `loadPlugins`
 usable in a test or a script.
 
@@ -260,9 +260,9 @@ records every `on()` call while the factories run and replays them into whatever
 API `streamChat` constructs:
 
 ```ts
-const replay: Extension = (pi) => {
+const replay: Extension = (tiny) => {
   for (const [event, handler] of recorded) {
-    const on = pi.on as (event: string, handler: unknown) => void;
+    const on = tiny.on as (event: string, handler: unknown) => void;
     // Events this facade never fires are dropped rather than registered, so a
     // pi extension subscribing to `session_start` loads without erroring.
     if (firesEvent(event)) on(event, handler);

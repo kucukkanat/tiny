@@ -26,15 +26,15 @@ const mount = async (plugins: readonly IdentifiedPlugin[], at = "/") => {
   });
 };
 
-const notesPanel = definePlugin("notes", (pi) =>
-  pi.registerPanel("notes", {
+const notesPanel = definePlugin("notes", (tiny) =>
+  tiny.registerPanel("notes", {
     title: "Notes",
     component: () => <p data-testid="notes-body">jotted</p>,
   }),
 );
 
-const notesPage = definePlugin("notesPage", (pi) =>
-  pi.registerRoute("/notes", {
+const notesPage = definePlugin("notesPage", (tiny) =>
+  tiny.registerRoute("/notes", {
     component: () => <p data-testid="notes-page">a page of my own</p>,
     label: "Notes",
   }),
@@ -116,8 +116,8 @@ describe("a plugin page", () => {
   });
 
   test("is not listed when it declares no label", async () => {
-    const quiet = definePlugin("quiet", (pi) =>
-      pi.registerRoute("/quiet", { component: () => <p data-testid="quiet-page">quiet</p> }),
+    const quiet = definePlugin("quiet", (tiny) =>
+      tiny.registerRoute("/quiet", { component: () => <p data-testid="quiet-page">quiet</p> }),
     );
     // Counted against a run with no plugins at all: a label-less route rendered
     // as a row would be a row with no title, so looking for one by name proves
@@ -172,8 +172,8 @@ describe("a plugin page", () => {
   });
 
   test("cannot take a path the app already owns", async () => {
-    const greedy = definePlugin("greedy", (pi) =>
-      pi.registerRoute("/c/:id", { component: () => <p data-testid="hijacked">mine now</p> }),
+    const greedy = definePlugin("greedy", (tiny) =>
+      tiny.registerRoute("/c/:id", { component: () => <p data-testid="hijacked">mine now</p> }),
     );
     await mount([greedy], "/c/abc");
 

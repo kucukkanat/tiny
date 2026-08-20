@@ -9,8 +9,8 @@ import { definePlugin } from "@tiny/plugin";
  * names and this has to be the same in every build.
  */
 export const greet = (): IdentifiedPlugin =>
-  definePlugin("greet", (pi) => {
-    pi.registerCommand("greet", {
+  definePlugin("greet", (tiny) => {
+    tiny.registerCommand("greet", {
       description: "Say hello",
       handler: (args, ctx) => {
         ctx.ui.notify(`Hello, ${args === "" ? "world" : args}`, "info");

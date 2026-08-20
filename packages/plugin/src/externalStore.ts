@@ -14,8 +14,8 @@
  *   return shown ? <Dialog onClose={() => open.set(false)} /> : null;
  * }
  *
- * pi.registerCommand("settings", { handler: () => open.set(true) });
- * pi.contribute("app.overlays", Overlay);
+ * tiny.registerCommand("settings", { handler: () => open.set(true) });
+ * tiny.contribute("app.overlays", Overlay);
  * ```
  */
 export type ExternalStore<T> = {

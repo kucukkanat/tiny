@@ -11,8 +11,8 @@ import type { Streaming } from "../src/useChat.ts";
 
 afterEach(cleanup);
 
-const asking: Plugin = (pi) =>
-  pi.contribute("message.pending", function Question() {
+const asking: Plugin = (tiny) =>
+  tiny.contribute("message.pending", function Question() {
     return <span data-testid="pending-question">May I?</span>;
   });
 

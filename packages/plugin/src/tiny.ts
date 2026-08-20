@@ -1,9 +1,9 @@
 /**
- * The `pi` object a plugin is handed, and everything it can be given back.
+ * The `tiny` object a plugin is handed, and everything it can be given back.
  *
  * This is the whole contract between a plugin and the host, in one file, so
  * "what can a plugin do?" is one thing to read. `PluginAPI` at the bottom is
- * what `pi` is; `PluginContext` is what handlers receive as `ctx`.
+ * what `tiny` is; `PluginContext` is what handlers receive as `ctx`.
  *
  * Shaped after pi's extension SDK: a method here either has pi's exact signature
  * or is marked as ours. The parts with their own implementation live beside it —
@@ -394,7 +394,7 @@ export interface PluginAPI {
 }
 
 export type Plugin = {
-  (pi: PluginAPI): void | Promise<void>;
+  (tiny: PluginAPI): void | Promise<void>;
   /**
    * Stable identity, used to namespace `ctx.storage` and to label this plugin's
    * errors. Declare it with `definePlugin` — see there for why it cannot be
@@ -408,8 +408,8 @@ export type Plugin = {
  *
  * ```ts
  * export const greet = (): Plugin =>
- *   definePlugin("greet", (pi) => {
- *     pi.registerCommand("greet", { handler: (_a, ctx) => ctx.ui.notify("hi") });
+ *   definePlugin("greet", (tiny) => {
+ *     tiny.registerCommand("greet", { handler: (_a, ctx) => ctx.ui.notify("hi") });
  *   });
  * ```
  *
@@ -426,7 +426,7 @@ export type Plugin = {
  */
 export const definePlugin = (
   id: string,
-  setup: (pi: PluginAPI) => void | Promise<void>,
+  setup: (tiny: PluginAPI) => void | Promise<void>,
 ): IdentifiedPlugin => Object.assign(setup, { id });
 
 /**

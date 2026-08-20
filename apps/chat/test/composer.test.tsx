@@ -11,8 +11,8 @@ import { PromptBar } from "@tiny/ui";
 afterEach(cleanup);
 
 /** Renders whatever a plugin currently sees as the draft. */
-const watcher = definePlugin("watcher", (pi) =>
-  pi.contribute("composer.actions", function Watching() {
+const watcher = definePlugin("watcher", (tiny) =>
+  tiny.contribute("composer.actions", function Watching() {
     const ctx = usePluginContext();
     return <span data-testid="seen-by-plugin">{ctx.ui.getEditorText()}</span>;
   }),

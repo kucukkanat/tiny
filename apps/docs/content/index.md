@@ -12,15 +12,20 @@ non-terminal frontend runs here unmodified.
 
 ## A plugin is a function
 
-That is the whole shape. It receives `pi`, registers what it wants, and returns.
+That is the whole shape. It receives `tiny`, registers what it wants, and returns.
+
+pi's own documentation calls that object `pi`. It is the factory's first
+parameter, so the name belongs to whoever wrote the factory — an extension
+brought over from `.pi/extensions/` runs here with its parameter still spelled
+`pi`, and every method keeps pi's name and signature either way.
 
 ```ts
 import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 export const shout = (): IdentifiedPlugin =>
-  definePlugin("shout", (pi) => {
-    pi.registerCommand("shout", {
+  definePlugin("shout", (tiny) => {
+    tiny.registerCommand("shout", {
       description: "Send the draft in caps",
       handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
     });
@@ -40,11 +45,11 @@ A plugin reaches the app one of two ways, and **the app cannot tell them apart**
 | Written as | a module in the repo | a single file with a `export default` |
 | Arrives by | being listed in `apps/chat/src/plugins/index.ts` | being installed from a URL or pasted into the Plugins dialog |
 | Needs a rebuild | yes | no |
-| Gets | the same `pi` | the same `pi` |
+| Gets | the same `tiny` | the same `tiny` |
 
 The second row is the interesting one. [`@tiny/plugin-manager`](runtime.md) is
 itself an ordinary plugin whose factory is `async`: before it returns, it has
-imported everything you installed and called each one with **the same `pi`
+imported everything you installed and called each one with **the same `tiny`
 object** it was handed. What they register lands in the app's one registry,
 indistinguishable from code that shipped in the build.
 
@@ -56,18 +61,19 @@ what that costs and what guards it.
 
 | Call | Adds |
 | --- | --- |
-| `pi.registerCommand(name, opts)` | a slash command, with argument completions |
-| `pi.registerShortcut(key, opts)` | a keybinding, in pi's `KeyId` format |
-| `pi.registerTool(tool)` | a [tool](tools.md) the model may call mid-answer |
-| `pi.registerProvider(id, config)` | another [endpoint](providers.md) in the model picker |
-| `pi.registerMarkdownTransformer(fn)` | a rewrite of message text on its way to the screen |
-| `pi.on(event, handler)` | a hook on the request lifecycle |
-| `pi.events` | a bus for talking to other plugins |
-| `pi.contribute(slot, Component)` | React into one of five named regions |
-| `pi.registerPanel(id, opts)` | a [panel](panels.md) in the right-hand rail |
-| `pi.registerRoute(path, opts)` | a [page](panels.md#pages) of your own, at an address |
+| `tiny.registerCommand(name, opts)` | a slash command, with argument completions |
+| `tiny.registerShortcut(key, opts)` | a keybinding, in pi's `KeyId` format |
+| `tiny.registerTool(tool)` | a [tool](tools.md) the model may call mid-answer |
+| `tiny.registerProvider(id, config)` | another [endpoint](providers.md) in the model picker |
+| `tiny.registerMarkdownTransformer(fn)` | a rewrite of message text on its way to the screen |
+| `tiny.on(event, handler)` | a hook on the request lifecycle |
+| `tiny.events` | a bus for talking to other plugins |
+| `tiny.contribute(slot, Component)` | React into one of five named regions |
+| `tiny.registerPanel(id, opts)` | a [panel](panels.md) in the right-hand rail |
+| `tiny.registerRoute(path, opts)` | a [page](panels.md#pages) of your own, at an address |
 
-Every one of those is pi's, with pi's name and signature, except the last three.
+Every one of those is pi's, with pi's method name and signature, except the last
+three.
 [`contribute`](slots.md), [`registerPanel` and `registerRoute`](panels.md) are the
 additions — pi's answer to rich UI returns terminal components, which is exactly
 the half that cannot cross into a browser, and a terminal has neither a right-hand

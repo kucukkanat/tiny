@@ -4,15 +4,6 @@ import { createEvents } from "./events.ts";
 import { type AppBridge, HostContext, type HostValue, type Widget } from "./hooks.ts";
 import { matchesKey } from "./keys.ts";
 import { Dialog, type DialogRequest, type Toast, Toasts } from "./Overlays.tsx";
-import type {
-  CommandInfo,
-  ContextUsage,
-  DialogOptions,
-  Plugin,
-  PluginContext,
-  PluginUIContext,
-  WidgetOptions,
-} from "./pi.ts";
 import type { ProviderEntry } from "./providers.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
 import {
@@ -23,6 +14,15 @@ import {
   type Registry,
   terminalFallbacks,
 } from "./registry.ts";
+import type {
+  CommandInfo,
+  ContextUsage,
+  DialogOptions,
+  Plugin,
+  PluginContext,
+  PluginUIContext,
+  WidgetOptions,
+} from "./tiny.ts";
 
 const newId = () => crypto.randomUUID();
 
@@ -101,8 +101,8 @@ export function PluginHost({
   // pi's `ctx.getContextUsage()` reads the harness's own accounting. This host
   // has none of its own, so it subscribes like any other extension — which also
   // means the app needs no change to support it.
-  const usageRecorder = useRef<Extension>((pi) => {
-    pi.on("message_end", (event, context) => {
+  const usageRecorder = useRef<Extension>((tiny) => {
+    tiny.on("message_end", (event, context) => {
       const { input, output, totalTokens } = event.message.usage;
       usage.current = { input, output, totalTokens, contextWindow: context.model.contextWindow };
     });
@@ -368,7 +368,7 @@ export function PluginHost({
   contextForRef.current = contextFor;
 
   // Read through a ref because `loadPlugins` captures the getter once, while a
-  // pi method may be called from a handler running long afterwards.
+  // `tiny.*` method may be called from a handler running long afterwards.
   const hostActions = useRef<HostActions>(undefined as unknown as HostActions);
   hostActions.current = {
     getCommands: () => commands,
@@ -383,7 +383,7 @@ export function PluginHost({
     getSessionName: () => bridge.sessionName,
     setSessionName: (name) => {
       if (bridge.setSessionName === undefined) {
-        console.error("[plugin] pi.setSessionName() is not supported by this app");
+        console.error("[plugin] tiny.setSessionName() is not supported by this app");
         return;
       }
       bridge.setSessionName(name);
@@ -441,7 +441,7 @@ export function PluginHost({
 
 /**
  * Subscribes to the provider store, which is mutable state outside React —
- * `pi.registerProvider` may be called from a command handler at any time, so the
+ * `tiny.registerProvider` may be called from a command handler at any time, so the
  * host cannot read it once and hold the result.
  */
 const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {

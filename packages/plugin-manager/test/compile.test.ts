@@ -17,7 +17,7 @@ afterEach(cleanup);
  * would throw rather than quietly pass.
  */
 
-const PLAIN = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
+const PLAIN = 'export default (tiny) => tiny.registerCommand("hello", { handler: () => {} });';
 
 describe("typescript", () => {
   test("strips types and runs", async () => {
@@ -27,8 +27,8 @@ describe("typescript", () => {
 
       type Options = { readonly name: string };
 
-      const make = ({ name }: Options): Plugin => (pi: PluginAPI) => {
-        pi.registerCommand(name, { description: "typed", handler: () => {} });
+      const make = ({ name }: Options): Plugin => (tiny: PluginAPI) => {
+        tiny.registerCommand(name, { description: "typed", handler: () => {} });
       };
 
       export default make({ name: "typed" }) satisfies Plugin;
@@ -67,8 +67,8 @@ describe("jsx", () => {
         );
       };
 
-      export default (pi) => {
-        pi.contribute("app.overlays", () => <Counter label="from a runtime plugin" />);
+      export default (tiny) => {
+        tiny.contribute("app.overlays", () => <Counter label="from a runtime plugin" />);
       };
     `);
 
@@ -95,7 +95,7 @@ describe("jsx", () => {
 
   test("a JSX plugin loads through loadPlugins like any other", async () => {
     const plugin = await compile(
-      'export default (pi) => pi.contribute("app.overlays", () => <p>hi</p>);',
+      'export default (tiny) => tiny.contribute("app.overlays", () => <p>hi</p>);',
     );
     const registry = await loadPlugins([plugin]);
     expect(registry.contributions.filter((entry) => entry.slot === "app.overlays")).toHaveLength(1);

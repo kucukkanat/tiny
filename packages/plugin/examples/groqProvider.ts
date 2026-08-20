@@ -11,8 +11,8 @@ import { definePlugin } from "@tiny/plugin";
  * models exist.
  */
 export const groq = (): Plugin =>
-  definePlugin("groq", (pi) => {
-    pi.registerProvider("groq", {
+  definePlugin("groq", (tiny) => {
+    tiny.registerProvider("groq", {
       name: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
       // Omitting `models` asks the endpoint's own /models route, which is what an
@@ -24,7 +24,7 @@ export const groq = (): Plugin =>
       apiKey: () => localStorage.getItem("groq:key") ?? "",
     });
 
-    pi.registerCommand("groq:key", {
+    tiny.registerCommand("groq:key", {
       description: "Set the Groq API key",
       handler: async (args, ctx) => {
         const key = args !== "" ? args : await ctx.ui.input("Groq API key", "gsk_…");
@@ -34,12 +34,12 @@ export const groq = (): Plugin =>
       },
     });
 
-    pi.registerCommand("groq:off", {
+    tiny.registerCommand("groq:off", {
       description: "Remove the Groq provider",
       // Registering and unregistering both work after the factory has returned,
       // as they do in pi — the picker updates without a reload.
       handler: (_args, ctx) => {
-        ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
+        ctx.ui.notify(tiny.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
       },
     });
   });

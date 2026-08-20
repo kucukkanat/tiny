@@ -17,8 +17,8 @@ const store = openInstalled(options);
 const installed = await store.install({
   name: "Word count",
   source: [
-    "export default (pi) => {",
-    '  pi.registerCommand("words", {',
+    "export default (tiny) => {",
+    '  tiny.registerCommand("words", {',
     '    description: "Count the words in the last reply",',
     "    handler: (_args, ctx) => {",
     "      const last = ctx.chat.messages.at(-1);",

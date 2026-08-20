@@ -76,14 +76,14 @@ const mount = async (plugins: readonly Plugin[]) => {
   await waitFor(() => expect(host?.registry.commands.length ?? -1).toBeGreaterThanOrEqual(0));
 };
 
-const groq = (): Plugin => (pi) => {
-  pi.registerProvider("groq", {
+const groq = (): Plugin => (tiny) => {
+  tiny.registerProvider("groq", {
     name: "Groq",
     baseUrl: "https://api.groq.test/v1",
     apiKey: () => Promise.resolve("gsk-secret"),
     models: ["llama-3.3-70b"],
   });
-  pi.registerCommand("capture", {
+  tiny.registerCommand("capture", {
     description: "Capture the context for assertions",
     handler: (_args, context) => {
       ctx = context;
@@ -115,10 +115,10 @@ describe("registerProvider in the app", () => {
   });
 
   test("a provider registered from a command handler appears without a reload", async () => {
-    const late = (): Plugin => (pi) => {
-      pi.registerCommand("add-provider", {
+    const late = (): Plugin => (tiny) => {
+      tiny.registerCommand("add-provider", {
         description: "Register a provider after the factory has returned",
-        handler: () => pi.registerProvider("late", { name: "Late", baseUrl: "https://late/v1" }),
+        handler: () => tiny.registerProvider("late", { name: "Late", baseUrl: "https://late/v1" }),
       });
     };
     await mount([late()]);
@@ -131,12 +131,12 @@ describe("registerProvider in the app", () => {
   });
 
   test("unregistering removes it again", async () => {
-    const toggle = (): Plugin => (pi) => {
-      pi.registerProvider("x", { name: "X", baseUrl: "https://x/v1" });
-      pi.registerCommand("drop", {
+    const toggle = (): Plugin => (tiny) => {
+      tiny.registerProvider("x", { name: "X", baseUrl: "https://x/v1" });
+      tiny.registerCommand("drop", {
         description: "Remove it",
         handler: () => {
-          pi.unregisterProvider("x");
+          tiny.unregisterProvider("x");
         },
       });
     };
@@ -150,16 +150,16 @@ describe("registerProvider in the app", () => {
   });
 });
 
-describe("pi methods backed by the app", () => {
+describe("tiny methods backed by the app", () => {
   test("setModel, sendUserMessage and getSessionName reach the bridge", async () => {
     const sent: string[] = [];
     let names: (string | undefined)[] = [];
-    const probe = (): Plugin => (pi) => {
-      pi.registerCommand("probe", {
+    const probe = (): Plugin => (tiny) => {
+      tiny.registerCommand("probe", {
         description: "Exercise the host-backed methods",
         handler: () => {
-          names = [pi.getSessionName()];
-          pi.setModel("switched");
+          names = [tiny.getSessionName()];
+          tiny.setModel("switched");
         },
       });
     };
@@ -178,25 +178,25 @@ describe("pi methods backed by the app", () => {
   test("getAllTools and setActiveTools filter what the model is offered", async () => {
     let all: readonly string[] = [];
     let active: readonly string[] = [];
-    const tools = (): Plugin => (pi) => {
+    const tools = (): Plugin => (tiny) => {
       for (const name of ["alpha", "beta"])
-        pi.registerTool({
+        tiny.registerTool({
           name,
           description: `The ${name} tool`,
           parameters: { type: "object" },
           execute: () => ({ content: [{ type: "text", text: name }] }),
         });
-      pi.registerCommand("only-alpha", {
+      tiny.registerCommand("only-alpha", {
         description: "Disable beta",
         handler: () => {
-          all = pi.getAllTools();
-          pi.setActiveTools(["alpha"]);
+          all = tiny.getAllTools();
+          tiny.setActiveTools(["alpha"]);
         },
       });
-      pi.registerCommand("read-active", {
+      tiny.registerCommand("read-active", {
         description: "Read the active list back",
         handler: () => {
-          active = pi.getActiveTools();
+          active = tiny.getActiveTools();
         },
       });
     };

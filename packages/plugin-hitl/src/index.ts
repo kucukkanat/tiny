@@ -45,11 +45,11 @@ const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(S
  * ```
  */
 export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
-  definePlugin("humanInTheLoop", (pi) => {
+  definePlugin("humanInTheLoop", (tiny) => {
     // The question lives here rather than in a dialog: the card is contributed
     // into the reply, and this is what the two halves talk through.
     const store = createPendingStore();
-    pi.contribute("message.pending", inlineApproval(store));
+    tiny.contribute("message.pending", inlineApproval(store));
 
     const ask = (ctx: PluginEventContext, call: PendingCall): Promise<Verdict | undefined> =>
       store.ask(
@@ -63,7 +63,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
         ctx.signal,
       );
 
-    pi.on("tool_call", async (event, ctx) => {
+    tiny.on("tool_call", async (event, ctx) => {
       const call: PendingCall = { toolName: event.toolName, input: event.input };
       const decision = decideCall(options, stored(ctx.storage), call);
       if (decision === "allow") return undefined;
@@ -84,7 +84,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
       return { block: true, reason: verdict?.reason ?? options.denyReason ?? DEFAULT_DENIED };
     });
 
-    pi.registerCommand(options.command ?? "approvals", {
+    tiny.registerCommand(options.command ?? "approvals", {
       description: "Review the tool approvals you chose to remember",
       handler: async (_args, ctx) => {
         const current = stored(ctx.storage);

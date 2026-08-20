@@ -42,7 +42,7 @@ export const scratchpadPage = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("scratchpadPage", (pi) => {
-    pi.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
+  return definePlugin("scratchpadPage", (tiny) => {
+    tiny.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
   });
 };

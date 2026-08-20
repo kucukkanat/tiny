@@ -32,8 +32,8 @@ import type { Plugin } from "@tiny/plugin";
 export type NotionOptions = { readonly token: string };
 
 export const notion = ({ token }: NotionOptions): IdentifiedPlugin =>
-  definePlugin("notion", (pi) => {
-    pi.registerTool({ name: "notion_search", /* … */ });
+  definePlugin("notion", (tiny) => {
+    tiny.registerTool({ name: "notion_search", /* … */ });
   });
 ```
 
@@ -66,8 +66,8 @@ rather than a build of it:
 ```tsx
 import type { Plugin } from "@tiny/plugin";
 
-const Shout: Plugin = (pi) => {
-  pi.registerCommand("shout", {
+const Shout: Plugin = (tiny) => {
+  tiny.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });
@@ -139,7 +139,7 @@ Keep one implementation and wrap it:
 
 ```ts
 // src/index.ts        — for apps that bundle it
-export const shout = (): IdentifiedPlugin => definePlugin("shout", (pi) => { /* … */ });
+export const shout = (): IdentifiedPlugin => definePlugin("shout", (tiny) => { /* … */ });
 
 // src/standalone.ts   — for the Plugins dialog
 import { shout } from "./index.ts";

@@ -8,7 +8,7 @@ and how to run it.
 ```ts
 import { toolOutput } from "@tiny/ai";
 
-pi.registerTool({
+tiny.registerTool({
   name: "fs_read",
   label: "Read File",
   description: "Read a text file and return its full contents.",
@@ -89,7 +89,7 @@ others' behalf.
 model will actually get.
 
 ```ts
-pi.registerTool({
+tiny.registerTool({
   name: "todo",
   description: "Manage a todo list",
   promptSnippet: "List or add items in the project todo list",
@@ -205,7 +205,7 @@ Nothing in the tool has to change for that, and no wrapper sits in front of it:
 running them, and any plugin can answer.
 
 ```ts
-pi.on("tool_call", async (event, ctx) => {
+tiny.on("tool_call", async (event, ctx) => {
   if (event.toolName !== "fs_delete") return undefined;
   const ok = await ctx.ui.confirm("Delete?", String(event.input.path));
   return ok ? undefined : { block: true, reason: "The user said no." };
@@ -225,7 +225,8 @@ Three properties are worth understanding before you write one:
 
 Handlers get the same `ctx` a [command](context.md) does, `ctx.ui` included, plus
 the request's `model` and `signal`. That is what makes the dialog above possible,
-and it is why pi's own permission gates run here with no edit but their import.
+and it is why pi's own permission gates run here with no required edit but their
+import.
 
 [`@tiny/plugin-hitl`](https://github.com/kucukkanat/tiny/tree/main/packages/plugin-hitl)
 is this event with a policy and an approval card in front of it. The card renders

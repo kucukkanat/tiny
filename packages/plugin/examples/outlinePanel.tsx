@@ -40,7 +40,7 @@ export const outlinePanel = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("outlinePanel", (pi) => {
-    pi.registerPanel("outline", { title: "Outline", component: Outline });
+  return definePlugin("outlinePanel", (tiny) => {
+    tiny.registerPanel("outline", { title: "Outline", component: Outline });
   });
 };

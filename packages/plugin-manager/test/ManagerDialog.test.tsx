@@ -11,7 +11,7 @@ import { ManagerDialog } from "../src/ManagerDialog.tsx";
 // bun:test hooks aren't globals, so testing-library can't auto-register this.
 afterEach(cleanup);
 
-const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
+const HELLO = 'export default (tiny) => tiny.registerCommand("hello", { handler: () => {} });';
 
 let root: FileSystemDirectoryHandle;
 let store: Installed;

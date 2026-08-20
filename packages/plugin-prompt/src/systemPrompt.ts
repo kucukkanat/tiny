@@ -9,8 +9,8 @@ import { definePlugin } from "@tiny/plugin";
  * so `event.systemPrompt` already reflects any earlier extension.
  */
 export const systemPrompt = (text: string): IdentifiedPlugin =>
-  definePlugin("systemPrompt", (pi) => {
-    pi.on("before_agent_start", (event) =>
+  definePlugin("systemPrompt", (tiny) => {
+    tiny.on("before_agent_start", (event) =>
       event.systemPrompt === "" ? { systemPrompt: text } : undefined,
     );
   });

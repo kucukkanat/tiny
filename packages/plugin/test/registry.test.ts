@@ -1,10 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { Extension, ExtensionAPI } from "@tiny/ai";
 import { matchesKey } from "../src/keys.ts";
-import type { Plugin } from "../src/pi.ts";
-import { definePlugin } from "../src/pi.ts";
 import { loadPlugins } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
+import type { Plugin } from "../src/tiny.ts";
+import { definePlugin } from "../src/tiny.ts";
 
 /**
  * Runs `body` with `console.error` captured, returning what it reported.
@@ -59,27 +59,27 @@ describe("loadPlugins", () => {
   });
 
   test("replays recorded on() calls in registration order", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.on("context", () => {});
-      pi.on("message_end", () => {});
+    const plugin: Plugin = (tiny) => {
+      tiny.on("context", () => {});
+      tiny.on("message_end", () => {});
     };
     const { extensions } = await loadPlugins([plugin]);
     expect(replayed(extensions)).toEqual(["context", "message_end"]);
   });
 
   test("replay is idempotent, so every request gets the same handlers", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.on("context", () => {});
+    const plugin: Plugin = (tiny) => {
+      tiny.on("context", () => {});
     };
     const { extensions } = await loadPlugins([plugin]);
     expect(replayed(extensions)).toEqual(replayed(extensions));
   });
 
   test("accepts pi events this facade never fires, and drops them from replay", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.on("session_start", () => {});
-      pi.on("turn_end", () => {});
-      pi.on("context", () => {});
+    const plugin: Plugin = (tiny) => {
+      tiny.on("session_start", () => {});
+      tiny.on("turn_end", () => {});
+      tiny.on("context", () => {});
     };
     const { extensions } = await loadPlugins([plugin]);
     // Registering did not throw, and only the event @tiny/ai emits is replayed.
@@ -87,15 +87,17 @@ describe("loadPlugins", () => {
   });
 
   test("replays tool_call, which @tiny/ai does fire", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.on("tool_call", () => ({ block: true }));
+    const plugin: Plugin = (tiny) => {
+      tiny.on("tool_call", () => ({ block: true }));
     };
     const { extensions } = await loadPlugins([plugin]);
     expect(replayed(extensions)).toEqual(["tool_call"]);
   });
 
   test("produces no extension when nothing subscribes", async () => {
-    const { extensions } = await loadPlugins([(pi) => pi.contribute("app.overlays", () => null)]);
+    const { extensions } = await loadPlugins([
+      (tiny) => tiny.contribute("app.overlays", () => null),
+    ]);
     expect(extensions).toEqual([]);
   });
 
@@ -109,24 +111,24 @@ describe("loadPlugins", () => {
 
 describe("command registration", () => {
   test("keeps a single registration unsuffixed", async () => {
-    const plugin: Plugin = (pi) => pi.registerCommand("review", { handler: () => {} });
+    const plugin: Plugin = (tiny) => tiny.registerCommand("review", { handler: () => {} });
     const { commands } = await loadPlugins([plugin]);
     expect(commands.map((c) => c.invocationName)).toEqual(["review"]);
   });
 
   test("suffixes duplicates in load order, as pi does", async () => {
-    const claim = (): Plugin => (pi) => pi.registerCommand("review", { handler: () => {} });
+    const claim = (): Plugin => (tiny) => tiny.registerCommand("review", { handler: () => {} });
     const { commands } = await loadPlugins([claim(), claim(), claim()]);
     expect(commands.map((c) => c.invocationName)).toEqual(["review:1", "review:2", "review:3"]);
     expect(commands.every((c) => c.name === "review")).toBe(true);
   });
 
   test("namespaces each registration by its plugin", async () => {
-    const alpha = definePlugin("alpha", (pi) => {
-      pi.registerCommand("a", { handler: () => {} });
+    const alpha = definePlugin("alpha", (tiny) => {
+      tiny.registerCommand("a", { handler: () => {} });
     });
-    const beta = definePlugin("beta", (pi) => {
-      pi.registerCommand("b", { handler: () => {} });
+    const beta = definePlugin("beta", (tiny) => {
+      tiny.registerCommand("b", { handler: () => {} });
     });
     const { commands } = await loadPlugins([alpha, beta]);
     expect(commands.map((c) => c.pluginId)).toEqual(["alpha", "beta"]);
@@ -139,8 +141,8 @@ describe("plugin identity", () => {
     // erases it, so a plugin identified that way would be namespaced one way in
     // development and another in the build users run — silently relocating the
     // storage under `tiny-plugin:<id>:`. The name here is deliberately a lie.
-    const misnamed = definePlugin("real-id", function wrongName(pi) {
-      pi.registerCommand("x", { handler: () => {} });
+    const misnamed = definePlugin("real-id", function wrongName(tiny) {
+      tiny.registerCommand("x", { handler: () => {} });
     });
 
     const { commands } = await loadPlugins([misnamed]);
@@ -150,7 +152,7 @@ describe("plugin identity", () => {
 
   test("falls back to its position when no id is declared", async () => {
     const { commands } = await loadPlugins([
-      (pi) => pi.registerCommand("y", { handler: () => {} }),
+      (tiny) => tiny.registerCommand("y", { handler: () => {} }),
     ]);
 
     expect(commands[0]?.pluginId).toBe("plugin-0");
@@ -160,9 +162,9 @@ describe("plugin identity", () => {
 describe("contributions and shortcuts", () => {
   test("records the slot, component and owning plugin", async () => {
     const Button = () => null;
-    const toolbar = definePlugin("toolbar", (pi) => {
-      pi.contribute("composer.actions", Button);
-      pi.registerShortcut("ctrl+k", { handler: () => {} });
+    const toolbar = definePlugin("toolbar", (tiny) => {
+      tiny.contribute("composer.actions", Button);
+      tiny.registerShortcut("ctrl+k", { handler: () => {} });
     });
     const { contributions, shortcuts } = await loadPlugins([toolbar]);
     expect(contributions).toEqual([
@@ -178,8 +180,8 @@ describe("panels", () => {
     const Left = () => null;
     const Right = () => null;
     const { panels } = await loadPlugins([
-      definePlugin("a", (pi) => pi.registerPanel("notes", { title: "A", component: Left })),
-      definePlugin("b", (pi) => pi.registerPanel("notes", { title: "B", component: Right })),
+      definePlugin("a", (tiny) => tiny.registerPanel("notes", { title: "A", component: Left })),
+      definePlugin("b", (tiny) => tiny.registerPanel("notes", { title: "B", component: Right })),
     ]);
 
     expect(panels.map((panel) => panel.id)).toEqual(["a:notes", "b:notes"]);
@@ -192,9 +194,9 @@ describe("panels", () => {
     let panels: Awaited<ReturnType<typeof loadPlugins>>["panels"] = [];
     const lines = await reported(async () => {
       ({ panels } = await loadPlugins([
-        definePlugin("a", (pi) => {
-          pi.registerPanel("notes", { title: "First", component: First });
-          pi.registerPanel("notes", { title: "Second", component: () => null });
+        definePlugin("a", (tiny) => {
+          tiny.registerPanel("notes", { title: "First", component: First });
+          tiny.registerPanel("notes", { title: "Second", component: () => null });
         }),
       ]));
     });
@@ -214,8 +216,8 @@ describe("routes", () => {
   test("records the path, options and owning plugin", async () => {
     const Page = () => null;
     const { routes } = await loadPlugins([
-      definePlugin("notes", (pi) =>
-        pi.registerRoute("/notes", { component: Page, label: "Notes" }),
+      definePlugin("notes", (tiny) =>
+        tiny.registerRoute("/notes", { component: Page, label: "Notes" }),
       ),
     ]);
 
@@ -229,8 +231,8 @@ describe("routes", () => {
     let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
     const lines = await reported(async () => {
       ({ routes } = await loadPlugins([
-        definePlugin("a", (pi) => pi.registerRoute("/notes", { component: First })),
-        definePlugin("b", (pi) => pi.registerRoute("/notes", { component: () => null })),
+        definePlugin("a", (tiny) => tiny.registerRoute("/notes", { component: First })),
+        definePlugin("b", (tiny) => tiny.registerRoute("/notes", { component: () => null })),
       ]));
     });
 
@@ -252,8 +254,8 @@ describe("routes", () => {
       let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
       const lines = await reported(async () => {
         ({ routes } = await loadPlugins([
-          definePlugin("a", (pi) => pi.registerRoute("/notes", { component: First })),
-          definePlugin("b", (pi) => pi.registerRoute(spelling, { component: () => null })),
+          definePlugin("a", (tiny) => tiny.registerRoute("/notes", { component: First })),
+          definePlugin("b", (tiny) => tiny.registerRoute(spelling, { component: () => null })),
         ]));
       });
 
@@ -265,7 +267,7 @@ describe("routes", () => {
 
   test("stores the canonical spelling, so a slashed path cannot outrank a plain one", async () => {
     const { routes } = await loadPlugins([
-      definePlugin("a", (pi) => pi.registerRoute("//deep//page//", { component: () => null })),
+      definePlugin("a", (tiny) => tiny.registerRoute("//deep//page//", { component: () => null })),
     ]);
 
     expect(routes[0]?.path).toBe("/deep/page");
@@ -273,7 +275,7 @@ describe("routes", () => {
 
   test("keeps the case of a path, because a page reads its own params back", async () => {
     const { routes } = await loadPlugins([
-      definePlugin("a", (pi) => pi.registerRoute("/report/:userId", { component: () => null })),
+      definePlugin("a", (tiny) => tiny.registerRoute("/report/:userId", { component: () => null })),
     ]);
 
     expect(routes[0]?.path).toBe("/report/:userId");
@@ -289,7 +291,7 @@ describe("routes", () => {
       let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
       const lines = await reported(async () => {
         ({ routes } = await loadPlugins([
-          definePlugin("a", (pi) => pi.registerRoute(path, { component: () => null })),
+          definePlugin("a", (tiny) => tiny.registerRoute(path, { component: () => null })),
         ]));
       });
 
@@ -353,8 +355,8 @@ describe("the context event handlers receive", () => {
 
   test("without a host, ui is present but hasUI is false — pi's print mode", async () => {
     let saw: { hasUI: boolean; confirmed: boolean } | undefined;
-    const plugin: Plugin = (pi) => {
-      pi.on("tool_call", async (_event, ctx) => {
+    const plugin: Plugin = (tiny) => {
+      tiny.on("tool_call", async (_event, ctx) => {
         saw = { hasUI: ctx.hasUI, confirmed: await ctx.ui.confirm("Run it?", "really?") };
       });
     };
@@ -368,8 +370,8 @@ describe("the context event handlers receive", () => {
   test("the request's own model and signal win over the plugin context", async () => {
     const signal = AbortSignal.abort();
     let saw: unknown;
-    const plugin: Plugin = (pi) => {
-      pi.on("tool_call", (_event, ctx) => {
+    const plugin: Plugin = (tiny) => {
+      tiny.on("tool_call", (_event, ctx) => {
         saw = ctx.signal;
       });
     };

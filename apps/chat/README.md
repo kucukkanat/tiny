@@ -30,8 +30,8 @@ pinned — and never caches API calls.
 Conversations persist locally; switch or delete them from the sidebar
 (`#/c/<id>` hash routes, so the build needs no server-side routing).
 
-A plugin can add more than a button. `pi.registerPanel` opens a rail down the
-right — absent entirely until some plugin asks for one — and `pi.registerRoute`
+A plugin can add more than a button. `tiny.registerPanel` opens a rail down the
+right — absent entirely until some plugin asks for one — and `tiny.registerRoute`
 adds a page of its own at its own path, with the sidebar and rail still around it.
 Neither needs a change here; see
 [Panels and pages](../docs/content/panels.md).

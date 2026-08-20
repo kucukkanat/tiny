@@ -236,7 +236,7 @@ export function ManagerDialog({
                 <textarea
                   className={`${field} mt-2 h-28 resize-none font-mono text-sm`}
                   data-testid="add-source"
-                  placeholder={"export default (pi) => {\n  pi.registerCommand(…)\n}"}
+                  placeholder={"export default (tiny) => {\n  tiny.registerCommand(…)\n}"}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                 />

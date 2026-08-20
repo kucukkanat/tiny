@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { createEvents, type PluginEvents } from "./events.ts";
+import type { ProviderEntry } from "./providers.ts";
+import type { MarkdownEntry, PanelEntry, Registry, RouteEntry } from "./registry.ts";
+import { emptyRegistry, transformMarkdown } from "./registry.ts";
 import type {
   CommandInfo,
   MarkdownContext,
@@ -8,10 +11,7 @@ import type {
   PluginSettings,
   PluginStreaming,
   WidgetPlacement,
-} from "./pi.ts";
-import type { ProviderEntry } from "./providers.ts";
-import type { MarkdownEntry, PanelEntry, Registry, RouteEntry } from "./registry.ts";
-import { emptyRegistry, transformMarkdown } from "./registry.ts";
+} from "./tiny.ts";
 
 export type Widget = { readonly lines: readonly string[]; readonly placement: WidgetPlacement };
 
@@ -30,9 +30,9 @@ export type AppBridge = {
   updateSettings(next: PluginSettings): void;
   navigate(path: string): void;
   /**
-   * The current conversation's name, behind `pi.getSessionName()`. Optional
+   * The current conversation's name, behind `tiny.getSessionName()`. Optional
    * because not every host that mounts this has named sessions; where it is
-   * absent the pi methods report as much rather than pretending.
+   * absent the `tiny.*` methods report as much rather than pretending.
    */
   readonly sessionName?: string | undefined;
   setSessionName?(name: string): void;
@@ -55,9 +55,9 @@ export type HostValue = {
   readonly commands: readonly CommandInfo[];
   /** Live, because pi allows registering a provider after the factory returns. */
   readonly providers: readonly ProviderEntry[];
-  /** The tool names currently enabled — `pi.getActiveTools()`. */
+  /** The tool names currently enabled — `tiny.getActiveTools()`. */
   readonly activeTools: readonly string[];
-  /** The bus behind `pi.events`. */
+  /** The bus behind `tiny.events`. */
   readonly events: PluginEvents;
   /** The composer's draft. The host owns it; the composer is controlled by it. */
   readonly editorText: string;
@@ -104,7 +104,7 @@ export function usePluginContext(): PluginContext {
 /**
  * What to hand `streamChat` as its `extensions`.
  *
- * Not one extension per plugin: every `pi.on(...)` call made by every plugin is
+ * Not one extension per plugin: every `tiny.on(...)` call made by every plugin is
  * recorded during load and replayed through a *single* bridge extension, which
  * is what lets `@tiny/ai` stay unaware of plugins. The host appends one more of
  * its own for token accounting. So this is 0, 1 or 2 entries regardless of how
@@ -116,7 +116,7 @@ export function usePluginExtensions() {
 
 /**
  * The tools plugins registered, for `useChat` to hand to `streamChat` — minus
- * any that `pi.setActiveTools` switched off.
+ * any that `tiny.setActiveTools` switched off.
  */
 export function usePluginTools() {
   const { registry, activeTools } = usePluginHost();
@@ -141,12 +141,12 @@ export function usePluginRoutes(): readonly RouteEntry[] {
   return usePluginHost().registry.routes;
 }
 
-/** The endpoints plugins registered with `pi.registerProvider`. */
+/** The endpoints plugins registered with `tiny.registerProvider`. */
 export function usePluginProviders(): readonly ProviderEntry[] {
   return usePluginHost().providers;
 }
 
-/** The bus behind `pi.events`, for a component that wants to join in. */
+/** The bus behind `tiny.events`, for a component that wants to join in. */
 export function usePluginEvents(): PluginEvents {
   return usePluginHost().events;
 }

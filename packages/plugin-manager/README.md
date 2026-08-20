@@ -19,7 +19,7 @@ export const plugins = [settings(), fileSystem(), pluginManager()];
 
 `loadPlugins` awaits every plugin factory, and this one is `async`. Before it
 returns, it has read the manifest, imported each installed plugin as a module,
-and called it with the **same** `pi` it was handed — so what a plugin installed
+and called it with the **same** `tiny` it was handed — so what a plugin installed
 at runtime registers is in the app's one registry, indistinguishable from a
 plugin that shipped with the build. Commands, tools, shortcuts and slot
 contributions all work.
@@ -137,8 +137,8 @@ const store = openInstalled(options);
 const installed = await store.install({
   name: "Word count",
   source: [
-    "export default (pi) => {",
-    '  pi.registerCommand("words", {',
+    "export default (tiny) => {",
+    '  tiny.registerCommand("words", {',
     '    description: "Count the words in the last reply",',
     "    handler: (_args, ctx) => {",
     "      const last = ctx.chat.messages.at(-1);",
@@ -200,9 +200,9 @@ const Hello = ({ greeting }: Props) => {
   return <button type="button" onClick={() => setCount(count + 1)}>{greeting} {count}</button>;
 };
 
-const plugin: Plugin = (pi: PluginAPI) => {
-  pi.contribute("app.overlays", () => <Hello greeting="hi" />);
-  pi.registerCommand("hello", { description: "Say hi", handler: () => {} });
+const plugin: Plugin = (tiny: PluginAPI) => {
+  tiny.contribute("app.overlays", () => <Hello greeting="hi" />);
+  tiny.registerCommand("hello", { description: "Say hi", handler: () => {} });
 };
 
 export default plugin;
@@ -242,7 +242,7 @@ import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";
 import { memoryManifest } from "@tiny/plugin-manager/testing";
 
-const SOURCE = 'export default (pi) => pi.registerCommand("greet", { handler: () => {} });';
+const SOURCE = 'export default (tiny) => tiny.registerCommand("greet", { handler: () => {} });';
 
 // Stand in for someone's plugin on the web.
 const server = Bun.serve({ port: 0, fetch: () => new Response(SOURCE) });
@@ -289,13 +289,13 @@ commands: plugins
 ## Writing a plugin someone can install
 
 A single module with a default export, TypeScript and JSX included. It receives
-the same `pi` documented in [`@tiny/plugin`](../plugin/README.md):
+the same `tiny` documented in [`@tiny/plugin`](../plugin/README.md):
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";
 
-const Shout: Plugin = (pi) => {
-  pi.registerCommand("shout", {
+const Shout: Plugin = (tiny) => {
+  tiny.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });

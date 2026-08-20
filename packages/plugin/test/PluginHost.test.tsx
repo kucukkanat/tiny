@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
-import { definePlugin } from "../src/pi.ts";
+import { definePlugin } from "../src/tiny.ts";
 
 const noop = () => {};
 const STABLE_MESSAGES: readonly [] = [];
 
 import { PluginHost } from "../src/PluginHost.tsx";
-import type { Plugin, PluginContext } from "../src/pi.ts";
 import { emptyRegistry } from "../src/registry.ts";
 import { Slot, StatusBar, Widgets } from "../src/Slot.tsx";
+import type { Plugin, PluginContext } from "../src/tiny.ts";
 
 afterEach(() => {
   cleanup();
@@ -65,10 +65,10 @@ const openCommand = (name: string) => {
 
 describe("Slot", () => {
   test("renders every contribution for its name", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.contribute("composer.actions", () => <span>alpha</span>);
-      pi.contribute("composer.actions", () => <span>beta</span>);
-      pi.contribute("sidebar.footer", () => <span>elsewhere</span>);
+    const plugin: Plugin = (tiny) => {
+      tiny.contribute("composer.actions", () => <span>alpha</span>);
+      tiny.contribute("composer.actions", () => <span>beta</span>);
+      tiny.contribute("sidebar.footer", () => <span>elsewhere</span>);
     };
     await mount([plugin], <Slot name="composer.actions" />);
 
@@ -78,8 +78,8 @@ describe("Slot", () => {
   });
 
   test("passes the message and index to message.actions", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.contribute("message.actions", ({ message, index }) => (
+    const plugin: Plugin = (tiny) => {
+      tiny.contribute("message.actions", ({ message, index }) => (
         <span>{`${index}:${message?.content ?? ""}`}</span>
       ));
     };
@@ -93,11 +93,11 @@ describe("Slot", () => {
   test("contains a throwing contribution instead of blanking the app", async () => {
     const consoleError = console.error;
     console.error = mock(() => {});
-    function boom(pi: Parameters<Plugin>[0]) {
-      pi.contribute("composer.actions", () => {
+    function boom(tiny: Parameters<Plugin>[0]) {
+      tiny.contribute("composer.actions", () => {
         throw new Error("render exploded");
       });
-      pi.contribute("composer.actions", () => <span>survivor</span>);
+      tiny.contribute("composer.actions", () => <span>survivor</span>);
     }
     await mount([boom], <Slot name="composer.actions" />);
 
@@ -112,8 +112,8 @@ describe("ctx.ui dialogs", () => {
   /** Registers a command that records what a dialog resolved to. */
   const asking = (ask: (ctx: PluginContext) => Promise<unknown>) => {
     const answers: unknown[] = [];
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("ask", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("ask", {
         handler: async (_args, ctx) => {
           answers.push(await ask(ctx));
         },
@@ -175,8 +175,8 @@ describe("ctx.ui dialogs", () => {
 
 describe("ctx.ui fire-and-forget", () => {
   test("notify shows a toast", async () => {
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("say", { handler: (_a, ctx) => ctx.ui.notify("Copied", "info") });
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("say", { handler: (_a, ctx) => ctx.ui.notify("Copied", "info") });
     await mount([plugin]);
 
     await runCommand("say");
@@ -185,10 +185,10 @@ describe("ctx.ui fire-and-forget", () => {
 
   test("getEditorText reads back what setEditorText and pasteToEditor put there", async () => {
     let seen: string | undefined;
-    const plugin: Plugin = (pi) => {
-      pi.registerCommand("write", { handler: (_a, ctx) => ctx.ui.setEditorText("hello") });
-      pi.registerCommand("append", { handler: (_a, ctx) => ctx.ui.pasteToEditor(" there") });
-      pi.registerCommand("read", {
+    const plugin: Plugin = (tiny) => {
+      tiny.registerCommand("write", { handler: (_a, ctx) => ctx.ui.setEditorText("hello") });
+      tiny.registerCommand("append", { handler: (_a, ctx) => ctx.ui.pasteToEditor(" there") });
+      tiny.registerCommand("read", {
         handler: (_a, ctx) => {
           seen = ctx.ui.getEditorText();
         },
@@ -204,8 +204,8 @@ describe("ctx.ui fire-and-forget", () => {
   });
 
   test("setWidget renders string lines at the requested placement", async () => {
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("draw", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("draw", {
         handler: (_a, ctx) => {
           ctx.ui.setWidget("w", ["line one", "line two"], { placement: "belowEditor" });
         },
@@ -221,9 +221,9 @@ describe("ctx.ui fire-and-forget", () => {
   });
 
   test("setStatus adds and clears an entry", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.registerCommand("on", { handler: (_a, ctx) => ctx.ui.setStatus("k", "working") });
-      pi.registerCommand("off", { handler: (_a, ctx) => ctx.ui.setStatus("k", undefined) });
+    const plugin: Plugin = (tiny) => {
+      tiny.registerCommand("on", { handler: (_a, ctx) => ctx.ui.setStatus("k", "working") });
+      tiny.registerCommand("off", { handler: (_a, ctx) => ctx.ui.setStatus("k", undefined) });
     };
     await mount([plugin], <StatusBar />);
 
@@ -237,8 +237,8 @@ describe("ctx.ui fire-and-forget", () => {
 describe("context and commands", () => {
   test("reports pi's mode and hasUI so terminal guards stay false", async () => {
     let seen: PluginContext | undefined;
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("peek", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("peek", {
         handler: (_a, ctx) => {
           seen = ctx;
         },
@@ -254,8 +254,8 @@ describe("context and commands", () => {
 
   test("passes command arguments through", async () => {
     let received: string | undefined;
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("echo", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("echo", {
         handler: (args) => {
           received = args;
         },
@@ -269,8 +269,8 @@ describe("context and commands", () => {
   test("a throwing command handler notifies instead of propagating", async () => {
     const consoleError = console.error;
     console.error = mock(() => {});
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("bad", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("bad", {
         handler: () => {
           throw new Error("handler exploded");
         },
@@ -290,7 +290,7 @@ describe("context and commands", () => {
       // No `definePlugin`, so its id is its position — which moves when the
       // list does, taking whatever it stored with it.
       await mount([
-        (pi) => pi.registerCommand("keep", { handler: (_a, ctx) => ctx.storage.set("k", 1) }),
+        (tiny) => tiny.registerCommand("keep", { handler: (_a, ctx) => ctx.storage.set("k", 1) }),
       ]);
       expect(warnings).toEqual([]);
 
@@ -305,8 +305,8 @@ describe("context and commands", () => {
   });
 
   test("storage is namespaced per plugin", async () => {
-    const alpha = definePlugin("alpha", (pi) => {
-      pi.registerCommand("write", { handler: (_a, ctx) => ctx.storage.set("k", 1) });
+    const alpha = definePlugin("alpha", (tiny) => {
+      tiny.registerCommand("write", { handler: (_a, ctx) => ctx.storage.set("k", 1) });
     });
     await mount([alpha]);
 
@@ -316,8 +316,8 @@ describe("context and commands", () => {
 
   test("a registered shortcut fires on a matching keydown", async () => {
     let fired = 0;
-    const plugin: Plugin = (pi) =>
-      pi.registerShortcut("ctrl+k", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerShortcut("ctrl+k", {
         handler: () => {
           fired += 1;
         },
@@ -381,8 +381,8 @@ describe("useProvideApp", () => {
       useProvideApp(bridge);
       return null;
     }
-    const plugin: Plugin = (pi) =>
-      pi.registerCommand("peek", {
+    const plugin: Plugin = (tiny) =>
+      tiny.registerCommand("peek", {
         handler: (_a, ctx) => {
           seen = ctx;
         },
@@ -396,12 +396,12 @@ describe("useProvideApp", () => {
 
 describe("contributed components", () => {
   test("usePluginContext gives a contribution the same context", async () => {
-    const plugin: Plugin = (pi) => {
-      pi.contribute("composer.actions", () => {
+    const plugin: Plugin = (tiny) => {
+      tiny.contribute("composer.actions", () => {
         const ctx = usePluginContext();
         return <span>{`${ctx.mode}/${ctx.commands.length}`}</span>;
       });
-      pi.registerCommand("noop", { handler: () => {} });
+      tiny.registerCommand("noop", { handler: () => {} });
     };
     await mount([plugin], <Slot name="composer.actions" />);
     await waitFor(() => expect(screen.getByText("react/1")).toBeDefined());
@@ -412,9 +412,9 @@ describe("reload", () => {
   /** What a plugin registers can change between loads — that is the whole point. */
   const shifting =
     (extra: () => boolean): Plugin =>
-    (pi) => {
-      pi.registerCommand("base", { handler: () => {} });
-      if (extra()) pi.registerCommand("extra", { handler: () => {} });
+    (tiny) => {
+      tiny.registerCommand("base", { handler: () => {} });
+      if (extra()) tiny.registerCommand("extra", { handler: () => {} });
     };
 
   const names = () => host?.commands.map((command) => command.name);

@@ -1,8 +1,8 @@
 # Panels and pages
 
 ```ts
-pi.registerPanel(id: string, options: PanelOptions): void;
-pi.registerRoute(path: string, options: RouteOptions): void;
+tiny.registerPanel(id: string, options: PanelOptions): void;
+tiny.registerRoute(path: string, options: RouteOptions): void;
 ```
 
 [`contribute`](slots.md) places a fragment among the app's own chrome — a button
@@ -66,8 +66,8 @@ export const outlinePanel = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("outlinePanel", (pi) => {
-    pi.registerPanel("outline", { title: "Outline", component: Outline });
+  return definePlugin("outlinePanel", (tiny) => {
+    tiny.registerPanel("outline", { title: "Outline", component: Outline });
   });
 };
 ```
@@ -152,8 +152,8 @@ export const scratchpadPage = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("scratchpadPage", (pi) => {
-    pi.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
+  return definePlugin("scratchpadPage", (tiny) => {
+    tiny.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
   });
 };
 ```
@@ -172,8 +172,8 @@ still addressable; it is simply not listed, which is what you want for a page
 reached from a command or a button:
 
 ```ts
-pi.registerRoute("/report", { component: Report });
-pi.registerCommand("report", {
+tiny.registerRoute("/report", { component: Report });
+tiny.registerCommand("report", {
   description: "Open the report",
   handler: (_args, ctx) => ctx.navigate("/report"),
 });

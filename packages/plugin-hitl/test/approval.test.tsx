@@ -37,7 +37,7 @@ const fsWrite: ToolDefinition = {
     return toolOutput("wrote /notes.md");
   },
 };
-const registersTool: Plugin = (pi) => pi.registerTool(fsWrite);
+const registersTool: Plugin = (tiny) => tiny.registerTool(fsWrite);
 
 /**
  * Answer the card the way a person does: choose, then send. The send is

@@ -5,18 +5,21 @@
  * Patterns checked: rm -rf, sudo, chmod/chown 777
  *
  * This is pi's own `examples/extensions/permission-gate.ts`, from
- * `@earendil-works/pi-coding-agent`. The import on the next line is the only
- * edit: pi's `ExtensionAPI` becomes this host's `PluginAPI`. Everything below
- * it — the event, `event.input`, `ctx.hasUI`, `ctx.ui.select`, and the
- * `{ block, reason }` return — is pi's code, unchanged.
+ * `@earendil-works/pi-coding-agent`, with two edits. The import on the next
+ * line is the load-bearing one: pi's `ExtensionAPI` becomes this host's
+ * `PluginAPI`. The parameter is then named `tiny` to match this repo, which is
+ * cosmetic — a parameter name never leaves its function, so the gate runs here
+ * with it still spelled `pi`. Everything below — the event, `event.input`,
+ * `ctx.hasUI`, `ctx.ui.select`, and the `{ block, reason }` return — is pi's
+ * code, unchanged.
  */
 
 import type { PluginAPI } from "@tiny/plugin";
 
-export default function (pi: PluginAPI) {
+export default function (tiny: PluginAPI) {
   const dangerousPatterns = [/\brm\s+(-rf?|--recursive)/i, /\bsudo\b/i, /\b(chmod|chown)\b.*777/i];
 
-  pi.on("tool_call", async (event, ctx) => {
+  tiny.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "bash") return undefined;
 
     const command = event.input.command as string;

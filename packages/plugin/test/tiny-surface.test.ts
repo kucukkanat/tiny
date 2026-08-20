@@ -1,17 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { endpointModel, toolOutput, toolText } from "@tiny/ai";
 import { createEvents } from "../src/events.ts";
-import type { Plugin } from "../src/pi.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
 import { type HostActions, loadPlugins, transformMarkdown } from "../src/registry.ts";
+import type { Plugin } from "../src/tiny.ts";
 
 describe("registerProvider", () => {
   test("collects an endpoint a plugin adds", async () => {
     const providers = createProviderStore();
     const registry = await loadPlugins(
       [
-        (pi) =>
-          pi.registerProvider("groq", {
+        (tiny) =>
+          tiny.registerProvider("groq", {
             name: "Groq",
             baseUrl: "https://api.groq.com/openai/v1",
             models: ["llama-3.3-70b"],
@@ -29,9 +29,9 @@ describe("registerProvider", () => {
     const providers = createProviderStore();
     await loadPlugins(
       [
-        (pi) => {
-          pi.registerProvider("x", { name: "First", baseUrl: "https://a.example/v1" });
-          pi.registerProvider("x", { name: "Second", baseUrl: "https://b.example/v1" });
+        (tiny) => {
+          tiny.registerProvider("x", { name: "First", baseUrl: "https://a.example/v1" });
+          tiny.registerProvider("x", { name: "Second", baseUrl: "https://b.example/v1" });
         },
       ],
       { providers },
@@ -46,10 +46,10 @@ describe("registerProvider", () => {
     let removedUnknown: boolean | undefined;
     await loadPlugins(
       [
-        (pi) => {
-          pi.registerProvider("x", { name: "X", baseUrl: "https://a.example/v1" });
-          removedKnown = pi.unregisterProvider("x");
-          removedUnknown = pi.unregisterProvider("nope");
+        (tiny) => {
+          tiny.registerProvider("x", { name: "X", baseUrl: "https://a.example/v1" });
+          removedKnown = tiny.unregisterProvider("x");
+          removedUnknown = tiny.unregisterProvider("nope");
         },
       ],
       { providers },
@@ -64,10 +64,10 @@ describe("registerProvider", () => {
     let late: (() => void) | undefined;
     await loadPlugins(
       [
-        (pi) => {
+        (tiny) => {
           // pi documents this: a call from a command handler applies immediately
           // rather than waiting for a reload.
-          late = () => pi.registerProvider("later", { name: "Later", baseUrl: "https://c/v1" });
+          late = () => tiny.registerProvider("later", { name: "Later", baseUrl: "https://c/v1" });
         },
       ],
       { providers },
@@ -85,8 +85,8 @@ describe("registerProvider", () => {
 
   test("a reload clears what the previous factories registered", async () => {
     const providers = createProviderStore();
-    const plugin: Plugin = (pi) =>
-      pi.registerProvider("x", { name: "X", baseUrl: "https://a.example/v1" });
+    const plugin: Plugin = (tiny) =>
+      tiny.registerProvider("x", { name: "X", baseUrl: "https://a.example/v1" });
     await loadPlugins([plugin], { providers });
     await loadPlugins([plugin], { providers });
     expect(providers.list()).toHaveLength(1);
@@ -144,8 +144,8 @@ describe("provider resolution", () => {
 describe("registerMarkdownTransformer", () => {
   test("chains transformers in registration order", async () => {
     const registry = await loadPlugins([
-      (pi) => pi.registerMarkdownTransformer((markdown) => markdown.replaceAll("-->", "→")),
-      (pi) => pi.registerMarkdownTransformer((markdown) => `${markdown}!`),
+      (tiny) => tiny.registerMarkdownTransformer((markdown) => markdown.replaceAll("-->", "→")),
+      (tiny) => tiny.registerMarkdownTransformer((markdown) => `${markdown}!`),
     ]);
     const out = transformMarkdown(registry.markdown, "a --> b", {
       messageType: "assistant",
@@ -156,12 +156,12 @@ describe("registerMarkdownTransformer", () => {
 
   test("keeps the markdown so far when one throws, and runs the rest", async () => {
     const registry = await loadPlugins([
-      (pi) => pi.registerMarkdownTransformer((markdown) => markdown.toUpperCase()),
-      (pi) =>
-        pi.registerMarkdownTransformer(() => {
+      (tiny) => tiny.registerMarkdownTransformer((markdown) => markdown.toUpperCase()),
+      (tiny) =>
+        tiny.registerMarkdownTransformer(() => {
           throw new Error("boom");
         }),
-      (pi) => pi.registerMarkdownTransformer((markdown) => `${markdown}.`),
+      (tiny) => tiny.registerMarkdownTransformer((markdown) => `${markdown}.`),
     ]);
     expect(
       transformMarkdown(registry.markdown, "hi", { messageType: "user", isStreaming: false }),
@@ -171,8 +171,8 @@ describe("registerMarkdownTransformer", () => {
   test("passes the message type and streaming flag through", async () => {
     const seen: string[] = [];
     const registry = await loadPlugins([
-      (pi) =>
-        pi.registerMarkdownTransformer((markdown, context) => {
+      (tiny) =>
+        tiny.registerMarkdownTransformer((markdown, context) => {
           seen.push(`${context.messageType}:${context.isStreaming}`);
           return markdown;
         }),
@@ -185,14 +185,14 @@ describe("registerMarkdownTransformer", () => {
   });
 });
 
-describe("pi.events", () => {
+describe("tiny.events", () => {
   test("carries data between two plugins", async () => {
     const events = createEvents();
     const heard: unknown[] = [];
     await loadPlugins(
       [
-        (pi) => pi.events.on("ping", (data) => heard.push(data)),
-        (pi) => pi.events.emit("ping", { from: "second" }),
+        (tiny) => tiny.events.on("ping", (data) => heard.push(data)),
+        (tiny) => tiny.events.emit("ping", { from: "second" }),
       ],
       { events },
     );
@@ -249,7 +249,7 @@ describe("pi.events", () => {
   });
 });
 
-describe("host-backed pi methods", () => {
+describe("host-backed tiny methods", () => {
   const recording = () => {
     const calls: string[] = [];
     const actions: HostActions = {
@@ -272,13 +272,18 @@ describe("host-backed pi methods", () => {
 
     await loadPlugins(
       [
-        (pi) => {
-          seen.push(pi.getCommands(), pi.getAllTools(), pi.getActiveTools(), pi.getSessionName());
+        (tiny) => {
+          seen.push(
+            tiny.getCommands(),
+            tiny.getAllTools(),
+            tiny.getActiveTools(),
+            tiny.getSessionName(),
+          );
           later = () => {
-            pi.setModel("gpt-4o-mini");
-            pi.setActiveTools(["b"]);
-            pi.sendUserMessage("hello");
-            pi.setSessionName("Renamed");
+            tiny.setModel("gpt-4o-mini");
+            tiny.setActiveTools(["b"]);
+            tiny.sendUserMessage("hello");
+            tiny.setSessionName("Renamed");
           };
         },
       ],
@@ -307,16 +312,16 @@ describe("host-backed pi methods", () => {
     console.error = (...args: unknown[]) => errors.push(args[0]);
     try {
       await loadPlugins([
-        (pi) => {
-          expect(pi.getCommands()).toEqual([]);
-          expect(pi.getSessionName()).toBeUndefined();
-          pi.setModel("x");
+        (tiny) => {
+          expect(tiny.getCommands()).toEqual([]);
+          expect(tiny.getSessionName()).toBeUndefined();
+          tiny.setModel("x");
         },
       ]);
     } finally {
       console.error = original;
     }
-    expect(errors).toContain("[plugin] pi.setModel() needs a mounted PluginHost");
+    expect(errors).toContain("[plugin] tiny.setModel() needs a mounted PluginHost");
   });
 });
 
@@ -324,8 +329,8 @@ describe("registerTool", () => {
   test("takes pi's positional arguments and content-block result", async () => {
     let received: readonly unknown[] = [];
     const registry = await loadPlugins([
-      (pi) =>
-        pi.registerTool({
+      (tiny) =>
+        tiny.registerTool({
           name: "echo",
           label: "Echo",
           description: "Echo a value back",
@@ -351,8 +356,8 @@ describe("registerTool", () => {
 
   test("carries pi's prompt fields onto the registry", async () => {
     const registry = await loadPlugins([
-      (pi) =>
-        pi.registerTool({
+      (tiny) =>
+        tiny.registerTool({
           name: "todo",
           description: "Manage a todo list",
           promptSnippet: "List or add items in the project todo list",
@@ -366,12 +371,12 @@ describe("registerTool", () => {
   });
 });
 
-describe("events accepted by pi.on", () => {
+describe("events accepted by tiny.on", () => {
   test("session_compact_failed loads without error, like every unfired pi event", async () => {
     const registry = await loadPlugins([
-      (pi) => {
-        pi.on("session_compact_failed", () => {});
-        pi.on("session_start", () => {});
+      (tiny) => {
+        tiny.on("session_compact_failed", () => {});
+        tiny.on("session_start", () => {});
       },
     ]);
     // Neither fires, so neither is replayed into `@tiny/ai`.

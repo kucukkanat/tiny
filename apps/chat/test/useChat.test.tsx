@@ -106,9 +106,9 @@ describe("useChat", () => {
       useChat({
         ...against("/v1"),
         extensions: [
-          (pi) => {
-            pi.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
-            pi.on("message_end", (event) => {
+          (tiny) => {
+            tiny.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
+            tiny.on("message_end", (event) => {
               tokens = event.message.usage.totalTokens;
             });
           },

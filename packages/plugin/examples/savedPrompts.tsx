@@ -23,8 +23,8 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return definePlugin("savedPrompts", (pi) => {
-    pi.registerCommand("prompts", {
+  return definePlugin("savedPrompts", (tiny) => {
+    tiny.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {
         const saved = ctx.storage.get<string[]>("saved") ?? [
@@ -36,7 +36,7 @@ export const savedPrompts = (): Plugin => {
       },
     });
 
-    pi.registerCommand("prompts:add", {
+    tiny.registerCommand("prompts:add", {
       description: "Save a prompt for later",
       handler: async (args, ctx) => {
         const text = args !== "" ? args : await ctx.ui.input("Save a prompt", "Type it here");
@@ -47,6 +47,6 @@ export const savedPrompts = (): Plugin => {
       },
     });
 
-    pi.contribute("composer.actions", SaveButton);
+    tiny.contribute("composer.actions", SaveButton);
   });
 };

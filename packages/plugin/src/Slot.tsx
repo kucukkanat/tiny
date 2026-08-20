@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { PluginBoundary } from "./Boundary.tsx";
 import { usePluginHost } from "./hooks.ts";
-import type { PluginMessage, WidgetPlacement } from "./pi.ts";
+import type { PluginMessage, WidgetPlacement } from "./tiny.ts";
 
 /**
  * Named regions of the app a plugin can render into.
@@ -11,8 +11,8 @@ import type { PluginMessage, WidgetPlacement } from "./pi.ts";
  * this tool call, asked where the tool call is, rather than over the whole app.
  *
  * A slot is for a *fragment* placed among the app's own chrome. For a region of
- * one's own there are two other surfaces: `pi.registerPanel` for the right-hand
- * rail, and `pi.registerRoute` for a whole page — see Panels.tsx.
+ * one's own there are two other surfaces: `tiny.registerPanel` for the right-hand
+ * rail, and `tiny.registerRoute` for a whole page — see Panels.tsx.
  */
 export type SlotName =
   | "app.overlays"

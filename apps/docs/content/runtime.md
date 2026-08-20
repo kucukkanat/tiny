@@ -26,50 +26,50 @@ export const plugins: readonly IdentifiedPlugin[] = [
 What makes it different is one word:
 
 ```ts
-return async (pi) => {
-  pi.registerCommand("plugins", { description: "Add and manage plugins", handler: () => open.set(true) });
-  pi.registerShortcut("super+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
-  pi.registerShortcut("ctrl+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
-  pi.contribute("app.overlays", ManagerOverlay);
-  pi.contribute("sidebar.footer", ManagerButton);
+return async (tiny) => {
+  tiny.registerCommand("plugins", { description: "Add and manage plugins", handler: () => open.set(true) });
+  tiny.registerShortcut("super+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
+  tiny.registerShortcut("ctrl+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
+  tiny.contribute("app.overlays", ManagerOverlay);
+  tiny.contribute("sidebar.footer", ManagerButton);
 
-  await activate(store, pi);
+  await activate(store, tiny);
 };
 ```
 
 `loadPlugins` **awaits every factory**. This one is `async`, so before it returns
 it has read the manifest, imported each installed plugin as a module, and called
-it with **the same `pi` object** it was handed. Whatever those plugins register is
+it with **the same `tiny` object** it was handed. Whatever those plugins register is
 recorded in the same arrays, in the same pass, by the same code.
 
 That is the entire mechanism. Nothing in `@tiny/plugin` knows that runtime
 plugins exist.
 
-> **They share the manager's identity.** `pi` carries the id `loadPlugins` gave
+> **They share the manager's identity.** `tiny` carries the id `loadPlugins` gave
 > `pluginManager`, so every installed plugin's `ctx.storage` writes under
 > `tiny-plugin:pluginManager:` and its errors are labelled with the manager's
 > name. Two installed plugins that both store `"state"` overwrite each other,
 > and — same cause — two that both register a [panel](panels.md) called `"notes"`
 > collapse into one, because a panel's id is namespaced by the plugin's.
-> Scoping them needs `loadPlugins` to hand out a per-plugin `pi`, which it does
+> Scoping them needs `loadPlugins` to hand out a per-plugin `tiny`, which it does
 > not do yet.
 
 ```text
 loadPlugins([settings(), fileSystem(), pluginManager()])
 │
-├─ settings(pi)              registers: /settings, app.overlays
-├─ fileSystem(pi)            registers: fs_read, fs_write, …
-└─ pluginManager(pi)   async
+├─ settings(tiny)              registers: /settings, app.overlays
+├─ fileSystem(tiny)            registers: fs_read, fs_write, …
+└─ pluginManager(tiny)   async
    │  registers: /plugins, ⌘⇧P, app.overlays, sidebar.footer
    │
-   └─ activate(store, pi)
+   └─ activate(store, tiny)
       ├─ read manifest from localStorage
       ├─ for each enabled entry:
       │    read source from OPFS  →  hash it  →  compare to the pinned hash
       │    ↓ matches
       │    compile(source)  →  blob URL  →  dynamic import  →  default export
       │    ↓
-      │    await plugin(pi)   ← the same pi
+      │    await plugin(tiny)   ← the same tiny
       └─ resolve
    ↓
 Registry { commands, shortcuts, tools, contributions, extensions }
@@ -208,14 +208,14 @@ yourself.
 ## Writing an installable plugin
 
 A single module with a default export, in TypeScript and JSX if you want them.
-It receives the same `pi` documented throughout this site:
+It receives the same `tiny` documented throughout this site:
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";
 import { useState } from "react";
 
-const Shout: Plugin = (pi) => {
-  pi.registerCommand("shout", {
+const Shout: Plugin = (tiny) => {
+  tiny.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });
@@ -298,8 +298,8 @@ const store = openInstalled(options);
 const installed = await store.install({
   name: "Word count",
   source: [
-    "export default (pi) => {",
-    '  pi.registerCommand("words", {',
+    "export default (tiny) => {",
+    '  tiny.registerCommand("words", {',
     '    description: "Count the words in the last reply",',
     "    handler: (_args, ctx) => {",
     "      const last = ctx.chat.messages.at(-1);",
@@ -341,7 +341,7 @@ import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";
 import { memoryManifest } from "@tiny/plugin-manager/testing";
 
-const SOURCE = 'export default (pi) => pi.registerCommand("greet", { handler: () => {} });';
+const SOURCE = 'export default (tiny) => tiny.registerCommand("greet", { handler: () => {} });';
 
 // Stand in for someone's plugin on the web.
 const server = Bun.serve({ port: 0, fetch: () => new Response(SOURCE) });

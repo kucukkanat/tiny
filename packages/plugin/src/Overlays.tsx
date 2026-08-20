@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { NotifyLevel } from "./pi.ts";
+import type { NotifyLevel } from "./tiny.ts";
 
 /** A pending `ctx.ui.*` dialog, mirroring RPC's id-keyed request/response. */
 export type DialogRequest =

@@ -38,8 +38,9 @@ of the code beneath it. Nothing in this document would have caught those.
 A wrong name costs more than a long file. The reader trusts it, and is wrong.
 
 **Name a thing after what it is, not after the language feature or the
-framework.** `types.ts` says nothing; `pi.ts` says "the surface a plugin talks
-to". `client.ts` contained no client — it contained `streamChat`, so that is its
+framework.** `types.ts` says nothing; `tiny.ts` is named after the object it
+defines — the one every plugin factory is handed — so it answers "what can a
+plugin do?". `client.ts` contained no client — it contained `streamChat`, so that is its
 name now. `hooks/`, `components/` and `storage/` name React, not the app.
 
 **Two things may not share a name.** Not in the same folder, not across

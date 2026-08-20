@@ -7,6 +7,16 @@ of what that means, so nothing here is mistaken for full SDK conformance.
 
 **A pi extension that touches only RPC-portable methods runs here unmodified.**
 
+## The object is called `tiny` here
+
+pi calls the object a factory receives `pi`; the rest of this site calls it
+`tiny`. That is a naming convention and nothing else — it is the factory's first
+parameter, so the name belongs to whoever wrote the factory, and a file copied
+out of `.pi/extensions/` runs here with its parameter still spelled `pi`. The
+tables below keep pi's spelling wherever the row is pi's, because the column
+beside it is pi's; only [Added](#added), which has no pi equivalent to spell,
+reads `tiny`.
+
 ## Coverage at a glance
 
 Counted against pi's documented surface.
@@ -92,7 +102,8 @@ short-circuits the rest. See [Approvals](tools.md#approvals-are-just-an-event).
 
 Handlers receive the same context commands do — `ctx.ui`, `ctx.hasUI`,
 `ctx.storage` — widened with the request's own `model` and `signal`. That is what
-lets pi's shipped permission gates run here unedited.
+lets pi's shipped permission gates run here with nothing changed but their import
+line.
 
 **Every other pi event name is accepted without error and never fires.** A pi
 extension that subscribes to `session_start`, `turn_end` or
@@ -149,9 +160,9 @@ No pi equivalent.
 
 | | |
 | --- | --- |
-| `pi.contribute(slot, Component)` | [React components into named regions](slots.md) |
-| `pi.registerPanel(id, opts)` | [a panel in the right-hand rail](panels.md), which no rail exists without |
-| `pi.registerRoute(path, opts)` | [a page of the plugin's own](panels.md#pages), at an address |
+| `tiny.contribute(slot, Component)` | [React components into named regions](slots.md) |
+| `tiny.registerPanel(id, opts)` | [a panel in the right-hand rail](panels.md), which no rail exists without |
+| `tiny.registerRoute(path, opts)` | [a page of the plugin's own](panels.md#pages), at an address |
 | `ctx.ui.open(render)` | a React component as a modal, resolving when it closes |
 | `ctx.chat`, `ctx.settings`, `ctx.updateSettings`, `ctx.navigate`, `ctx.storage`, `ctx.runCommand`, `ctx.commands` | the app's own state and actions |
 

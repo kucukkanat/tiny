@@ -259,8 +259,8 @@ describe("the tool_call event", () => {
         return toolOutput("no");
       },
     };
-    const gate: Extension = (pi) =>
-      pi.on("tool_call", (event) =>
+    const gate: Extension = (tiny) =>
+      tiny.on("tool_call", (event) =>
         event.toolName === "echo" ? { block: true, reason: "Blocked by user" } : undefined,
       );
 
@@ -277,15 +277,15 @@ describe("the tool_call event", () => {
   });
 
   test("blocking without a reason uses pi's wording", async () => {
-    const gate: Extension = (pi) => pi.on("tool_call", () => ({ block: true }));
+    const gate: Extension = (tiny) => tiny.on("tool_call", () => ({ block: true }));
     await collectWith("/once", [echo], [gate]);
     expect(requests[1]?.messages.at(-1)).toMatchObject({ content: BLOCKED_MESSAGE });
   });
 
   test("carries pi's event shape", async () => {
     const seen: ToolCallEvent[] = [];
-    const spy: Extension = (pi) => {
-      pi.on("tool_call", (event) => {
+    const spy: Extension = (tiny) => {
+      tiny.on("tool_call", (event) => {
         seen.push({ ...event, input: { ...event.input } });
       });
     };
@@ -305,8 +305,8 @@ describe("the tool_call event", () => {
       },
     };
     // pi's contract: patch in place, do not return the arguments.
-    const patch: Extension = (pi) => {
-      pi.on("tool_call", (event) => {
+    const patch: Extension = (tiny) => {
+      tiny.on("tool_call", (event) => {
         event.input.value = "patched";
       });
     };
@@ -317,19 +317,19 @@ describe("the tool_call event", () => {
 
   test("later handlers see earlier mutations, and the first block short-circuits", async () => {
     const order: string[] = [];
-    const first: Extension = (pi) => {
-      pi.on("tool_call", (event) => {
+    const first: Extension = (tiny) => {
+      tiny.on("tool_call", (event) => {
         order.push(`first:${String(event.input.value)}`);
         event.input.value = "one";
       });
     };
-    const second: Extension = (pi) =>
-      pi.on("tool_call", (event) => {
+    const second: Extension = (tiny) =>
+      tiny.on("tool_call", (event) => {
         order.push(`second:${String(event.input.value)}`);
         return { block: true, reason: "stop" };
       });
-    const third: Extension = (pi) => {
-      pi.on("tool_call", () => {
+    const third: Extension = (tiny) => {
+      tiny.on("tool_call", () => {
         order.push("third");
       });
     };
@@ -347,8 +347,8 @@ describe("the tool_call event", () => {
         return toolOutput("no");
       },
     };
-    const broken: Extension = (pi) =>
-      pi.on("tool_call", () => {
+    const broken: Extension = (tiny) =>
+      tiny.on("tool_call", () => {
         throw new Error("gate exploded");
       });
 
@@ -368,8 +368,8 @@ describe("the tool_call event", () => {
       },
     };
     // Standing in for a user who dismisses an approval dialog by hitting stop.
-    const asks: Extension = (pi) => {
-      pi.on("tool_call", () => {
+    const asks: Extension = (tiny) => {
+      tiny.on("tool_call", () => {
         controller.abort();
       });
     };

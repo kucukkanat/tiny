@@ -3,7 +3,7 @@ import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { fetchSource, openInstalled, pluginManager } from "@tiny/plugin-manager";
 import { memoryManifest } from "@tiny/plugin-manager/testing";
 
-const SOURCE = 'export default (pi) => pi.registerCommand("greet", { handler: () => {} });';
+const SOURCE = 'export default (tiny) => tiny.registerCommand("greet", { handler: () => {} });';
 
 // Stand in for someone's plugin on the web.
 const server = Bun.serve({ port: 0, fetch: () => new Response(SOURCE) });

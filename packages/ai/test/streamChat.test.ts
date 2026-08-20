@@ -159,8 +159,8 @@ describe("extensions", () => {
   test("before_agent_start replaces the system prompt for the request", async () => {
     await collect("/v1", user, {
       extensions: [
-        (pi) => {
-          pi.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
+        (tiny) => {
+          tiny.on("before_agent_start", () => ({ systemPrompt: "be terse" }));
         },
       ],
     });
@@ -173,8 +173,10 @@ describe("extensions", () => {
   test("before_agent_start chains, each handler seeing the previous result", async () => {
     const append =
       (word: string): Extension =>
-      (pi) => {
-        pi.on("before_agent_start", (event) => ({ systemPrompt: `${event.systemPrompt}${word}` }));
+      (tiny) => {
+        tiny.on("before_agent_start", (event) => ({
+          systemPrompt: `${event.systemPrompt}${word}`,
+        }));
       };
     await collect("/v1", user, { extensions: [append("a"), append("b"), append("c")] });
     expect(bodyOf().messages).toContainEqual({ role: "system", content: "abc" });
@@ -191,8 +193,8 @@ describe("extensions", () => {
       ],
       {
         extensions: [
-          (pi) => {
-            pi.on("before_agent_start", (event) => {
+          (tiny) => {
+            tiny.on("before_agent_start", (event) => {
               prompt = event.prompt;
             });
           },
@@ -212,8 +214,8 @@ describe("extensions", () => {
       ],
       {
         extensions: [
-          (pi) => {
-            pi.on("context", (event) => ({ messages: event.messages.slice(-1) }));
+          (tiny) => {
+            tiny.on("context", (event) => ({ messages: event.messages.slice(-1) }));
           },
         ],
       },
@@ -224,9 +226,9 @@ describe("extensions", () => {
   test("a context handler receives a copy it may modify in place", async () => {
     await collect("/v1", user, {
       extensions: [
-        (pi) => {
+        (tiny) => {
           // Mutating the copy without returning it must not reach the request.
-          pi.on("context", (event) => {
+          tiny.on("context", (event) => {
             event.messages.push({ role: "user", content: "smuggled", timestamp: 0 });
           });
         },
@@ -241,13 +243,13 @@ describe("extensions", () => {
     let total: number | undefined;
     await collect("/v1", user, {
       extensions: [
-        (pi) => {
-          pi.on("message_start", () => void seen.push("start"));
-          pi.on("message_update", (event) => {
+        (tiny) => {
+          tiny.on("message_start", () => void seen.push("start"));
+          tiny.on("message_update", (event) => {
             seen.push("update");
             raw.push(event.assistantMessageEvent.type);
           });
-          pi.on("message_end", (event) => {
+          tiny.on("message_end", (event) => {
             seen.push("end");
             total = event.message.usage.totalTokens;
           });
@@ -268,8 +270,8 @@ describe("extensions", () => {
     await collect("/v1", user, {
       signal: controller.signal,
       extensions: [
-        (pi) => {
-          pi.on("context", (_event, ctx) => {
+        (tiny) => {
+          tiny.on("context", (_event, ctx) => {
             modelId = ctx.model.id;
             hasSignal = ctx.signal !== undefined;
           });
@@ -283,9 +285,9 @@ describe("extensions", () => {
   test("an async factory finishes registering before the request is built", async () => {
     await collect("/v1", user, {
       extensions: [
-        async (pi) => {
+        async (tiny) => {
           await Bun.sleep(5);
-          pi.on("before_agent_start", () => ({ systemPrompt: "registered late" }));
+          tiny.on("before_agent_start", () => ({ systemPrompt: "registered late" }));
         },
       ],
     });
@@ -295,8 +297,8 @@ describe("extensions", () => {
   test("an async handler is awaited before the request goes out", async () => {
     await collect("/v1", user, {
       extensions: [
-        (pi) => {
-          pi.on("context", async (event) => {
+        (tiny) => {
+          tiny.on("context", async (event) => {
             await Bun.sleep(5);
             return {
               messages: [...event.messages, { role: "user", content: "late", timestamp: 0 }],
@@ -312,8 +314,8 @@ describe("extensions", () => {
     expect(
       collect("/v1", user, {
         extensions: [
-          (pi) => {
-            pi.on("context", () => {
+          (tiny) => {
+            tiny.on("context", () => {
               throw new Error("bad extension");
             });
           },

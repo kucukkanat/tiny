@@ -13,7 +13,7 @@ export type PluginManagerOptions = InstalledOptions;
  *
  * Its factory is `async`, and `loadPlugins` awaits each factory — so by the
  * time the host has a registry, everything installed at runtime has already
- * registered into it through the same `pi`. A plugin the user pasted in can do
+ * registered into it through the same `tiny`. A plugin the user pasted in can do
  * everything one that shipped with the build can — including, for now, sharing
  * this plugin's storage namespace. See `activate.ts`.
  *
@@ -60,25 +60,25 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
     );
   }
 
-  return definePlugin("pluginManager", async (pi) => {
+  return definePlugin("pluginManager", async (tiny) => {
     // Registered before the stored plugins run, so an installed plugin cannot
     // claim the `plugins` command name and push this one to `plugins:2` —
     // leaving the user no way in to remove it.
-    pi.registerCommand("plugins", {
+    tiny.registerCommand("plugins", {
       description: "Add and manage plugins",
       handler: () => open.set(true),
     });
-    pi.registerShortcut("super+shift+p", {
+    tiny.registerShortcut("super+shift+p", {
       description: "Manage plugins",
       handler: () => open.set(true),
     });
-    pi.registerShortcut("ctrl+shift+p", {
+    tiny.registerShortcut("ctrl+shift+p", {
       description: "Manage plugins",
       handler: () => open.set(true),
     });
-    pi.contribute("app.overlays", ManagerOverlay);
-    pi.contribute("sidebar.footer", ManagerButton);
+    tiny.contribute("app.overlays", ManagerOverlay);
+    tiny.contribute("sidebar.footer", ManagerButton);
 
-    await activate(store, pi, modules);
+    await activate(store, tiny, modules);
   });
 };

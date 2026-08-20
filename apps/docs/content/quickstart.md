@@ -40,8 +40,8 @@ import { definePlugin } from "@tiny/plugin";
  * names and this has to be the same in every build.
  */
 export const greet = (): IdentifiedPlugin =>
-  definePlugin("greet", (pi) => {
-    pi.registerCommand("greet", {
+  definePlugin("greet", (tiny) => {
+    tiny.registerCommand("greet", {
       description: "Say hello",
       handler: (args, ctx) => {
         ctx.ui.notify(`Hello, ${args === "" ? "world" : args}`, "info");
@@ -105,8 +105,8 @@ export const copyButton = (): Plugin => {
     );
   }
 
-  return definePlugin("copyButton", (pi) => {
-    pi.contribute("message.actions", CopyAction);
+  return definePlugin("copyButton", (tiny) => {
+    tiny.contribute("message.actions", CopyAction);
   });
 };
 ```
@@ -122,8 +122,8 @@ A runtime plugin is **one file with a default export**. Nothing else. Save this
 as `shout.js` anywhere you can serve it from, or just copy it:
 
 ```js
-export default (pi) => {
-  pi.registerCommand("shout", {
+export default (tiny) => {
+  tiny.registerCommand("shout", {
     description: "Send the draft in caps",
     handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
   });

@@ -21,7 +21,7 @@ between preparing a tool's arguments and running it, and this plugin is an
 ordinary subscriber:
 
 ```ts
-pi.on("tool_call", async (event, ctx) => {
+tiny.on("tool_call", async (event, ctx) => {
   // event.toolName, event.toolCallId, event.input
   const ok = await ctx.ui.confirm("Run it?", event.toolName);
   return ok ? undefined : { block: true, reason: "Blocked by user" };
@@ -171,8 +171,10 @@ type HitlOptions = {
 pi ships no permission system — `docs/security.md` says so outright. What it
 ships is the `tool_call` event and a set of example gates, and those gates run
 here. Both files below are pi's, from
-`@earendil-works/pi-coding-agent/examples/extensions/`, with **one edit each**:
-the import line.
+`@earendil-works/pi-coding-agent/examples/extensions/`, with **two edits each**:
+the import line, and the parameter renamed from `pi` to `tiny`. Only the first is
+required — a parameter's name never leaves its function, so either gate would run
+here with it still spelled `pi`.
 
 `examples/piPermissionGate.ts`
 
@@ -184,18 +186,21 @@ the import line.
  * Patterns checked: rm -rf, sudo, chmod/chown 777
  *
  * This is pi's own `examples/extensions/permission-gate.ts`, from
- * `@earendil-works/pi-coding-agent`. The import on the next line is the only
- * edit: pi's `ExtensionAPI` becomes this host's `PluginAPI`. Everything below
- * it — the event, `event.input`, `ctx.hasUI`, `ctx.ui.select`, and the
- * `{ block, reason }` return — is pi's code, unchanged.
+ * `@earendil-works/pi-coding-agent`, with two edits. The import on the next
+ * line is the load-bearing one: pi's `ExtensionAPI` becomes this host's
+ * `PluginAPI`. The parameter is then named `tiny` to match this repo, which is
+ * cosmetic — a parameter name never leaves its function, so the gate runs here
+ * with it still spelled `pi`. Everything below — the event, `event.input`,
+ * `ctx.hasUI`, `ctx.ui.select`, and the `{ block, reason }` return — is pi's
+ * code, unchanged.
  */
 
 import type { PluginAPI } from "@tiny/plugin";
 
-export default function (pi: PluginAPI) {
+export default function (tiny: PluginAPI) {
   const dangerousPatterns = [/\brm\s+(-rf?|--recursive)/i, /\bsudo\b/i, /\b(chmod|chown)\b.*777/i];
 
-  pi.on("tool_call", async (event, ctx) => {
+  tiny.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "bash") return undefined;
 
     const command = event.input.command as string;
@@ -237,17 +242,17 @@ pi's other gate needs no dialog at all:
  * Blocks write and edit operations to protected paths.
  * Useful for preventing accidental modifications to sensitive files.
  *
- * pi's own `examples/extensions/protected-paths.ts`, with the same single edit
- * as `piPermissionGate.ts`: the import. It needs no dialog at all — a gate that
- * decides on its own is still a gate.
+ * pi's own `examples/extensions/protected-paths.ts`, with the same two edits as
+ * `piPermissionGate.ts`: the import, and the parameter's name. It needs no
+ * dialog at all — a gate that decides on its own is still a gate.
  */
 
 import type { PluginAPI } from "@tiny/plugin";
 
-export default function (pi: PluginAPI) {
+export default function (tiny: PluginAPI) {
   const protectedPaths = [".env", ".git/", "node_modules/"];
 
-  pi.on("tool_call", async (event, ctx) => {
+  tiny.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "write" && event.toolName !== "edit") {
       return undefined;
     }

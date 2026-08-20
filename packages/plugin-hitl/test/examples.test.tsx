@@ -30,8 +30,8 @@ const tool = (name: string): ToolDefinition => ({
 
 const registers =
   (...names: readonly string[]): Plugin =>
-  (pi) => {
-    for (const name of names) pi.registerTool(tool(name));
+  (tiny) => {
+    for (const name of names) tiny.registerTool(tool(name));
   };
 
 const write = createServer("fs_write", { path: "/notes.md" });

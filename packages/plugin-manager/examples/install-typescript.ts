@@ -24,9 +24,9 @@ const Hello = ({ greeting }: Props) => {
   return <button type="button" onClick={() => setCount(count + 1)}>{greeting} {count}</button>;
 };
 
-const plugin: Plugin = (pi: PluginAPI) => {
-  pi.contribute("app.overlays", () => <Hello greeting="hi" />);
-  pi.registerCommand("hello", { description: "Say hi", handler: () => {} });
+const plugin: Plugin = (tiny: PluginAPI) => {
+  tiny.contribute("app.overlays", () => <Hello greeting="hi" />);
+  tiny.registerCommand("hello", { description: "Say hi", handler: () => {} });
 };
 
 export default plugin;

@@ -4,14 +4,14 @@
 // A plugin is a function. `definePlugin` gives it the id that namespaces its
 // storage — see "Identity" below.
 export type Plugin = {
-  (pi: PluginAPI): void | Promise<void>;
+  (tiny: PluginAPI): void | Promise<void>;
   readonly id?: string | undefined;
 };
 export type IdentifiedPlugin = Plugin & { readonly id: string };
 
 export const definePlugin: (
   id: string,
-  setup: (pi: PluginAPI) => void | Promise<void>,
+  setup: (tiny: PluginAPI) => void | Promise<void>,
 ) => IdentifiedPlugin;
 ```
 
@@ -27,7 +27,7 @@ import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 export const tokenMeter = (options: { limit?: number } = {}): IdentifiedPlugin =>
-  definePlugin("tokenMeter", (pi) => {
+  definePlugin("tokenMeter", (tiny) => {
     // …registrations
   });
 ```
@@ -55,7 +55,7 @@ and labels the plugin's errors:
 
 ```ts
 export const greet = (): Plugin =>
-  definePlugin("greet", (pi) => {
+  definePlugin("greet", (tiny) => {
     // ctx.storage for this plugin lives under "greet"
   });
 ```
@@ -75,7 +75,7 @@ than blocking it.
 ## Commands
 
 ```ts
-pi.registerCommand(name, {
+tiny.registerCommand(name, {
   description?: string,
   getArgumentCompletions?: (prefix: string) => AutocompleteItem[] | null | Promise<…>,
   handler(args: string, ctx: PluginContext): void | Promise<void>,
@@ -104,7 +104,7 @@ duplicating its body.
 ## Shortcuts
 
 ```ts
-pi.registerShortcut("ctrl+shift+backspace", {
+tiny.registerShortcut("ctrl+shift+backspace", {
   description: "Clear the conversation",
   handler: (ctx) => ctx.runCommand("clear"),
 });
@@ -121,7 +121,8 @@ The base key is a letter, a digit, a symbol, or one of `escape` `enter` `tab`
 
 Here is a command and a shortcut together, with a confirmation before anything is
 lost. Every call in this file is pi's, so it would run unchanged under
-`.pi/extensions/`:
+`.pi/extensions/` — the object is named `tiny` here, but that is the factory's
+parameter and pi never sees it:
 
 ```ts path=packages/plugin/examples/clearChat.ts
 import type { Plugin } from "@tiny/plugin";
@@ -131,11 +132,12 @@ import { definePlugin } from "@tiny/plugin";
  * A command and a shortcut, with a confirmation before anything is lost.
  *
  * Every call here is pi's, with pi's signatures — this file would run
- * unmodified as a pi extension under `.pi/extensions/`.
+ * unmodified as a pi extension under `.pi/extensions/`. The object is named
+ * `tiny` rather than `pi` only because it is this factory's parameter.
  */
 export const clearChat = (): Plugin =>
-  definePlugin("clearChat", (pi) => {
-    pi.registerCommand("clear", {
+  definePlugin("clearChat", (tiny) => {
+    tiny.registerCommand("clear", {
       description: "Start a new conversation",
       handler: async (_args, ctx) => {
         if (ctx.chat.messages.length === 0) {
@@ -148,7 +150,7 @@ export const clearChat = (): Plugin =>
     });
 
     // pi's modifier set is ctrl / shift / alt / super — there is no `mod`.
-    pi.registerShortcut("ctrl+shift+backspace", {
+    tiny.registerShortcut("ctrl+shift+backspace", {
       description: "Clear the conversation",
       handler: (ctx) => ctx.runCommand("clear"),
     });
@@ -158,8 +160,8 @@ export const clearChat = (): Plugin =>
 ## Panels and pages
 
 ```ts
-pi.registerPanel("outline", { title: "Outline", component: Outline });
-pi.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
+tiny.registerPanel("outline", { title: "Outline", component: Outline });
+tiny.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
 ```
 
 A panel is a region of your own in the app's right-hand rail — a rail that does
@@ -169,7 +171,7 @@ in [Panels and pages](panels.md).
 
 ## Events
 
-`pi.on(event, handler)` subscribes to the request lifecycle. Six events actually
+`tiny.on(event, handler)` subscribes to the request lifecycle. Six events actually
 fire, because six are all `@tiny/ai` emits:
 
 | Event | Fires | Handler may return |
@@ -199,19 +201,19 @@ import { definePlugin } from "@tiny/plugin";
 /**
  * An event subscriber that draws with `setWidget`.
  *
- * Both halves are pi's: `pi.on` is the same subscription `@tiny/ai` extensions
+ * Both halves are pi's: `on` is the same subscription `@tiny/ai` extensions
  * already use, and `setWidget` carries plain string lines — all the RPC
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
 export const tokenMeter = (): Plugin =>
-  definePlugin("tokenMeter", (pi) => {
+  definePlugin("tokenMeter", (tiny) => {
     let total = 0;
 
-    pi.on("message_end", (event, _ctx) => {
+    tiny.on("message_end", (event, _ctx) => {
       total += event.message.usage.totalTokens;
     });
 
-    pi.registerCommand("tokens", {
+    tiny.registerCommand("tokens", {
       description: "Show tokens used this session",
       handler: (_args, ctx) => {
         ctx.ui.setWidget("tokens", [`${total} tokens this session`], {
@@ -220,7 +222,7 @@ export const tokenMeter = (): Plugin =>
       },
     });
 
-    pi.registerCommand("tokens:hide", {
+    tiny.registerCommand("tokens:hide", {
       description: "Hide the token meter",
       handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
     });
@@ -233,22 +235,22 @@ Handlers are recorded during `loadPlugins` and replayed into whatever
 
 ## Tools
 
-`pi.registerTool` gives the model something it can call. It has its own page:
+`tiny.registerTool` gives the model something it can call. It has its own page:
 [Tools for the model](tools.md).
 
 ## Providers
 
-`pi.registerProvider(id, config)` adds another endpoint to the model picker, and
-`pi.unregisterProvider(id)` takes it away again. Both work during the factory and
+`tiny.registerProvider(id, config)` adds another endpoint to the model picker, and
+`tiny.unregisterProvider(id)` takes it away again. Both work during the factory and
 long after it returns: [Providers](providers.md).
 
 ## Markdown
 
-`pi.registerMarkdownTransformer(fn)` rewrites message text on its way to the
+`tiny.registerMarkdownTransformer(fn)` rewrites message text on its way to the
 screen. Transformers run in load order, each seeing the previous one's output:
 
 ```ts
-pi.registerMarkdownTransformer((markdown, { messageType, isStreaming }) => {
+tiny.registerMarkdownTransformer((markdown, { messageType, isStreaming }) => {
   if (isStreaming || messageType === "assistant-thinking") return markdown;
   return markdown.replaceAll("-->", "→");
 });
@@ -264,12 +266,12 @@ field is absent here.
 
 ## Talking to other plugins
 
-`pi.events` is a bus plugins share — deliberately not the lifecycle events of
-`pi.on`, so a plugin emitting `message_end` cannot fool another plugin's handler.
+`tiny.events` is a bus plugins share — deliberately not the lifecycle events of
+`tiny.on`, so a plugin emitting `message_end` cannot fool another plugin's handler.
 
 ```ts
-pi.events.on("todo:changed", (data) => refresh(data));
-pi.events.emit("todo:changed", { count: 3 });
+tiny.events.on("todo:changed", (data) => refresh(data));
+tiny.events.emit("todo:changed", { count: 3 });
 ```
 
 `on` returns an unsubscribe function; `once` and `off` are there too. A listener
@@ -282,20 +284,20 @@ from a command handler, from an event.
 
 | Call | Does |
 | --- | --- |
-| `pi.getCommands()` | every command available to `runCommand` |
-| `pi.getAllTools()` | every registered tool name |
-| `pi.getActiveTools()` | the ones currently offered to the model |
-| `pi.setActiveTools(names)` | narrow that list |
-| `pi.setModel(model)` | switch the model the next request uses |
-| `pi.sendUserMessage(content)` | send a message as the user |
-| `pi.getSessionName()` / `setSessionName(name)` | the conversation's title |
+| `tiny.getCommands()` | every command available to `runCommand` |
+| `tiny.getAllTools()` | every registered tool name |
+| `tiny.getActiveTools()` | the ones currently offered to the model |
+| `tiny.setActiveTools(names)` | narrow that list |
+| `tiny.setModel(model)` | switch the model the next request uses |
+| `tiny.sendUserMessage(content)` | send a message as the user |
+| `tiny.getSessionName()` / `setSessionName(name)` | the conversation's title |
 
 Called before a `PluginHost` is mounted, each reports the fact and does nothing
 rather than throwing — `loadPlugins` is usable on its own, in a test or a script.
 
 ## Slots
 
-`pi.contribute(slot, Component)` renders React into one of five named regions:
+`tiny.contribute(slot, Component)` renders React into one of five named regions:
 [Slots and rendering](slots.md).
 
 ## Unregistering

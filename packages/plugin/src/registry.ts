@@ -1,6 +1,10 @@
 import { type Extension, type ExtensionContext, firesEvent, type ToolDefinition } from "@tiny/ai";
 import { createEvents, type PluginEvents } from "./events.ts";
 import type { KeyId } from "./keys.ts";
+import type { ProviderEntry } from "./providers.ts";
+import { createProviderStore, type ProviderStore } from "./providers.ts";
+import type { Contribution, SlotName } from "./Slot.tsx";
+import { identityTheme } from "./theme.ts";
 import type {
   CommandInfo,
   CommandOptions,
@@ -14,11 +18,7 @@ import type {
   PluginUIContext,
   RouteOptions,
   ShortcutOptions,
-} from "./pi.ts";
-import type { ProviderEntry } from "./providers.ts";
-import { createProviderStore, type ProviderStore } from "./providers.ts";
-import type { Contribution, SlotName } from "./Slot.tsx";
-import { identityTheme } from "./theme.ts";
+} from "./tiny.ts";
 
 export type CommandEntry = {
   /** The name as registered. */
@@ -196,7 +196,7 @@ const withInvocationNames = (
 };
 
 /**
- * The host actions `pi.*` methods reach through.
+ * The host actions `tiny.*` methods reach through.
  *
  * `loadPlugins` runs before the app has published any state, and pi allows
  * these to be called long after the factory returns — from a command handler,
@@ -241,7 +241,7 @@ export const terminalFallbacks = {
 /** What a host that has not published anything yet can honestly do: nothing. */
 const detachedHost = (): HostActions => {
   const unavailable = (method: string) => () => {
-    console.error(`[plugin] pi.${method}() needs a mounted PluginHost`);
+    console.error(`[plugin] tiny.${method}() needs a mounted PluginHost`);
   };
   return {
     getCommands: () => [],
@@ -311,7 +311,7 @@ const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: fal
 export type LoadOptions = {
   /** Providers outlive one load, because pi allows registering after the factory. */
   readonly providers?: ProviderStore | undefined;
-  /** The bus behind `pi.events`; one per host so plugins can reach each other. */
+  /** The bus behind `tiny.events`; one per host so plugins can reach each other. */
   readonly events?: PluginEvents | undefined;
   /** Resolved per call, so a handler running later sees the live host. */
   readonly host?: (() => HostActions) | undefined;
@@ -357,7 +357,7 @@ export const loadPlugins = async (
     // Annotated, not asserted. `as PluginAPI` over the whole literal would only
     // check what is here against the interface, never that all of it is here —
     // so a method added to `PluginAPI` and forgotten below would compile, and
-    // surface as `pi.<method> is not a function` when a plugin first calls it,
+    // surface as `tiny.<method> is not a function` when a plugin first calls it,
     // swallowed by the host's load handler into one console line. The cast is
     // therefore narrowed to the single property that needs it.
     const api: PluginAPI = {
@@ -436,12 +436,12 @@ export const loadPlugins = async (
   const fallbackContext = () => (detached ??= detachedContext());
 
   // Replay is idempotent: `loadExtensions` builds fresh handler arrays per call.
-  const replay: Extension = (pi) => {
+  const replay: Extension = (tiny) => {
     for (const [owner, event, handler] of recorded) {
       // Events this facade never fires are dropped rather than registered, so a
       // pi extension subscribing to `session_start` loads without erroring.
       if (!firesEvent(event)) continue;
-      const on = pi.on as (event: string, handler: unknown) => void;
+      const on = tiny.on as (event: string, handler: unknown) => void;
       const run = handler as (event: unknown, ctx: PluginEventContext) => unknown;
       // `@tiny/ai` can only supply `{ model, signal }`; pi hands handlers the
       // same context its commands get. The request's own half wins, so `model`

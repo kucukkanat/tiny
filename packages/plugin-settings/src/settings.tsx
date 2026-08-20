@@ -43,14 +43,20 @@ export const settings = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("settings", (pi) => {
-    pi.registerCommand("settings", {
+  return definePlugin("settings", (tiny) => {
+    tiny.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),
     });
     // pi's modifier set has no `mod`; `super` is Cmd on macOS.
-    pi.registerShortcut("super+,", { description: "Open settings", handler: () => open.set(true) });
-    pi.registerShortcut("ctrl+,", { description: "Open settings", handler: () => open.set(true) });
-    pi.contribute("app.overlays", SettingsOverlay);
+    tiny.registerShortcut("super+,", {
+      description: "Open settings",
+      handler: () => open.set(true),
+    });
+    tiny.registerShortcut("ctrl+,", {
+      description: "Open settings",
+      handler: () => open.set(true),
+    });
+    tiny.contribute("app.overlays", SettingsOverlay);
   });
 };

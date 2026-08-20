@@ -21,6 +21,25 @@ export { matchesKey } from "./keys.ts";
 export { Panels } from "./Panels.tsx";
 export { PluginHost } from "./PluginHost.tsx";
 export { PluginPage } from "./PluginPage.tsx";
+export type { ProviderConfig, ProviderEntry, ProviderModel, ProviderStore } from "./providers.ts";
+export { createProviderStore, endpointOf, modelId, modelSpec, modelsOf } from "./providers.ts";
+export type {
+  CommandEntry,
+  ContributionEntry,
+  HostActions,
+  LoadOptions,
+  MarkdownEntry,
+  PanelEntry,
+  Registry,
+  RouteEntry,
+  ShortcutEntry,
+  ToolEntry,
+} from "./registry.ts";
+export { emptyRegistry, loadPlugins, transformMarkdown } from "./registry.ts";
+export type { Contribution, SlotName, SlotProps } from "./Slot.tsx";
+export { Slot, StatusBar, Widgets } from "./Slot.tsx";
+export type { ThemeLike } from "./theme.ts";
+export { identityTheme } from "./theme.ts";
 export type {
   AutocompleteItem,
   CommandInfo,
@@ -47,24 +66,5 @@ export type {
   ShortcutOptions,
   WidgetOptions,
   WidgetPlacement,
-} from "./pi.ts";
-export { definePlugin, settingsComplete } from "./pi.ts";
-export type { ProviderConfig, ProviderEntry, ProviderModel, ProviderStore } from "./providers.ts";
-export { createProviderStore, endpointOf, modelId, modelSpec, modelsOf } from "./providers.ts";
-export type {
-  CommandEntry,
-  ContributionEntry,
-  HostActions,
-  LoadOptions,
-  MarkdownEntry,
-  PanelEntry,
-  Registry,
-  RouteEntry,
-  ShortcutEntry,
-  ToolEntry,
-} from "./registry.ts";
-export { emptyRegistry, loadPlugins, transformMarkdown } from "./registry.ts";
-export type { Contribution, SlotName, SlotProps } from "./Slot.tsx";
-export { Slot, StatusBar, Widgets } from "./Slot.tsx";
-export type { ThemeLike } from "./theme.ts";
-export { identityTheme } from "./theme.ts";
+} from "./tiny.ts";
+export { definePlugin, settingsComplete } from "./tiny.ts";

@@ -11,9 +11,9 @@ import { pluginManager } from "../src/plugin.tsx";
  * indistinguishable from a plugin that shipped with the build.
  */
 
-const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
-const TOOLED = `export default (pi) =>
-  pi.registerTool({
+const HELLO = 'export default (tiny) => tiny.registerCommand("hello", { handler: () => {} });';
+const TOOLED = `export default (tiny) =>
+  tiny.registerTool({
     name: "dice",
     description: "Roll a die",
     parameters: { type: "object", properties: {} },
@@ -60,7 +60,7 @@ describe("activation", () => {
     const directory = await root.getDirectoryHandle("plugins");
     const writable = await (await directory.getFileHandle(`${installed.id}.js`)).createWritable();
     await writable.write(
-      'export default (pi) => pi.registerCommand("owned", { handler: () => {} });',
+      'export default (tiny) => tiny.registerCommand("owned", { handler: () => {} });',
     );
     await writable.close();
 
@@ -77,7 +77,7 @@ describe("activation", () => {
   test("the manager is first in line when an installed plugin claims its name", async () => {
     await store.install({
       name: "Impostor",
-      source: 'export default (pi) => pi.registerCommand("plugins", { handler: () => {} });',
+      source: 'export default (tiny) => tiny.registerCommand("plugins", { handler: () => {} });',
     });
     const { commands } = await registry();
 

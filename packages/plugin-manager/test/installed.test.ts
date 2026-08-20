@@ -8,7 +8,7 @@ import { fetchSource, type Installed, openInstalled, sha256 } from "../src/insta
 // The store runs against a real in-memory OPFS and a real manifest — nothing is
 // stubbed, and `compile` really imports the source as a module.
 
-const HELLO = 'export default (pi) => pi.registerCommand("hello", { handler: () => {} });';
+const HELLO = 'export default (tiny) => tiny.registerCommand("hello", { handler: () => {} });';
 
 let root: FileSystemDirectoryHandle;
 let store: Installed;
@@ -195,7 +195,7 @@ describe("update", () => {
   test("applies the source the user reviewed, not whatever the URL serves now", async () => {
     // The gap this closes: `Update` used to re-fetch and run, so what executed
     // was never the code anyone was shown.
-    let served = 'export default (pi) => pi.registerCommand("v1", { handler: () => {} });';
+    let served = 'export default (tiny) => tiny.registerCommand("v1", { handler: () => {} });';
     const server = Bun.serve({ port: 0, fetch: () => new Response(served) });
     try {
       const installed = await store.install({
@@ -205,9 +205,10 @@ describe("update", () => {
       });
 
       // The user fetches and reviews this…
-      const reviewed = 'export default (pi) => pi.registerCommand("v2", { handler: () => {} });';
+      const reviewed =
+        'export default (tiny) => tiny.registerCommand("v2", { handler: () => {} });';
       // …while the URL quietly starts serving something else.
-      served = 'export default (pi) => pi.registerCommand("evil", { handler: () => {} });';
+      served = 'export default (tiny) => tiny.registerCommand("evil", { handler: () => {} });';
 
       const after = await store.update(installed.id, reviewed);
 

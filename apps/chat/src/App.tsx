@@ -56,7 +56,7 @@ export function App() {
   const [chats, setChats] = useState<readonly Conversation[]>([]);
   const { runCommand, editorText, setEditorText, ready } = usePluginHost();
 
-  // Endpoints plugins added with `pi.registerProvider`, and the models each
+  // Endpoints plugins added with `tiny.registerProvider`, and the models each
   // publishes. Live state: a provider may be registered from a command handler
   // after a setup flow, which pi allows and this list has to reflect.
   const providers = usePluginProviders();
@@ -212,7 +212,7 @@ export function App() {
 
   const sessionName = chats.find((conversation) => conversation.id === id)?.title;
 
-  /** `pi.setSessionName()` — renames the conversation the user is looking at. */
+  /** `tiny.setSessionName()` — renames the conversation the user is looking at. */
   const setSessionName = useCallback(
     (name: string) => {
       if (id === undefined) return;

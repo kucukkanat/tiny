@@ -17,7 +17,7 @@ import type {
  * `registerTool`, `registerCommand`, `ctx.ui` and session events have nothing
  * to bind to. See the README for the full list of deviations.
  */
-export type Extension = (pi: ExtensionAPI) => void | Promise<void>;
+export type Extension = (tiny: ExtensionAPI) => void | Promise<void>;
 
 /**
  * Handlers may be sync or async and may return nothing, exactly as in pi — the
@@ -147,7 +147,7 @@ export const firesEvent = (event: string): boolean => Object.hasOwn(FIRED, event
  */
 export const loadExtensions = async (extensions: readonly Extension[]): Promise<Handlers> => {
   const handlers = emptyHandlers();
-  const pi: ExtensionAPI = {
+  const tiny: ExtensionAPI = {
     on: (event, handler) => {
       // The `on` overload above enforces that event and handler agree; widening
       // to unknown[] here is what lets the generic key index the record.
@@ -155,7 +155,7 @@ export const loadExtensions = async (extensions: readonly Extension[]): Promise<
       registered.push(handler);
     },
   };
-  for (const extension of extensions) await extension(pi);
+  for (const extension of extensions) await extension(tiny);
   return handlers;
 };
 

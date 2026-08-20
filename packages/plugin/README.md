@@ -25,8 +25,8 @@ import { definePlugin } from "@tiny/plugin";
  * names and this has to be the same in every build.
  */
 export const greet = (): IdentifiedPlugin =>
-  definePlugin("greet", (pi) => {
-    pi.registerCommand("greet", {
+  definePlugin("greet", (tiny) => {
+    tiny.registerCommand("greet", {
       description: "Say hello",
       handler: (args, ctx) => {
         ctx.ui.notify(`Hello, ${args === "" ? "world" : args}`, "info");
@@ -78,7 +78,7 @@ Read them in this order; each answers one question.
 
 | File | Answers |
 | --- | --- |
-| `src/pi.ts` | What can a plugin call, and what does it get back? The whole contract. |
+| `src/tiny.ts` | What can a plugin call, and what does it get back? The whole contract. |
 | `src/registry.ts` | `loadPlugins` — running every factory once and collecting what it registered. |
 | `src/PluginHost.tsx` | The React host: dialogs, toasts, widgets, statuses, and the live `ctx`. |
 | `src/hooks.ts` | What the app calls to reach the host — `usePluginContext`, `usePluginTools`, … |

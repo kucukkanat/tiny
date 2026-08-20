@@ -9,9 +9,10 @@ const model = process.env.AI_MODEL ?? "gpt-4.1-mini";
 
 // An extension is a factory that receives the extension API and subscribes to
 // events — the same shape pi's own extensions use, so this would be the default
-// export of a file under `.pi/extensions/`.
-const beTerse = (pi: ExtensionAPI) => {
-  pi.on("before_agent_start", () => ({ systemPrompt: "Answer in one sentence." }));
+// export of a file under `.pi/extensions/`, parameter name and all: that name is
+// the factory's own.
+const beTerse = (tiny: ExtensionAPI) => {
+  tiny.on("before_agent_start", () => ({ systemPrompt: "Answer in one sentence." }));
 };
 
 for await (const delta of streamChat(

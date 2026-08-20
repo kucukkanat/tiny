@@ -8,10 +8,11 @@ import piPermissionGate from "../examples/piPermissionGate.ts";
 import piProtectedPaths from "../examples/piProtectedPaths.ts";
 import { answer, createServer, forgetHost, mount, reply } from "./harness.tsx";
 
-// pi's shipped permission gates, run here. The only edit either one carries is
-// its import line, so what these tests actually check is that the `tool_call`
-// contract — `event.input`, `ctx.hasUI`, `ctx.ui`, `{ block, reason }` — behaves
-// the way an extension written for pi expects.
+// pi's shipped permission gates, run here. Each carries two edits — its import
+// line, and the parameter renamed to `tiny` — but only the import is load-bearing,
+// since a parameter's name never leaves its function. So what these tests actually
+// check is that the `tool_call` contract — `event.input`, `ctx.hasUI`, `ctx.ui`,
+// `{ block, reason }` — behaves the way an extension written for pi expects.
 
 let ran = false;
 
@@ -29,7 +30,7 @@ const bash: ToolDefinition = {
   },
 };
 
-const registersBash: Plugin = (pi) => pi.registerTool(bash);
+const registersBash: Plugin = (tiny) => tiny.registerTool(bash);
 
 const dangerous = createServer("bash", { command: "sudo rm -rf /" });
 const harmless = createServer("bash", { command: "ls -la" });
@@ -47,7 +48,7 @@ afterEach(() => {
   ran = false;
 });
 
-describe("pi's permission-gate example, ported by its import line alone", () => {
+describe("pi's permission-gate example, ported by its import line", () => {
   test("prompts through this host's dialog and runs the command on Yes", async () => {
     await mount([piPermissionGate, registersBash]);
     const { deltas, finished } = reply(dangerous.endpoint);
@@ -130,7 +131,7 @@ describe("pi's protected-paths example", () => {
   };
 
   test("blocks the write and warns, without asking anyone", async () => {
-    await mount([piProtectedPaths, (pi) => pi.registerTool(write)]);
+    await mount([piProtectedPaths, (tiny) => tiny.registerTool(write)]);
     const { deltas, finished } = reply(writes.endpoint);
     // Inside `act`: this gate answers itself, and the `ctx.ui.notify` it raises
     // on the way is a React update that belongs in the act scope.

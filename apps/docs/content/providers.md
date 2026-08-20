@@ -19,8 +19,8 @@ import { definePlugin } from "@tiny/plugin";
  * models exist.
  */
 export const groq = (): Plugin =>
-  definePlugin("groq", (pi) => {
-    pi.registerProvider("groq", {
+  definePlugin("groq", (tiny) => {
+    tiny.registerProvider("groq", {
       name: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
       // Omitting `models` asks the endpoint's own /models route, which is what an
@@ -32,7 +32,7 @@ export const groq = (): Plugin =>
       apiKey: () => localStorage.getItem("groq:key") ?? "",
     });
 
-    pi.registerCommand("groq:key", {
+    tiny.registerCommand("groq:key", {
       description: "Set the Groq API key",
       handler: async (args, ctx) => {
         const key = args !== "" ? args : await ctx.ui.input("Groq API key", "gsk_…");
@@ -42,12 +42,12 @@ export const groq = (): Plugin =>
       },
     });
 
-    pi.registerCommand("groq:off", {
+    tiny.registerCommand("groq:off", {
       description: "Remove the Groq provider",
       // Registering and unregistering both work after the factory has returned,
       // as they do in pi — the picker updates without a reload.
       handler: (_args, ctx) => {
-        ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
+        ctx.ui.notify(tiny.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
       },
     });
   });
@@ -126,8 +126,8 @@ import { definePlugin } from "@tiny/plugin";
  * cross-origin request outright — so this works from a page with no proxy.
  */
 export const anthropic = (apiKey: () => string): Plugin =>
-  definePlugin("anthropic", (pi) => {
-    pi.registerProvider("anthropic", {
+  definePlugin("anthropic", (tiny) => {
+    tiny.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.
       baseUrl: "https://api.anthropic.com",
@@ -220,13 +220,13 @@ applied when the registry is built, and a call **after it returns** — from a
 command handler, after a setup flow — takes effect immediately, with no reload.
 
 ```ts
-pi.registerCommand("connect", {
+tiny.registerCommand("connect", {
   description: "Add my endpoint",
   handler: async (_args, ctx) => {
     const key = await ctx.ui.input("API key");
     if (key === undefined) return;
     // The model picker updates on the next render.
-    pi.registerProvider("mine", { name: "Mine", baseUrl: "https://mine.example/v1", apiKey: key });
+    tiny.registerProvider("mine", { name: "Mine", baseUrl: "https://mine.example/v1", apiKey: key });
   },
 });
 ```

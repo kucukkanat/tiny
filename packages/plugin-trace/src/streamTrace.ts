@@ -11,7 +11,7 @@ import { definePlugin } from "@tiny/plugin";
  * by the bundler).
  */
 export const streamTrace = (log: (message: string) => void = console.debug): IdentifiedPlugin =>
-  definePlugin("streamTrace", (pi) => {
+  definePlugin("streamTrace", (tiny) => {
     if (process.env.NODE_ENV === "production") return;
 
     // One extension instance serves every request, so the tally resets on start.
@@ -20,9 +20,9 @@ export const streamTrace = (log: (message: string) => void = console.debug): Ide
       counts.set(type, (counts.get(type) ?? 0) + 1);
     };
 
-    pi.on("message_start", () => counts.clear());
-    pi.on("message_update", (event) => count(event.assistantMessageEvent.type));
-    pi.on("message_end", () => {
+    tiny.on("message_start", () => counts.clear());
+    tiny.on("message_update", (event) => count(event.assistantMessageEvent.type));
+    tiny.on("message_end", () => {
       count("done");
       log(`[trace] ${[...counts].map(([type, n]) => `${type}×${n}`).join(" ")}`);
     });

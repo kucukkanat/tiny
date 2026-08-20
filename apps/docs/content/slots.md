@@ -1,7 +1,7 @@
 # Slots and rendering
 
 ```ts
-pi.contribute(slot: SlotName, component: ComponentType<SlotProps>): void;
+tiny.contribute(slot: SlotName, component: ComponentType<SlotProps>): void;
 ```
 
 `contribute` is the one part of the API with no pi equivalent. pi's answer to rich
@@ -95,8 +95,8 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return definePlugin("savedPrompts", (pi) => {
-    pi.registerCommand("prompts", {
+  return definePlugin("savedPrompts", (tiny) => {
+    tiny.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {
         const saved = ctx.storage.get<string[]>("saved") ?? [
@@ -108,7 +108,7 @@ export const savedPrompts = (): Plugin => {
       },
     });
 
-    pi.registerCommand("prompts:add", {
+    tiny.registerCommand("prompts:add", {
       description: "Save a prompt for later",
       handler: async (args, ctx) => {
         const text = args !== "" ? args : await ctx.ui.input("Save a prompt", "Type it here");
@@ -119,7 +119,7 @@ export const savedPrompts = (): Plugin => {
       },
     });
 
-    pi.contribute("composer.actions", SaveButton);
+    tiny.contribute("composer.actions", SaveButton);
   });
 };
 ```
@@ -134,7 +134,7 @@ a shortcut and from the button, with one implementation.
 // Good — one component identity for the life of the module.
 export const savedPrompts = (): Plugin => {
   function SaveButton() { /* … */ }
-  return (pi) => pi.contribute("composer.actions", SaveButton);
+  return (tiny) => tiny.contribute("composer.actions", SaveButton);
 };
 ```
 
@@ -156,9 +156,9 @@ export const settings = (): Plugin => {
     return shown ? <Dialog onClose={() => open.set(false)} /> : null;
   }
 
-  return (pi) => {
-    pi.registerCommand("settings", { handler: () => open.set(true) });
-    pi.contribute("app.overlays", SettingsOverlay);
+  return (tiny) => {
+    tiny.registerCommand("settings", { handler: () => open.set(true) });
+    tiny.contribute("app.overlays", SettingsOverlay);
   };
 };
 ```

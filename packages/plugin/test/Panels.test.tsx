@@ -4,9 +4,9 @@ import { usePluginContext, usePluginHost } from "../src/hooks.ts";
 import { Panels } from "../src/Panels.tsx";
 import { PluginHost } from "../src/PluginHost.tsx";
 import { PluginPage } from "../src/PluginPage.tsx";
-import type { Plugin } from "../src/pi.ts";
-import { definePlugin } from "../src/pi.ts";
 import { emptyRegistry, loadPlugins } from "../src/registry.ts";
+import type { Plugin } from "../src/tiny.ts";
+import { definePlugin } from "../src/tiny.ts";
 
 // The rail is the one surface that has to be able to *not exist*: an app whose
 // plugins register no panel must look exactly as it did before panels existed.
@@ -41,8 +41,8 @@ const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => 
 };
 
 const panel = (id: string, title: string, body: string) =>
-  definePlugin(id, (pi) =>
-    pi.registerPanel(id, { title, component: () => <p data-testid={`body-${id}`}>{body}</p> }),
+  definePlugin(id, (tiny) =>
+    tiny.registerPanel(id, { title, component: () => <p data-testid={`body-${id}`}>{body}</p> }),
   );
 
 describe("the rail", () => {
@@ -100,8 +100,8 @@ describe("the rail", () => {
   });
 
   test("uses a declared icon in both the tab and the collapsed rail", async () => {
-    const iconed = definePlugin("iconed", (pi) =>
-      pi.registerPanel("iconed", {
+    const iconed = definePlugin("iconed", (tiny) =>
+      tiny.registerPanel("iconed", {
         title: "Iconed",
         icon: <span data-testid="panel-icon">*</span>,
         component: () => <p>body</p>,
@@ -230,8 +230,8 @@ describe("the rail", () => {
   });
 
   test("a panel reads the app's chat state through its own context", async () => {
-    const reader = definePlugin("reader", (pi) =>
-      pi.registerPanel("reader", {
+    const reader = definePlugin("reader", (tiny) =>
+      tiny.registerPanel("reader", {
         title: "Reader",
         component: function Reader() {
           const ctx = usePluginContext();
@@ -248,8 +248,8 @@ describe("the rail", () => {
   });
 
   test("a throwing panel costs only the rail's body", async () => {
-    const failing = definePlugin("boom", (pi) =>
-      pi.registerPanel("boom", {
+    const failing = definePlugin("boom", (tiny) =>
+      tiny.registerPanel("boom", {
         title: "Boom",
         component: () => {
           throw new Error("panel exploded");
@@ -274,8 +274,8 @@ describe("the rail", () => {
 
 describe("a page", () => {
   test("renders the registered component, isolated and namespaced", async () => {
-    const notes = definePlugin("notes", (pi) =>
-      pi.registerRoute("/notes", {
+    const notes = definePlugin("notes", (tiny) =>
+      tiny.registerRoute("/notes", {
         component: function Page() {
           const ctx = usePluginContext();
           return <span data-testid="page-mode">{ctx.mode}</span>;
@@ -295,8 +295,8 @@ describe("a page", () => {
   });
 
   test("a throwing page is replaced rather than taking the app down", async () => {
-    const failing = definePlugin("boom", (pi) =>
-      pi.registerRoute("/boom", {
+    const failing = definePlugin("boom", (tiny) =>
+      tiny.registerRoute("/boom", {
         component: () => {
           throw new Error("page exploded");
         },

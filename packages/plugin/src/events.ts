@@ -1,7 +1,7 @@
 /**
- * `pi.events` — the shared bus plugins talk to each other over.
+ * `tiny.events` — the shared bus plugins talk to each other over.
  *
- * Deliberately not the lifecycle events of `pi.on`: those are the host's, with
+ * Deliberately not the lifecycle events of `tiny.on`: those are the host's, with
  * fixed names and payloads, while this is an open namespace plugins own. Kept
  * separate for the same reason pi keeps them separate — a plugin emitting
  * `message_end` should not be able to fool another plugin's handler.

@@ -13,8 +13,8 @@ import { definePlugin } from "@tiny/plugin";
  * cross-origin request outright — so this works from a page with no proxy.
  */
 export const anthropic = (apiKey: () => string): Plugin =>
-  definePlugin("anthropic", (pi) => {
-    pi.registerProvider("anthropic", {
+  definePlugin("anthropic", (tiny) => {
+    tiny.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.
       baseUrl: "https://api.anthropic.com",

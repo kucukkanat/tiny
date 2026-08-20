@@ -1,4 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An event subscriber that draws with `setWidget`.
@@ -8,7 +9,7 @@ import type { Plugin } from "@tiny/plugin";
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
 export const tokenMeter = (): Plugin =>
-  function tokenMeter(pi) {
+  definePlugin("tokenMeter", (pi) => {
     let total = 0;
 
     pi.on("message_end", (event, _ctx) => {
@@ -28,4 +29,4 @@ export const tokenMeter = (): Plugin =>
       description: "Hide the token meter",
       handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
     });
-  };
+  });

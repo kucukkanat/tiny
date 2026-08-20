@@ -1,4 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A provider that is not OpenAI-shaped.
@@ -12,7 +13,7 @@ import type { Plugin } from "@tiny/plugin";
  * cross-origin request outright — so this works from a page with no proxy.
  */
 export const anthropic = (apiKey: () => string): Plugin =>
-  function anthropic(pi) {
+  definePlugin("anthropic", (pi) => {
     pi.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.
@@ -27,4 +28,4 @@ export const anthropic = (apiKey: () => string): Plugin =>
         { id: "claude-opus-4-6", reasoning: true, contextWindow: 200_000 },
       ],
     });
-  };
+  });

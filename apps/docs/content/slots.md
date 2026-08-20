@@ -66,7 +66,7 @@ plugin — and re-renders when chat state moves.
 
 ```tsx path=packages/plugin/examples/savedPrompts.tsx
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * Per-plugin storage and a composer button, together.
@@ -90,7 +90,7 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return function savedPrompts(pi) {
+  return definePlugin("savedPrompts", (pi) => {
     pi.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {
@@ -115,7 +115,7 @@ export const savedPrompts = (): Plugin => {
     });
 
     pi.contribute("composer.actions", SaveButton);
-  };
+  });
 };
 ```
 

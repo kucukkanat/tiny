@@ -1,5 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
-import { createExternalStore, usePluginContext } from "@tiny/plugin";
+import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { settingsComplete } from "../settings.ts";
 import { SettingsDialog } from "./SettingsDialog.tsx";
@@ -38,7 +38,7 @@ export const settingsPlugin = (): Plugin => {
     );
   }
 
-  return function settingsPlugin(pi) {
+  return definePlugin("settingsPlugin", (pi) => {
     pi.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),
@@ -47,5 +47,5 @@ export const settingsPlugin = (): Plugin => {
     pi.registerShortcut("super+,", { description: "Open settings", handler: () => open.set(true) });
     pi.registerShortcut("ctrl+,", { description: "Open settings", handler: () => open.set(true) });
     pi.contribute("app.overlays", SettingsOverlay);
-  };
+  });
 };

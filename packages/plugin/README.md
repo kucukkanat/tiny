@@ -63,7 +63,7 @@ Add a button to every finished reply — `examples/copyButton.tsx`:
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * A button on every finished reply. `contribute` is the one part of the API pi
@@ -89,9 +89,9 @@ export const copyButton = (): Plugin => {
     );
   }
 
-  return function copyButton(pi) {
+  return definePlugin("copyButton", (pi) => {
     pi.contribute("message.actions", CopyAction);
-  };
+  });
 };
 ```
 
@@ -101,6 +101,7 @@ run unchanged under `.pi/extensions/`:
 
 ```ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A command and a shortcut, with a confirmation before anything is lost.
@@ -109,7 +110,7 @@ import type { Plugin } from "@tiny/plugin";
  * unmodified as a pi extension under `.pi/extensions/`.
  */
 export const clearChat = (): Plugin =>
-  function clearChat(pi) {
+  definePlugin("clearChat", (pi) => {
     pi.registerCommand("clear", {
       description: "Start a new conversation",
       handler: async (_args, ctx) => {
@@ -127,13 +128,14 @@ export const clearChat = (): Plugin =>
       description: "Clear the conversation",
       handler: (ctx) => ctx.runCommand("clear"),
     });
-  };
+  });
 ```
 
 Subscribe to a stream event and draw with plain strings — `examples/tokenMeter.ts`:
 
 ```ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An event subscriber that draws with `setWidget`.
@@ -143,7 +145,7 @@ import type { Plugin } from "@tiny/plugin";
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
 export const tokenMeter = (): Plugin =>
-  function tokenMeter(pi) {
+  definePlugin("tokenMeter", (pi) => {
     let total = 0;
 
     pi.on("message_end", (event, _ctx) => {
@@ -163,14 +165,14 @@ export const tokenMeter = (): Plugin =>
       description: "Hide the token meter",
       handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
     });
-  };
+  });
 ```
 
 Persist your own state and push text at the composer — `examples/savedPrompts.tsx`:
 
 ```tsx
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * Per-plugin storage and a composer button, together.
@@ -194,7 +196,7 @@ export const savedPrompts = (): Plugin => {
     );
   }
 
-  return function savedPrompts(pi) {
+  return definePlugin("savedPrompts", (pi) => {
     pi.registerCommand("prompts", {
       description: "Insert a saved prompt",
       handler: async (_args, ctx) => {
@@ -219,7 +221,7 @@ export const savedPrompts = (): Plugin => {
     });
 
     pi.contribute("composer.actions", SaveButton);
-  };
+  });
 };
 ```
 
@@ -437,6 +439,7 @@ registration wins and the clash is logged.
 
 ```ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An endpoint added to the model picker — pi's `registerProvider`, reduced to
@@ -448,7 +451,7 @@ import type { Plugin } from "@tiny/plugin";
  * models exist.
  */
 export const groq = (): Plugin =>
-  function groq(pi) {
+  definePlugin("groq", (pi) => {
     pi.registerProvider("groq", {
       name: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
@@ -479,7 +482,7 @@ export const groq = (): Plugin =>
         ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
       },
     });
-  };
+  });
 ```
 
 ### API types
@@ -490,6 +493,7 @@ Set it on the provider and override it per model, as pi allows —
 
 ```ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A provider that is not OpenAI-shaped.
@@ -503,7 +507,7 @@ import type { Plugin } from "@tiny/plugin";
  * cross-origin request outright — so this works from a page with no proxy.
  */
 export const anthropic = (apiKey: () => string): Plugin =>
-  function anthropic(pi) {
+  definePlugin("anthropic", (pi) => {
     pi.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.
@@ -518,7 +522,7 @@ export const anthropic = (apiKey: () => string): Plugin =>
         { id: "claude-opus-4-6", reasoning: true, contextWindow: 200_000 },
       ],
     });
-  };
+  });
 ```
 
 Six of pi's nine implementations reach a browser and are offered:

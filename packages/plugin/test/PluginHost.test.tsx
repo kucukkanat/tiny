@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
+import { definePlugin } from "../src/pi.ts";
 
 const noop = () => {};
 const STABLE_MESSAGES: readonly [] = [];
@@ -282,9 +283,9 @@ describe("context and commands", () => {
   });
 
   test("storage is namespaced per plugin", async () => {
-    function alpha(pi: Parameters<Plugin>[0]) {
+    const alpha = definePlugin("alpha", (pi) => {
       pi.registerCommand("write", { handler: (_a, ctx) => ctx.storage.set("k", 1) });
-    }
+    });
     await mount([alpha]);
 
     await runCommand("write");

@@ -100,23 +100,19 @@ export const transformMarkdown = (
 };
 
 /**
- * A plugin's identity: the name of the function it is.
+ * A plugin's identity — the namespace for its `ctx.storage` and the label on
+ * its errors, so it has to be the same in every build.
  *
- * This is the namespace for `ctx.storage` and the label on its errors, so it has
- * to be stable across loads. An anonymous plugin has nothing stable to offer, so
- * it falls back to its position in the list — which moves the moment the list
- * does, taking the user's stored data with it. That is worth a warning rather
- * than a silent surprise; naming the function fixes it:
- *
- * ```ts
- * export const greet = (): Plugin => function greet(pi) { ... };
- * ```
+ * Deliberately not `plugin.name`: minifiers erase function names, so that would
+ * differ between `bun run dev` and `bun run build` and move the user's stored
+ * data on release. `definePlugin` is how a plugin says who it is.
  */
 const pluginId = (plugin: Plugin, index: number): string => {
-  if (plugin.name !== "") return plugin.name;
+  if (plugin.id !== undefined && plugin.id !== "") return plugin.id;
   console.warn(
-    `[plugin] the plugin at position ${index} is anonymous, so its storage is namespaced ` +
-      `"plugin-${index}" and moves if the list is reordered. Give the function a name.`,
+    `[plugin] the plugin at position ${index} declares no id, so its storage is ` +
+      `namespaced "plugin-${index}" and moves if the list is reordered. ` +
+      `Wrap it in definePlugin("<name>", …).`,
   );
   return `plugin-${index}`;
 };

@@ -147,7 +147,14 @@ If a rule is only written in a comment, it will be broken.
   property compile and crash at runtime. Say exactly what is passed.
 - Prefer a shape that cannot be wrong over a check that it isn't. Plugin ids
   came from array position and namespaced user storage, so reordering a list
-  moved everyone's data. Now identity comes from the function's own name.
+  moved everyone's data. Naming the functions looked like the fix and was not:
+  the minifier erases `Function.name`, so it worked in development and in the
+  tests and never in a shipped build. Identity is declared now, with
+  `definePlugin("id", …)`, and a test asserts it ignores the function's name.
+
+**Verify a fix in the artifact you ship, not the one you develop in.** Anything
+derived from a name, a stack, or a source location is erased by a bundler. If a
+fix cannot be checked against `dist/`, assume it is not fixed.
 
 ## 7. Errors and fallbacks
 

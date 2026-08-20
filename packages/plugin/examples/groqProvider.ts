@@ -1,4 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An endpoint added to the model picker — pi's `registerProvider`, reduced to
@@ -10,7 +11,7 @@ import type { Plugin } from "@tiny/plugin";
  * models exist.
  */
 export const groq = (): Plugin =>
-  function groq(pi) {
+  definePlugin("groq", (pi) => {
     pi.registerProvider("groq", {
       name: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
@@ -41,4 +42,4 @@ export const groq = (): Plugin =>
         ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
       },
     });
-  };
+  });

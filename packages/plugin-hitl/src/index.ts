@@ -1,4 +1,5 @@
 import type { Plugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 import { inlineApproval, type Verdict } from "./inlineApproval.tsx";
 import { createPendingStore } from "./pending.ts";
 import {
@@ -44,7 +45,7 @@ const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(S
  * ```
  */
 export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
-  function humanInTheLoop(pi) {
+  definePlugin("humanInTheLoop", (pi) => {
     // The question lives here rather than in a dialog: the card is contributed
     // into the reply, and this is what the two halves talk through.
     const store = createPendingStore();
@@ -93,7 +94,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
           return;
         }
         const forgetAll = "Forget all";
-        const chosen = await ctx.ui.select("Remembered approvals — pick one to withoutDecision", [
+        const chosen = await ctx.ui.select("Remembered approvals — pick one to forget", [
           ...entries.map(([name, decision]) => `${decision} ${name}`),
           forgetAll,
         ]);
@@ -108,4 +109,4 @@ export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
         ctx.ui.notify(`${name} will ask again.`, "info");
       },
     });
-  };
+  });

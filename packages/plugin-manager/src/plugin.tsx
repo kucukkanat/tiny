@@ -1,5 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
-import { createExternalStore, usePluginContext } from "@tiny/plugin";
+import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { activate } from "./activate.ts";
 import { type InstalledOptions, openInstalled } from "./installed.ts";
@@ -55,7 +55,7 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
     );
   }
 
-  return async function pluginManager(pi) {
+  return definePlugin("pluginManager", async (pi) => {
     // Registered before the stored plugins run, so an installed plugin cannot
     // claim the `plugins` command name and push this one to `plugins:2` —
     // leaving the user no way in to remove it.
@@ -75,5 +75,5 @@ export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
     pi.contribute("sidebar.footer", ManagerButton);
 
     await activate(store, pi);
-  };
+  });
 };

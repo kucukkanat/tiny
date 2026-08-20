@@ -1,4 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 import { fileSystemTools, type RootResolver } from "./tools.ts";
 
 export { FsError } from "./paths.ts";
@@ -34,7 +35,7 @@ const originPrivateRoot: RootResolver = () => {
  * ```
  */
 export const fileSystem = (options: FileSystemOptions = {}): Plugin =>
-  function fileSystem(pi) {
+  definePlugin("fileSystem", (pi) => {
     const tools = fileSystemTools(options.root ?? originPrivateRoot);
     for (const tool of tools) pi.registerTool(tool);
-  };
+  });

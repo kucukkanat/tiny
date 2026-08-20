@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { Extension, ExtensionAPI } from "@tiny/ai";
 import { matchesKey } from "../src/keys.ts";
 import type { Plugin } from "../src/pi.ts";
+import { definePlugin } from "../src/pi.ts";
 import { loadPlugins } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
 
@@ -102,24 +103,55 @@ describe("command registration", () => {
   });
 
   test("namespaces each registration by its plugin", async () => {
-    function alpha(pi: Parameters<Plugin>[0]) {
+    const alpha = definePlugin("alpha", (pi) => {
       pi.registerCommand("a", { handler: () => {} });
-    }
-    function beta(pi: Parameters<Plugin>[0]) {
+    });
+    const beta = definePlugin("beta", (pi) => {
       pi.registerCommand("b", { handler: () => {} });
-    }
+    });
     const { commands } = await loadPlugins([alpha, beta]);
     expect(commands.map((c) => c.pluginId)).toEqual(["alpha", "beta"]);
+  });
+});
+
+describe("plugin identity", () => {
+  test("comes from the declared id, not the function's name", async () => {
+    // `Function.name` is the obvious source and the wrong one: every minifier
+    // erases it, so a plugin identified that way would be namespaced one way in
+    // development and another in the build users run — silently relocating the
+    // storage under `tiny-plugin:<id>:`. The name here is deliberately a lie.
+    const misnamed = definePlugin("real-id", function wrongName(pi) {
+      pi.registerCommand("x", { handler: () => {} });
+    });
+
+    const { commands } = await loadPlugins([misnamed]);
+
+    expect(commands[0]?.pluginId).toBe("real-id");
+  });
+
+  test("falls back to position, loudly, when no id is declared", async () => {
+    const warn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (message: string) => void warnings.push(message);
+    try {
+      const { commands } = await loadPlugins([
+        (pi) => pi.registerCommand("y", { handler: () => {} }),
+      ]);
+      expect(commands[0]?.pluginId).toBe("plugin-0");
+      expect(warnings.join(" ")).toContain("definePlugin");
+    } finally {
+      console.warn = warn;
+    }
   });
 });
 
 describe("contributions and shortcuts", () => {
   test("records the slot, component and owning plugin", async () => {
     const Button = () => null;
-    function toolbar(pi: Parameters<Plugin>[0]) {
+    const toolbar = definePlugin("toolbar", (pi) => {
       pi.contribute("composer.actions", Button);
       pi.registerShortcut("ctrl+k", { handler: () => {} });
-    }
+    });
     const { contributions, shortcuts } = await loadPlugins([toolbar]);
     expect(contributions).toEqual([
       { id: "toolbar#0", slot: "composer.actions", pluginId: "toolbar", component: Button },

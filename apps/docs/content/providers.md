@@ -7,6 +7,7 @@ conversation remembers which one it belongs to.
 
 ```ts path=packages/plugin/examples/groqProvider.ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An endpoint added to the model picker — pi's `registerProvider`, reduced to
@@ -18,7 +19,7 @@ import type { Plugin } from "@tiny/plugin";
  * models exist.
  */
 export const groq = (): Plugin =>
-  function groq(pi) {
+  definePlugin("groq", (pi) => {
     pi.registerProvider("groq", {
       name: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
@@ -49,7 +50,7 @@ export const groq = (): Plugin =>
         ctx.ui.notify(pi.unregisterProvider("groq") ? "Groq removed" : "Groq was not registered");
       },
     });
-  };
+  });
 ```
 
 ## The config
@@ -111,6 +112,7 @@ model — exactly the two levels pi allows.
 
 ```ts path=packages/plugin/examples/anthropicProvider.ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A provider that is not OpenAI-shaped.
@@ -124,7 +126,7 @@ import type { Plugin } from "@tiny/plugin";
  * cross-origin request outright — so this works from a page with no proxy.
  */
 export const anthropic = (apiKey: () => string): Plugin =>
-  function anthropic(pi) {
+  definePlugin("anthropic", (pi) => {
     pi.registerProvider("anthropic", {
       name: "Anthropic",
       // No `/v1`: the Anthropic implementation appends its own.
@@ -139,7 +141,7 @@ export const anthropic = (apiKey: () => string): Plugin =>
         { id: "claude-opus-4-6", reasoning: true, contextWindow: 200_000 },
       ],
     });
-  };
+  });
 ```
 
 Six of pi's nine implementations reach a browser:

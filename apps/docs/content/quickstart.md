@@ -69,7 +69,7 @@ run by the test suite:
 
 ```tsx path=packages/plugin/examples/copyButton.tsx
 import type { Plugin } from "@tiny/plugin";
-import { usePluginContext } from "@tiny/plugin";
+import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * A button on every finished reply. `contribute` is the one part of the API pi
@@ -95,9 +95,9 @@ export const copyButton = (): Plugin => {
     );
   }
 
-  return function copyButton(pi) {
+  return definePlugin("copyButton", (pi) => {
     pi.contribute("message.actions", CopyAction);
-  };
+  });
 };
 ```
 

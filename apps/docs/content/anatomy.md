@@ -37,20 +37,24 @@ The one exception is a plugin meant to be installed at
 [`@tiny/plugin-manager`](runtime.md) loads installed plugins into the same
 registry.
 
-A plugin's id is **the name of the function it is**. It namespaces `ctx.storage`
-and labels the plugin's errors, so name the function you return:
+A plugin's id is **declared**, with `definePlugin`. It namespaces `ctx.storage`
+and labels the plugin's errors:
 
 ```ts
 export const greet = (): Plugin =>
-  function greet(pi) {
+  definePlugin("greet", (pi) => {
     // ctx.storage for this plugin lives under "greet"
-  };
+  });
 ```
 
-An anonymous plugin has no stable name to offer, so it falls back to its position
-in the list — and that position moves the moment the list does, taking the user's
-stored data with it. The host warns when this happens. Every plugin in this repo
-names its function; yours should too.
+It has to be written down because it cannot be inferred. `Function.name` looks
+like the obvious source — but every minifier erases it, so a plugin identified
+that way has one identity under `bun run dev` and a different one in the build
+your users run, which quietly moves their stored data on release.
+
+A plugin with no id still loads: it falls back to its position in the list, with
+a warning. That is fine for a throwaway and wrong for anything that stores
+something, because the position moves whenever the list does.
 
 Factories run in an effect, so contributions appear just after first paint rather
 than blocking it.
@@ -108,6 +112,7 @@ lost. Every call in this file is pi's, so it would run unchanged under
 
 ```ts path=packages/plugin/examples/clearChat.ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A command and a shortcut, with a confirmation before anything is lost.
@@ -116,7 +121,7 @@ import type { Plugin } from "@tiny/plugin";
  * unmodified as a pi extension under `.pi/extensions/`.
  */
 export const clearChat = (): Plugin =>
-  function clearChat(pi) {
+  definePlugin("clearChat", (pi) => {
     pi.registerCommand("clear", {
       description: "Start a new conversation",
       handler: async (_args, ctx) => {
@@ -134,7 +139,7 @@ export const clearChat = (): Plugin =>
       description: "Clear the conversation",
       handler: (ctx) => ctx.runCommand("clear"),
     });
-  };
+  });
 ```
 
 ## Events
@@ -164,6 +169,7 @@ deliberate: it is what lets a real pi extension load unmodified.
 
 ```ts path=packages/plugin/examples/tokenMeter.ts
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * An event subscriber that draws with `setWidget`.
@@ -173,7 +179,7 @@ import type { Plugin } from "@tiny/plugin";
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
 export const tokenMeter = (): Plugin =>
-  function tokenMeter(pi) {
+  definePlugin("tokenMeter", (pi) => {
     let total = 0;
 
     pi.on("message_end", (event, _ctx) => {
@@ -193,7 +199,7 @@ export const tokenMeter = (): Plugin =>
       description: "Hide the token meter",
       handler: (_args, ctx) => ctx.ui.setWidget("tokens", undefined),
     });
-  };
+  });
 ```
 
 Handlers are recorded during `loadPlugins` and replayed into whatever

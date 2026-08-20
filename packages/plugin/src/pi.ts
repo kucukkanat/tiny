@@ -326,4 +326,36 @@ export interface PluginAPI {
   contribute(slot: SlotName, component: Contribution): void;
 }
 
-export type Plugin = (pi: PluginAPI) => void | Promise<void>;
+export type Plugin = {
+  (pi: PluginAPI): void | Promise<void>;
+  /**
+   * Stable identity, used to namespace `ctx.storage` and to label this plugin's
+   * errors. Declare it with `definePlugin` — see there for why it cannot be
+   * inferred from the function's name.
+   */
+  readonly id?: string | undefined;
+};
+
+/**
+ * A plugin with an explicit, stable identity.
+ *
+ * ```ts
+ * export const greet = (): Plugin =>
+ *   definePlugin("greet", (pi) => {
+ *     pi.registerCommand("greet", { handler: (_a, ctx) => ctx.ui.notify("hi") });
+ *   });
+ * ```
+ *
+ * The id has to be written down because it cannot be derived. `Function.name`
+ * would be the obvious source, and it is what a reader expects — but every
+ * JavaScript minifier erases it, so a plugin identified that way has one
+ * identity in development and a different one in the build users actually run.
+ * Since the id namespaces `ctx.storage`, getting that wrong silently relocates
+ * the user's data on their next release.
+ *
+ * A plugin without an id still loads: it falls back to its position in the list,
+ * with a warning. That is fine for a throwaway, and wrong for anything that
+ * stores something.
+ */
+export const definePlugin = (id: string, setup: (pi: PluginAPI) => void | Promise<void>): Plugin =>
+  Object.assign(setup, { id });

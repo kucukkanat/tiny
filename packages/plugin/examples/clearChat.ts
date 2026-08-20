@@ -1,4 +1,5 @@
 import type { Plugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
 /**
  * A command and a shortcut, with a confirmation before anything is lost.
@@ -7,7 +8,7 @@ import type { Plugin } from "@tiny/plugin";
  * unmodified as a pi extension under `.pi/extensions/`.
  */
 export const clearChat = (): Plugin =>
-  function clearChat(pi) {
+  definePlugin("clearChat", (pi) => {
     pi.registerCommand("clear", {
       description: "Start a new conversation",
       handler: async (_args, ctx) => {
@@ -25,4 +26,4 @@ export const clearChat = (): Plugin =>
       description: "Clear the conversation",
       handler: (ctx) => ctx.runCommand("clear"),
     });
-  };
+  });

@@ -40,6 +40,7 @@ export type {
   WidgetOptions,
   WidgetPlacement,
 } from "./pi.ts";
+export { definePlugin } from "./pi.ts";
 export type { ProviderConfig, ProviderEntry, ProviderModel, ProviderStore } from "./providers.ts";
 export { createProviderStore, endpointOf, modelId, modelSpec, modelsOf } from "./providers.ts";
 export type {

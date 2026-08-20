@@ -81,9 +81,32 @@ only when a request is about to go out.
 
 ## API types
 
-`api` is pi's api type identifier, and it decides which streaming implementation
-the request goes through. Set it on the provider, and override it per model —
-exactly the two levels pi allows.
+### What an api type is
+
+Every vendor streams a reply over HTTP, and no two agree on how. The request body
+differs (`messages` versus `contents`), the streamed event names differ
+(`content_block_delta` versus `choices[].delta`), the auth header differs
+(`Authorization: Bearer` versus `x-api-key`), and so does where the version lives
+in the URL.
+
+An **api type** names one of those wire protocols. pi ships a translator for each
+and calls them api types; picking one is how you say *what language this endpoint
+speaks* — a separate question from *where it is* (`baseUrl`) and *who you are*
+(`apiKey`).
+
+Most of the time you never think about it. `openai-completions` is the default,
+and it is what OpenAI, Ollama, vLLM, LM Studio, Groq, Together and OpenRouter
+speak — "OpenAI-compatible" on a project's README means exactly this. You need a
+different one only when the endpoint genuinely is not: Anthropic, Google and
+Mistral each have their own.
+
+> A wrong api type is not a subtle failure. The request goes out in the wrong
+> shape and the endpoint rejects it, usually with a 400 or a 404.
+
+### Choosing one
+
+`api` is pi's api type identifier. Set it on the provider, and override it per
+model — exactly the two levels pi allows.
 
 ```ts path=packages/plugin/examples/anthropicProvider.ts
 import type { Plugin } from "@tiny/plugin";

@@ -133,7 +133,7 @@ none is. Pass it to your own `fetch` so your work is cancelled with the turn.
 ## Settings and navigation
 
 ```ts
-ctx.settings          // { baseUrl, apiKey, model } | undefined
+ctx.settings          // { baseUrl, apiKey, model, api?, providerId? } | undefined
 ctx.updateSettings({ ...ctx.settings, model: "gpt-4o-mini" });
 ctx.navigate("/c/abc123");  // hash routes: "/" is a new conversation
 ```
@@ -142,8 +142,10 @@ ctx.navigate("/c/abc123");  // hash routes: "/" is a new conversation
 same endpoint needs it. That is a real capability, and it is one of the reasons
 [installing a runtime plugin is a trust decision](runtime.md#the-trust-boundary).
 
-`settings.providerId` names the [registered provider](providers.md) the selected
-model came from; absent means the user's own endpoint. If you are adding a
+`settings.api` is the [api type](providers.md#api-types) the user's own endpoint
+speaks, absent meaning `openai-completions`. `settings.providerId` names the
+[registered provider](providers.md) the selected model came from; absent means
+that own endpoint. If you are adding a
 provider, pass its key as a thunk rather than a string — a key in the config sits
 in the registry, where this very object would hand it to every other plugin.
 

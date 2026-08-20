@@ -71,7 +71,7 @@ export const sections: readonly Section[] = [
         slug: "providers",
         file: "providers.md",
         title: "Providers",
-        blurb: "Adding an endpoint to the model picker, and what pi's version does not port.",
+        blurb: "Adding an endpoint to the model picker, pi's api types, and what does not port.",
       },
     ],
   },

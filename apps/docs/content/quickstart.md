@@ -13,9 +13,15 @@ bun install
 bun run dev
 ```
 
-Open the app, click the settings gear, and give it a base URL
+Open the app, click the settings gear, and give it an **API**, a base URL
 (`https://api.openai.com/v1`, or `http://localhost:11434/v1` for Ollama), a key,
 and a model. Everything stays in your browser — nothing is proxied.
+
+Leave the API on **OpenAI Chat Completions** unless your endpoint is Anthropic,
+Google or Mistral — that setting is what "OpenAI-compatible" means, and it covers
+Ollama, vLLM, LM Studio, Groq, Together and OpenRouter. If you do pick another,
+read [api types](providers.md#api-types) first: the base URL is a different shape
+for some of them.
 
 ## Write a bundled plugin
 

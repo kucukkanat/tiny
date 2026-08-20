@@ -1,4 +1,4 @@
-import type { ChatMessage, Extension, ToolDefinition, ToolStatus } from "@tiny/ai";
+import type { ChatMessage, Endpoint, Extension, ToolDefinition, ToolStatus } from "@tiny/ai";
 import { describeError, streamChat } from "@tiny/ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -9,7 +9,6 @@ import {
   type StoredMessage,
   titleFrom,
 } from "../storage/conversations.ts";
-import { type Settings, settingsComplete } from "../storage/settings.ts";
 
 /** One tool call the model made during a reply. */
 export type ToolRun = {
@@ -32,7 +31,13 @@ const toChatMessages = (stored: readonly StoredMessage[]): ChatMessage[] =>
 
 export function useChat(
   conversationId: string | undefined,
-  settings: Settings | undefined,
+  /**
+   * Where this conversation streams from — the user's own endpoint, or one a
+   * plugin registered with `pi.registerProvider`. Resolved by `App`, because
+   * only it can see both the settings and the provider registry.
+   */
+  endpoint: Endpoint | undefined,
+  model: string,
   onConversationCreated: (id: string) => void,
   /**
    * Supplied by the plugin host, which is the one place plugin factories run.
@@ -74,7 +79,7 @@ export function useChat(
 
   const send = useCallback(
     async (text: string) => {
-      if (!settingsComplete(settings) || streaming !== undefined) return;
+      if (endpoint === undefined || model === "" || streaming !== undefined) return;
       setError(undefined);
 
       const id = conversationId ?? newConversationId();
@@ -108,7 +113,7 @@ export function useChat(
       setStreaming({ reasoning, text: answer, reasoningSeconds, tools });
 
       try {
-        for await (const delta of streamChat(settings, settings.model, toChatMessages(history), {
+        for await (const delta of streamChat(endpoint, model, toChatMessages(history), {
           signal: controller.signal,
           extensions,
           tools: toolDefinitions,
@@ -150,11 +155,12 @@ export function useChat(
     },
     [
       conversationId,
+      endpoint,
+      model,
       extensions,
       toolDefinitions,
       messages,
       onConversationCreated,
-      settings,
       streaming,
     ],
   );

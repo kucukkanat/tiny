@@ -1,11 +1,14 @@
 import { PromptBar } from "@tiny/ui";
 import { useRef, useState } from "react";
 
-const MODELS = ["gpt-4.1", "gpt-4.1-mini"] as const;
+const MODELS = [
+  { value: "gpt-4.1", label: "gpt-4.1" },
+  { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+] as const;
 
 /** The send button becomes a stop button while `busy`; stopping aborts. */
 export function PromptBarExample() {
-  const [model, setModel] = useState<string>(MODELS[0]);
+  const [model, setModel] = useState<string>(MODELS[0].value);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<readonly string[]>([]);
   const controller = useRef<AbortController>(new AbortController());

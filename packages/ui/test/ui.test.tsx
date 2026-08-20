@@ -109,7 +109,7 @@ describe("PromptBar", () => {
         onSend={(text) => sent.push(text)}
         busy={false}
         onStop={noop}
-        models={["m1"]}
+        models={[{ value: "m1", label: "m1" }]}
         model="m1"
         onModelChange={noop}
       />,
@@ -146,7 +146,10 @@ describe("PromptBar", () => {
         onSend={noop}
         busy={false}
         onStop={noop}
-        models={["alpha", "beta"]}
+        models={[
+          { value: "alpha", label: "alpha" },
+          { value: "beta", label: "beta" },
+        ]}
         model="alpha"
         onModelChange={(m) => chosen.push(m)}
       />,

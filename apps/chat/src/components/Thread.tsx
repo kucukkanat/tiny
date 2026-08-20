@@ -1,7 +1,7 @@
 import type { ToolStatus } from "@tiny/ai";
-import { Slot } from "@tiny/plugin";
+import { type MarkdownContext, Slot, useMarkdown } from "@tiny/plugin";
 import { Loader, StreamText, Thinking } from "@tiny/ui";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Streaming } from "../hooks/useChat.ts";
 import type { StoredMessage, StoredToolRun } from "../storage/conversations.ts";
 
@@ -32,6 +32,16 @@ function Tools({ runs }: { runs: readonly StoredToolRun[] }) {
   );
 }
 
+/**
+ * One message's text, after every `registerMarkdownTransformer` has had a turn.
+ *
+ * Display-only, exactly as in pi: the original text is what stays in the
+ * conversation and in the model's context.
+ */
+function Transformed({ text, context }: { text: string; context: MarkdownContext }) {
+  return <>{useMarkdown(text, context)}</>;
+}
+
 function Assistant({
   content,
   reasoning,
@@ -51,13 +61,27 @@ function Assistant({
   message?: StoredMessage;
   index?: number;
 }) {
+  // `isStreaming` is pi's flag for a partial assistant update, so a transformer
+  // can skip work until the text settles.
+  const body = useMarkdown(
+    content,
+    useMemo(() => ({ messageType: "assistant", isStreaming: !done }) as const, [done]),
+  );
+  const thinking = useMarkdown(
+    reasoning ?? "",
+    useMemo(
+      () => ({ messageType: "assistant-thinking", isStreaming: reasoningLive }) as const,
+      [reasoningLive],
+    ),
+  );
+
   return (
     <div className="flex flex-col gap-1">
       {reasoning !== undefined && reasoning !== "" && (
-        <Thinking working={reasoningLive} seconds={reasoningSeconds} text={reasoning} />
+        <Thinking working={reasoningLive} seconds={reasoningSeconds} text={thinking} />
       )}
       <Tools runs={tools} />
-      {(content !== "" || done) && <StreamText text={content} done={done} />}
+      {(content !== "" || done) && <StreamText text={body} done={done} />}
       {/* Only finished replies carry actions — there is nothing to copy or
           retry while the tokens are still arriving. */}
       {done && message !== undefined && (
@@ -68,6 +92,9 @@ function Assistant({
     </div>
   );
 }
+
+/** Stable, so the transform memo in `Transformed` is not defeated per message. */
+const USER_MESSAGE: MarkdownContext = { messageType: "user", isStreaming: false };
 
 export function Thread({
   messages,
@@ -99,7 +126,7 @@ export function Thread({
         message.role === "user" ? (
           <div key={index} className="flex justify-end pl-14">
             <div className="rounded-xl bg-field px-3 py-1.5 text-[13px] leading-[1.4] whitespace-pre-wrap text-ink">
-              {message.content}
+              <Transformed text={message.content} context={USER_MESSAGE} />
             </div>
           </div>
         ) : (

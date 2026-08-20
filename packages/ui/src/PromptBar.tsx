@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GlideMenu } from "./GlideMenu.tsx";
 
 function Icon({ children, size = 15 }: { children: ReactNode; size?: number }) {
@@ -19,6 +19,16 @@ function Icon({ children, size = 15 }: { children: ReactNode; size?: number }) {
   );
 }
 
+/**
+ * One entry in the model picker. `group` heads a section, so models coming from
+ * different endpoints stay told apart when several are configured.
+ */
+export type ModelOption = {
+  readonly value: string;
+  readonly label: string;
+  readonly group?: string | undefined;
+};
+
 /* The Beautiful UI composer, pared down to its essentials: an autosizing
  * textarea, a model picker that opens upward, and a tactile send button that
  * doubles as stop while a reply streams. Enter sends, Shift+Enter breaks. */
@@ -37,7 +47,7 @@ export function PromptBar({
   onSend: (text: string) => void;
   busy: boolean;
   onStop: () => void;
-  models: readonly string[];
+  models: readonly ModelOption[];
   model: string;
   onModelChange: (model: string) => void;
   placeholder?: string;
@@ -51,6 +61,8 @@ export function PromptBar({
   text?: string;
 }) {
   const [draft, setDraft] = useState("");
+  // `model` is an option value, which need not be the name worth showing.
+  const selectedLabel = models.find((option) => option.value === model)?.label ?? "Choose model";
 
   useEffect(() => {
     if (text !== undefined) setDraft(text);
@@ -99,27 +111,37 @@ export function PromptBar({
             className="flex flex-col gap-px"
             highlightClassName="inset-x-0 rounded-[6px] bg-hover"
           >
-            {models.map((m) => (
-              <button
-                key={m}
-                data-row
-                type="button"
-                onClick={() => {
-                  onModelChange(m);
-                  setModelOpen(false);
-                  inputRef.current?.focus();
-                }}
-                className="relative z-10 flex h-7.5 w-full items-center gap-2 rounded-[6px] px-2 text-left"
-              >
-                <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
-                  {m}
-                </span>
-                <span className={`shrink-0 text-ink ${m === model ? "" : "invisible"}`}>
-                  <Icon size={13}>
-                    <path d="M20 6L9 17l-5-5" />
-                  </Icon>
-                </span>
-              </button>
+            {models.map((option, index) => (
+              <Fragment key={option.value}>
+                {/* A heading only where the group actually changes, so a single
+                    ungrouped endpoint renders exactly as it always did. */}
+                {option.group !== undefined && option.group !== models[index - 1]?.group && (
+                  <div className="px-2 pt-1.5 pb-0.5 text-[10.5px] font-semibold tracking-wide text-ink-3 uppercase">
+                    {option.group}
+                  </div>
+                )}
+                <button
+                  data-row
+                  type="button"
+                  onClick={() => {
+                    onModelChange(option.value);
+                    setModelOpen(false);
+                    inputRef.current?.focus();
+                  }}
+                  className="relative z-10 flex h-7.5 w-full items-center gap-2 rounded-[6px] px-2 text-left"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                    {option.label}
+                  </span>
+                  <span
+                    className={`shrink-0 text-ink ${option.value === model ? "" : "invisible"}`}
+                  >
+                    <Icon size={13}>
+                      <path d="M20 6L9 17l-5-5" />
+                    </Icon>
+                  </span>
+                </button>
+              </Fragment>
             ))}
             {models.length === 0 && (
               <div className="flex h-9 items-center px-2 text-[12px] text-ink-3">
@@ -156,7 +178,7 @@ export function PromptBar({
               onClick={() => setModelOpen((current) => !current)}
               className="flex h-7 items-center gap-1 rounded-control px-1.5 text-[12px] font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink"
             >
-              {model || "Choose model"}
+              {selectedLabel}
               <span className="text-ink-3">
                 <Icon size={11}>
                   <path d="M6 9l6 6 6-6" />

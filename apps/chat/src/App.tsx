@@ -1,14 +1,18 @@
+import type { Endpoint } from "@tiny/ai";
 import { listModels } from "@tiny/ai";
 import {
+  endpointOf,
+  modelsOf,
   Slot,
   StatusBar,
   usePluginExtensions,
   usePluginHost,
+  usePluginProviders,
   usePluginTools,
   useProvideApp,
   Widgets,
 } from "@tiny/plugin";
-import { PromptBar, Sidebar } from "@tiny/ui";
+import { type ModelOption, PromptBar, Sidebar } from "@tiny/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Thread } from "./components/Thread.tsx";
@@ -16,17 +20,47 @@ import { useChat } from "./hooks/useChat.ts";
 import {
   type Conversation,
   deleteConversation,
+  getConversation,
   listConversations,
+  putConversation,
 } from "./storage/conversations.ts";
-import { loadSettings, type Settings, saveSettings, settingsComplete } from "./storage/settings.ts";
+import {
+  loadSettings,
+  OWN_ENDPOINT,
+  type Settings,
+  saveSettings,
+  settingsComplete,
+} from "./storage/settings.ts";
+
+/**
+ * A picker entry addresses a model *and* the endpoint it lives on, because the
+ * same model id can exist on several. Kept opaque behind these two helpers so
+ * the separator never leaks into a comparison somewhere else.
+ */
+const optionValue = (providerId: string, model: string) => `${providerId}\u0000${model}`;
+const parseOption = (value: string): { providerId: string; model: string } => {
+  const at = value.indexOf("\u0000");
+  return at === -1
+    ? { providerId: OWN_ENDPOINT, model: value }
+    : { providerId: value.slice(0, at), model: value.slice(at + 1) };
+};
 
 export function App() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<Settings | undefined>(loadSettings);
-  const [models, setModels] = useState<readonly string[]>([]);
+  const [ownModels, setOwnModels] = useState<readonly string[]>([]);
   const [chats, setChats] = useState<readonly Conversation[]>([]);
   const { runCommand, editorText } = usePluginHost();
+
+  // Endpoints plugins added with `pi.registerProvider`, and the models each
+  // publishes. Live state: a provider may be registered from a command handler
+  // after a setup flow, which pi allows and this list has to reflect.
+  const providers = usePluginProviders();
+  const [providerModels, setProviderModels] = useState<ReadonlyMap<string, readonly string[]>>(
+    new Map(),
+  );
+  const [endpoint, setEndpoint] = useState<Endpoint | undefined>(undefined);
 
   const refreshChats = useCallback(() => {
     void listConversations().then(setChats);
@@ -46,7 +80,8 @@ export function App() {
 
   const chat = useChat(
     id,
-    settings,
+    endpoint,
+    settings?.model ?? "",
     onConversationCreated,
     usePluginExtensions(),
     usePluginTools(),
@@ -56,8 +91,84 @@ export function App() {
   // non-fatal (the saved model still works), so it only empties the list.
   useEffect(() => {
     if (!settingsComplete(settings)) return;
-    listModels(settings).then(setModels, () => setModels([]));
+    listModels(settings).then(setOwnModels, () => setOwnModels([]));
   }, [settings]);
+
+  // The same, per registered provider. One provider that cannot be reached
+  // contributes no models rather than emptying the picker for the others.
+  useEffect(() => {
+    let live = true;
+    Promise.all(
+      providers.map(
+        async (entry) =>
+          [entry.id, await modelsOf(entry.config, listModels).catch(() => [])] as const,
+      ),
+    ).then((pairs) => {
+      if (live) setProviderModels(new Map(pairs));
+    });
+    return () => {
+      live = false;
+    };
+  }, [providers]);
+
+  /**
+   * Which endpoint this conversation streams through. `providerId` names a
+   * plugin provider; absent means the user's own endpoint, which is what every
+   * settings object saved before providers existed resolves to.
+   */
+  useEffect(() => {
+    if (settings === undefined) return setEndpoint(undefined);
+    const providerId = settings.providerId;
+    if (providerId === undefined || providerId === OWN_ENDPOINT)
+      return setEndpoint(
+        settingsComplete(settings)
+          ? { baseUrl: settings.baseUrl, apiKey: settings.apiKey }
+          : undefined,
+      );
+
+    // A provider disappears when its plugin is disabled or removed; the saved
+    // model then has nowhere to go until another is picked.
+    const entry = providers.find((candidate) => candidate.id === providerId);
+    if (entry === undefined) return setEndpoint(undefined);
+
+    let live = true;
+    // `apiKey` may be a thunk that prompts, so resolving it is asynchronous.
+    endpointOf(entry.config).then(
+      (resolved) => {
+        if (live) setEndpoint(resolved);
+      },
+      () => {
+        if (live) setEndpoint(undefined);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [settings, providers]);
+
+  // Grouped only once there is more than one endpoint to tell apart, so a
+  // single-endpoint app looks exactly as it did.
+  const models = useMemo<readonly ModelOption[]>(() => {
+    const grouped = providers.length > 0;
+    return [
+      ...ownModels.map((model) => ({
+        value: optionValue(OWN_ENDPOINT, model),
+        label: model,
+        ...(grouped ? { group: "Your endpoint" } : {}),
+      })),
+      ...providers.flatMap((entry) =>
+        (providerModels.get(entry.id) ?? []).map((model) => ({
+          value: optionValue(entry.id, model),
+          label: model,
+          group: entry.config.name,
+        })),
+      ),
+    ];
+  }, [ownModels, providers, providerModels]);
+
+  const selectedModel =
+    settings === undefined ? "" : optionValue(settings.providerId ?? OWN_ENDPOINT, settings.model);
+  const canSend = endpoint !== undefined && (settings?.model ?? "") !== "";
 
   useEffect(() => {
     if (chat.streaming === undefined) refreshChats();
@@ -67,6 +178,20 @@ export function App() {
     saveSettings(next);
     setSettings(next);
   }, []);
+
+  const sessionName = chats.find((conversation) => conversation.id === id)?.title;
+
+  /** `pi.setSessionName()` — renames the conversation the user is looking at. */
+  const setSessionName = useCallback(
+    (name: string) => {
+      if (id === undefined) return;
+      void getConversation(id).then((conversation) => {
+        if (conversation === undefined) return;
+        void putConversation({ ...conversation, title: name }).then(refreshChats);
+      });
+    },
+    [id, refreshChats],
+  );
 
   const remove = async (chatId: string) => {
     await deleteConversation(chatId);
@@ -87,8 +212,20 @@ export function App() {
         stop: chat.stop,
         updateSettings,
         navigate: (path: string) => navigate(path),
+        sessionName,
+        setSessionName,
       }),
-      [chat.messages, chat.streaming, chat.send, chat.stop, settings, updateSettings, navigate],
+      [
+        chat.messages,
+        chat.streaming,
+        chat.send,
+        chat.stop,
+        settings,
+        updateSettings,
+        navigate,
+        sessionName,
+        setSessionName,
+      ],
     ),
   );
 
@@ -127,14 +264,20 @@ export function App() {
             busy={chat.streaming !== undefined}
             onStop={chat.stop}
             models={models}
-            model={settings?.model ?? ""}
-            onModelChange={(model) => {
-              if (settings !== undefined) updateSettings({ ...settings, model });
+            model={selectedModel}
+            onModelChange={(value) => {
+              if (settings === undefined) return;
+              const { providerId, model } = parseOption(value);
+              updateSettings({
+                ...settings,
+                model,
+                // The user's own endpoint is the absence of a provider, which is
+                // also how settings saved before providers existed look.
+                ...(providerId === OWN_ENDPOINT ? { providerId: undefined } : { providerId }),
+              });
             }}
-            disabled={!settingsComplete(settings)}
-            placeholder={
-              settingsComplete(settings) ? "Write a message…" : "Configure your endpoint first"
-            }
+            disabled={!canSend}
+            placeholder={canSend ? "Write a message…" : "Configure your endpoint first"}
             actions={<Slot name="composer.actions" />}
             text={editorText}
           />

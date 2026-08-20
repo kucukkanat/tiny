@@ -25,6 +25,9 @@ import {
   type Endpoint,
   type StreamDelta,
   type ToolDefinition,
+  type ToolResult,
+  type ToolUpdate,
+  toolText,
 } from "./types.ts";
 
 /**
@@ -94,6 +97,12 @@ const toPiTool = (tool: ToolDefinition): Tool => ({
   parameters: tool.parameters as unknown as Tool["parameters"],
 });
 
+/** A tool's contribution to the system prompt, in pi's order: snippet, then guidelines. */
+const toolPrompt = (tool: ToolDefinition): readonly string[] => [
+  ...(tool.promptSnippet === undefined ? [] : [tool.promptSnippet]),
+  ...(tool.promptGuidelines ?? []),
+];
+
 const toolCallsOf = (message: AssistantMessage): readonly ToolCall[] =>
   message.content.filter((part): part is ToolCall => part.type === "toolCall");
 
@@ -144,13 +153,14 @@ export async function* streamChat(
   const maxTurns = options.maxToolTurns ?? DEFAULT_MAX_TOOL_TURNS;
 
   const base = toContext(messages, descriptor);
+  // pi folds each active tool's prompt snippet and guidelines into the system
+  // prompt before firing `before_agent_start`, so an extension sees the prompt
+  // the model will actually get.
+  const assembled = [base.systemPrompt ?? "", ...tools.flatMap(toolPrompt)]
+    .filter((part) => part !== "")
+    .join("\n\n");
   // Fired once per request, as in pi — not once per tool round.
-  const systemPrompt = await emitBeforeAgentStart(
-    handlers,
-    lastPrompt(messages),
-    base.systemPrompt ?? "",
-    ctx,
-  );
+  const systemPrompt = await emitBeforeAgentStart(handlers, lastPrompt(messages), assembled, ctx);
 
   let turns = base.messages;
 
@@ -202,6 +212,8 @@ export async function* streamChat(
     if (reply === undefined || calls.length === 0) return;
 
     const results: Message[] = [];
+    let terminate = calls.length > 0;
+
     for (const call of calls) {
       yield {
         kind: "tool",
@@ -212,9 +224,21 @@ export async function* streamChat(
       };
 
       const tool = tools.find((candidate) => candidate.name === call.name);
+      // Progress arrives synchronously from inside `execute`, which cannot
+      // yield from this generator — so updates are queued and drained after.
+      const updates: string[] = [];
+      const onUpdate = (update: ToolUpdate) => updates.push(summarise(toolText(update)));
+
       // A tool the model invented, or one that threw, comes back as an error
       // result rather than a thrown request: the model gets to correct itself.
-      const [output, failed] = await run(tool, call, options.signal);
+      const [output, failed, result] = await run(tool, call, options.signal, onUpdate, ctx);
+
+      for (const summary of updates)
+        yield { kind: "tool", id: call.id, name: call.name, status: "running", summary };
+
+      // pi stops only when the whole batch asks to; one tool cannot end the turn
+      // on the others' behalf.
+      if (failed || result?.terminate !== true) terminate = false;
 
       results.push(toolResult(call, output, failed));
       yield {
@@ -227,6 +251,7 @@ export async function* streamChat(
     }
 
     turns = [...turns, reply, ...results];
+    if (terminate) return;
   }
 
   throw new ChatApiError(`Gave up after ${maxTurns} tool rounds without a final answer`);
@@ -237,15 +262,21 @@ const run = async (
   tool: ToolDefinition | undefined,
   call: ToolCall,
   signal: AbortSignal | undefined,
-): Promise<[output: string, failed: boolean]> => {
-  if (tool === undefined) return [`No such tool: ${call.name}`, true];
+  onUpdate: (update: ToolUpdate) => void,
+  ctx: ExtensionContext,
+): Promise<[output: string, failed: boolean, result: ToolResult | undefined]> => {
+  if (tool === undefined) return [`No such tool: ${call.name}`, true, undefined];
   try {
-    return [await tool.execute(call.arguments, { signal }), false];
+    // pi lets a tool repair arguments before it sees them; a throw here is a
+    // tool error like any other.
+    const params = tool.prepareArguments?.(call.arguments) ?? call.arguments;
+    const result = await tool.execute(call.id, params, signal, onUpdate, ctx);
+    return [toolText(result), false, result];
   } catch (error) {
     // An aborted request must fail the stream rather than be reported to the
     // model as a tool that went wrong.
     if (signal?.aborted === true) throw error;
-    return [error instanceof Error ? error.message : String(error), true];
+    return [error instanceof Error ? error.message : String(error), true, undefined];
   }
 };
 

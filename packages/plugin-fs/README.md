@@ -53,6 +53,7 @@ correct itself instead of the turn dying.
 All five in one run — `examples/tools-in-action.ts`:
 
 ```ts
+import { toolText } from "@tiny/ai";
 import { fileSystemTools } from "@tiny/plugin-fs";
 import { memoryRoot } from "@tiny/plugin-fs/memory";
 
@@ -62,10 +63,14 @@ import { memoryRoot } from "@tiny/plugin-fs/memory";
 const root = memoryRoot();
 const tools = fileSystemTools(() => Promise.resolve(root));
 
-const call = (name: string, args: Record<string, unknown>) => {
+// pi hands `execute` positional arguments and takes back content blocks;
+// `toolText` is the text of those blocks, which is what the model reads.
+const call = async (name: string, args: Record<string, unknown>) => {
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) throw new Error(`no tool named ${name}`);
-  return Promise.resolve(tool.execute(args, { signal: undefined }));
+  return toolText(
+    await tool.execute("example-1", args, undefined, undefined, { signal: undefined }),
+  );
 };
 
 // Parent directories are created as needed.
@@ -104,7 +109,16 @@ const workspace = () => disk.getDirectoryHandle("workspace", { create: true });
 
 const { tools } = await loadPlugins([fileSystem({ root: workspace })]);
 const write = tools.find((tool) => tool.name === "fs_write");
-await write?.execute({ path: "/notes/todo.md", content: "buy milk" }, { signal: undefined });
+// pi's positional signature: (toolCallId, params, signal, onUpdate, ctx).
+await write?.execute(
+  "example-1",
+  { path: "/notes/todo.md", content: "buy milk" },
+  undefined,
+  undefined,
+  {
+    signal: undefined,
+  },
+);
 
 // Read back from outside the sandbox to show where the file actually landed.
 const notes = await (await disk.getDirectoryHandle("workspace")).getDirectoryHandle("notes");

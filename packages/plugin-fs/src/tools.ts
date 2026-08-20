@@ -1,4 +1,4 @@
-import type { ToolDefinition } from "@tiny/ai";
+import { type ToolDefinition, toolOutput } from "@tiny/ai";
 import { directoryAt, display, FsError, fileAt, readFile, segments, writeFile } from "./opfs.ts";
 
 /** Resolves the root lazily so a page that never calls a tool never touches OPFS. */
@@ -39,6 +39,7 @@ const notFoundEntry = (error: unknown): boolean =>
 export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] => [
   {
     name: "fs_list",
+    label: "List Directory",
     description:
       "List the entries of a directory. Returns one line per entry, marking directories with a trailing slash. Use this before reading when unsure what exists.",
     parameters: {
@@ -47,19 +48,24 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       required: ["path"],
       additionalProperties: false,
     },
-    execute: async (args) => {
+    execute: async (_id, args) => {
       const parts = segments(text(args, "path"));
       const dir = await directoryAt(await root(), parts);
       const lines: string[] = [];
       for await (const [name, handle] of dir.entries())
         lines.push(handle.kind === "directory" ? `${name}/` : name);
       lines.sort();
-      return lines.length === 0 ? `${display(parts)} is empty` : lines.join("\n");
+      return toolOutput(lines.length === 0 ? `${display(parts)} is empty` : lines.join("\n"), {
+        // Structured alongside the text: the model reads `content`, a renderer
+        // or a caller can use this without parsing lines back apart.
+        details: { path: display(parts), entries: lines },
+      });
     },
   },
 
   {
     name: "fs_read",
+    label: "Read File",
     description: "Read a text file and return its full contents.",
     parameters: {
       type: "object",
@@ -67,14 +73,17 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       required: ["path"],
       additionalProperties: false,
     },
-    execute: async (args) => {
+    execute: async (_id, args) => {
       const content = await readFile(await root(), text(args, "path"));
-      return content === "" ? "(the file is empty)" : content;
+      return toolOutput(content === "" ? "(the file is empty)" : content, {
+        details: { path: text(args, "path"), characters: content.length },
+      });
     },
   },
 
   {
     name: "fs_write",
+    label: "Write File",
     description:
       "Write a text file whole, creating it and any missing parent directories. Replaces the file if it already exists; use fs_edit to change part of one.",
     parameters: {
@@ -86,15 +95,18 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       required: ["path", "content"],
       additionalProperties: false,
     },
-    execute: async (args) => {
+    execute: async (_id, args) => {
       const content = optionalText(args, "content", "");
       const parts = await writeFile(await root(), text(args, "path"), content);
-      return `Wrote ${content.length} character(s) to ${display(parts)}`;
+      return toolOutput(`Wrote ${content.length} character(s) to ${display(parts)}`, {
+        details: { path: display(parts), characters: content.length },
+      });
     },
   },
 
   {
     name: "fs_edit",
+    label: "Edit File",
     description:
       "Replace one exact snippet in a text file. old_text must appear exactly once, so include enough surrounding context to make it unique.",
     parameters: {
@@ -107,7 +119,7 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       required: ["path", "old_text", "new_text"],
       additionalProperties: false,
     },
-    execute: async (args) => {
+    execute: async (_id, args) => {
       const path = text(args, "path");
       const oldText = text(args, "old_text");
       const newText = optionalText(args, "new_text", "");
@@ -125,12 +137,13 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
         );
 
       const parts = await writeFile(handle, path, before.replace(oldText, newText));
-      return `Edited ${display(parts)}`;
+      return toolOutput(`Edited ${display(parts)}`, { details: { path: display(parts) } });
     },
   },
 
   {
     name: "fs_delete",
+    label: "Delete",
     description: "Delete a file, or a directory and everything inside it. This cannot be undone.",
     parameters: {
       type: "object",
@@ -138,7 +151,7 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       required: ["path"],
       additionalProperties: false,
     },
-    execute: async (args) => {
+    execute: async (_id, args) => {
       const path = text(args, "path");
       const { parent, name, parts } = await fileAt(await root(), path);
       try {
@@ -147,7 +160,7 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
         if (notFoundEntry(error)) throw new FsError(`No such file or directory: ${display(parts)}`);
         throw error;
       }
-      return `Deleted ${display(parts)}`;
+      return toolOutput(`Deleted ${display(parts)}`, { details: { path: display(parts) } });
     },
   },
 ];

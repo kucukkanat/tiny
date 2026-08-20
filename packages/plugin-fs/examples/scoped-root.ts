@@ -14,7 +14,16 @@ const workspace = () => disk.getDirectoryHandle("workspace", { create: true });
 
 const { tools } = await loadPlugins([fileSystem({ root: workspace })]);
 const write = tools.find((tool) => tool.name === "fs_write");
-await write?.execute({ path: "/notes/todo.md", content: "buy milk" }, { signal: undefined });
+// pi's positional signature: (toolCallId, params, signal, onUpdate, ctx).
+await write?.execute(
+  "example-1",
+  { path: "/notes/todo.md", content: "buy milk" },
+  undefined,
+  undefined,
+  {
+    signal: undefined,
+  },
+);
 
 // Read back from outside the sandbox to show where the file actually landed.
 const notes = await (await disk.getDirectoryHandle("workspace")).getDirectoryHandle("notes");

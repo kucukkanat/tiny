@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { StreamDelta, ToolDefinition } from "../src/index.ts";
-import { streamChat } from "../src/index.ts";
+import { streamChat, toolOutput } from "../src/index.ts";
 
 // The agent loop is driven against a real in-process OpenAI-compatible server
 // that answers with tool calls — no mocks, and no stand-in for the loop itself.
@@ -105,7 +105,7 @@ const echo: ToolDefinition = {
     properties: { value: { type: "string" } },
     required: ["value"],
   },
-  execute: (args) => `echoed:${String(args.value)}`,
+  execute: (_id, params) => toolOutput(`echoed:${String(params.value)}`),
 };
 
 const collect = async (path: string, tools: readonly ToolDefinition[], maxToolTurns?: number) => {

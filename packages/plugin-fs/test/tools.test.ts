@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { toolText } from "@tiny/ai";
 import { loadPlugins } from "@tiny/plugin";
 import { fileSystem, fileSystemTools } from "../src/index.ts";
 import { memoryRoot } from "../src/memory.ts";
@@ -10,10 +11,14 @@ import { segments } from "../src/opfs.ts";
 let root: FileSystemDirectoryHandle;
 let tools: ReturnType<typeof fileSystemTools>;
 
-const call = (name: string, args: Record<string, unknown>) => {
+/** Runs a tool through pi's positional signature and returns the text the model sees. */
+const call = async (name: string, args: Record<string, unknown>) => toolText(await raw(name, args));
+
+/** The whole `ToolResult`, for the tests that care about `details`. */
+const raw = (name: string, args: Record<string, unknown>) => {
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) throw new Error(`no tool named ${name}`);
-  return Promise.resolve(tool.execute(args, { signal: undefined }));
+  return Promise.resolve(tool.execute("call-1", args, undefined, undefined, { signal: undefined }));
 };
 
 beforeEach(() => {
@@ -171,8 +176,10 @@ describe("the plugin", () => {
     const { tools: registered } = await loadPlugins([fileSystem()]);
     const read = registered.find((tool) => tool.name === "fs_read");
     // Bun has no OPFS, so the default resolver reports rather than crashing oddly.
-    expect(Promise.resolve(read?.execute({ path: "/a" }, { signal: undefined }))).rejects.toThrow(
-      "Origin Private File System is unavailable",
-    );
+    expect(
+      Promise.resolve(
+        read?.execute("call-1", { path: "/a" }, undefined, undefined, { signal: undefined }),
+      ),
+    ).rejects.toThrow("Origin Private File System is unavailable");
   });
 });

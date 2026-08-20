@@ -28,7 +28,11 @@ export type {
   ChatRole,
   Endpoint,
   StreamDelta,
+  ToolContent,
   ToolDefinition,
+  ToolExecuteContext,
+  ToolResult,
   ToolStatus,
+  ToolUpdate,
 } from "./types.ts";
-export { ChatApiError, describeError } from "./types.ts";
+export { ChatApiError, describeError, toolOutput, toolText } from "./types.ts";

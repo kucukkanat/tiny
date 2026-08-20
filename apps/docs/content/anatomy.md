@@ -155,6 +155,18 @@ export const clearChat = (): Plugin =>
   });
 ```
 
+## Panels and pages
+
+```ts
+pi.registerPanel("outline", { title: "Outline", component: Outline });
+pi.registerRoute("/scratchpad", { component: Scratchpad, label: "Scratchpad" });
+```
+
+A panel is a region of your own in the app's right-hand rail — a rail that does
+not exist at all until some plugin registers one. A page is a whole screen at an
+address, replacing the thread while the app's chrome stays put. Both are covered
+in [Panels and pages](panels.md).
+
 ## Events
 
 `pi.on(event, handler)` subscribes to the request lifecycle. Six events actually
@@ -176,8 +188,8 @@ Payloads and chaining rules are `@tiny/ai`'s and are documented in
 `packages/ai/README.md`; nothing about them changes here.
 
 **Every other pi event name is accepted and simply never fires.** A pi extension
-subscribing to `session_start`, `tool_call` or `turn_end` loads without a type
-error and without a runtime error — it just never hears from them. That is
+subscribing to `session_start`, `turn_end` or `session_compact` loads without a
+type error and without a runtime error — it just never hears from them. That is
 deliberate: it is what lets a real pi extension load unmodified.
 
 ```ts path=packages/plugin/examples/tokenMeter.ts

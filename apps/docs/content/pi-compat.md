@@ -15,7 +15,7 @@ Counted against pi's documented surface.
 | --- | --- | --- |
 | `ctx.ui.*` | 28 methods | all 28 — 11 functional, 17 degraded as RPC degrades them — plus `open()` |
 | Events for `pi.on` | 34 | all 34 accepted; 6 fire |
-| `pi.*` methods | 26 | 15, plus `contribute()` |
+| `pi.*` methods | 26 | 15, plus `contribute()`, `registerPanel()`, `registerRoute()` |
 | `ExtensionContext` | 18 members | 9, plus 7 of the app's own |
 | `ExtensionCommandContext` extras | 7 | `reload()` |
 
@@ -150,6 +150,8 @@ No pi equivalent.
 | | |
 | --- | --- |
 | `pi.contribute(slot, Component)` | [React components into named regions](slots.md) |
+| `pi.registerPanel(id, opts)` | [a panel in the right-hand rail](panels.md), which no rail exists without |
+| `pi.registerRoute(path, opts)` | [a page of the plugin's own](panels.md#pages), at an address |
 | `ctx.ui.open(render)` | a React component as a modal, resolving when it closes |
 | `ctx.chat`, `ctx.settings`, `ctx.updateSettings`, `ctx.navigate`, `ctx.storage`, `ctx.runCommand`, `ctx.commands` | the app's own state and actions |
 
@@ -169,7 +171,8 @@ Bringing an extension over from `.pi/extensions/`:
 1. Does it call anything whose signature mentions `tui`, `theme` or a component
    factory? Those calls become no-ops. Replace them with
    [`contribute`](slots.md) or [`ui.open`](context.md#a-react-modal) if the UI
-   matters.
+   matters, [`registerPanel`](panels.md) if it wants a region of its own, or
+   [`registerRoute`](panels.md#pages) if it wants a whole screen.
 2. Does it branch on `ctx.mode`? `"react"` is a new member of the union, so a
    `=== "tui"` guard stays false, and an `!== "tui"` guard now passes. Check the
    latter.

@@ -30,14 +30,21 @@ pinned — and never caches API calls.
 Conversations persist locally; switch or delete them from the sidebar
 (`#/c/<id>` hash routes, so the build needs no server-side routing).
 
+A plugin can add more than a button. `pi.registerPanel` opens a rail down the
+right — absent entirely until some plugin asks for one — and `pi.registerRoute`
+adds a page of its own at its own path, with the sidebar and rail still around it.
+Neither needs a change here; see
+[Panels and pages](../docs/content/panels.md).
+
 ## Structure
 
-- `src/App.tsx` — layout: sidebar, thread, composer, plugin slots
+- `src/App.tsx` — the shell: sidebar, thread, composer, plugin slots, the
+  right-hand rail, and the route table plugin pages are added to
 - `src/Thread.tsx` — the transcript: messages, the reply in flight, tool lines
 - `src/useChat.ts` — one conversation: streaming state machine and persistence
 - `src/conversations.ts` — chat history, in IndexedDB
 - `src/settings.ts` — the saved endpoint, key and model, in localStorage
-- `src/plugins/` — the plugins and the registry the app runs; add one here.
+- `src/plugins.ts` — the plugins the app runs; add one here.
   A plugin that only subscribes to events is an `@tiny/ai` extension (see
   "Extensions" in [`packages/ai`](../../packages/ai/README.md)); one that adds UI
   also registers commands, shortcuts or slots (see

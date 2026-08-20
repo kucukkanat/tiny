@@ -38,9 +38,10 @@ export const greet = (): IdentifiedPlugin =>
 List it in `apps/chat/src/plugins/index.ts` and it is live. That is the whole wiring —
 nothing in `@tiny/ai`, `@tiny/plugin`, `useChat` or any component changes.
 
-Nine more runnable plugins are in [`examples/`](examples), each executed by the test
+Eight more runnable plugins are in [`examples/`](examples), each executed by the test
 suite: a composer button, a command with a confirmation, per-plugin storage, an event
-subscriber that draws with `setWidget`, and two providers.
+subscriber that draws with `setWidget`, a right-rail panel, a page of its own, and two
+providers.
 
 ## Why the pi API works in a browser
 
@@ -81,7 +82,9 @@ Read them in this order; each answers one question.
 | `src/registry.ts` | `loadPlugins` — running every factory once and collecting what it registered. |
 | `src/PluginHost.tsx` | The React host: dialogs, toasts, widgets, statuses, and the live `ctx`. |
 | `src/hooks.ts` | What the app calls to reach the host — `usePluginContext`, `usePluginTools`, … |
-| `src/Slot.tsx` | Where contributed components render, and what happens when one throws. |
+| `src/Slot.tsx` | Where contributed components render. |
+| `src/Panels.tsx`, `src/PluginPage.tsx` | The right-hand rail, and a page at an address. |
+| `src/Boundary.tsx` | What happens when anything a plugin renders throws. |
 | `src/Overlays.tsx` | How the four pi dialogs, a custom React overlay and toasts are painted. |
 | `src/providers.ts` | Endpoints a plugin adds to the model picker. |
 | `src/keys.ts`, `src/theme.ts` | Two small pi shapes: keybindings, and the no-op theme. |
@@ -99,6 +102,7 @@ these two did.
 | [Anatomy](../../apps/docs/content/anatomy.md) | the factory, identity, and everything it may register |
 | [The context object](../../apps/docs/content/context.md) | dialogs, chat state, storage, navigation |
 | [Slots](../../apps/docs/content/slots.md) | rendering React into the app, and error boundaries |
+| [Panels and pages](../../apps/docs/content/panels.md) | a rail of your own, and whole pages at an address |
 | [Tools](../../apps/docs/content/tools.md) | `registerTool`, and how a call becomes a result |
 | [Providers](../../apps/docs/content/providers.md) | adding an endpoint to the model picker |
 | [Runtime plugins](../../apps/docs/content/runtime.md) | installing plugins without a rebuild |

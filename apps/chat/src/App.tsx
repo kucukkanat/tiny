@@ -4,19 +4,22 @@ import {
   endpointOf,
   modelSpec,
   modelsOf,
+  Panels,
+  PluginPage,
   Slot,
   StatusBar,
   settingsComplete,
   usePluginExtensions,
   usePluginHost,
   usePluginProviders,
+  usePluginRoutes,
   usePluginTools,
   useProvideApp,
   Widgets,
 } from "@tiny/plugin";
-import { type ModelOption, PromptBar, Sidebar } from "@tiny/ui";
+import { type ModelOption, PromptBar, Sidebar, type SidebarLink } from "@tiny/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Route, Routes, useLocation, useMatch, useNavigate } from "react-router";
 import {
   type Conversation,
   deleteConversation,
@@ -42,17 +45,32 @@ const parseOption = (value: string): { providerId: string; model: string } => {
 };
 
 export function App() {
-  const { id } = useParams<{ id: string }>();
+  // `useMatch` rather than `useParams`: `App` is the shell now, mounted above
+  // the routes rather than by one of them, so the conversation id has to be read
+  // off the location instead of arriving as a param.
+  const id = useMatch("/c/:id")?.params.id;
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<Settings | undefined>(loadSettings);
   const [ownModels, setOwnModels] = useState<readonly string[]>([]);
   const [chats, setChats] = useState<readonly Conversation[]>([]);
-  const { runCommand, editorText, setEditorText } = usePluginHost();
+  const { runCommand, editorText, setEditorText, ready } = usePluginHost();
 
   // Endpoints plugins added with `pi.registerProvider`, and the models each
   // publishes. Live state: a provider may be registered from a command handler
   // after a setup flow, which pi allows and this list has to reflect.
   const providers = usePluginProviders();
+
+  // Pages plugins registered. One that declared a `label` also wants a row in
+  // the navigation; one that did not is reached from a command or a button.
+  const pages = usePluginRoutes();
+  const links = useMemo<readonly SidebarLink[]>(
+    () =>
+      pages.flatMap(({ path, options: { label, icon } }) =>
+        label === undefined ? [] : [{ id: path, label, ...(icon === undefined ? {} : { icon }) }],
+      ),
+    [pages],
+  );
   const [providerModels, setProviderModels] = useState<ReadonlyMap<string, readonly string[]>>(
     new Map(),
   );
@@ -244,6 +262,50 @@ export function App() {
 
   const empty = chat.messages.length === 0 && chat.streaming === undefined;
 
+  const thread = (
+    <main className="flex min-w-0 flex-1 flex-col bg-page">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-4">
+          {empty ? (
+            <div className="flex h-full min-h-[60vh] items-end justify-center pb-6">
+              <p className="text-xl text-ink-3">Ask anything</p>
+            </div>
+          ) : (
+            <Thread messages={chat.messages} streaming={chat.streaming} error={chat.error} />
+          )}
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-2xl px-4 pb-4">
+        <Widgets placement="aboveEditor" />
+        <PromptBar
+          onSend={(text) => void chat.send(text)}
+          busy={chat.streaming !== undefined}
+          onStop={chat.stop}
+          models={models}
+          model={selectedModel}
+          onModelChange={(value) => {
+            if (settings === undefined) return;
+            const { providerId, model } = parseOption(value);
+            updateSettings({
+              ...settings,
+              model,
+              // The user's own endpoint is the absence of a provider, which is
+              // also how settings saved before providers existed look.
+              ...(providerId === OWN_ENDPOINT ? { providerId: undefined } : { providerId }),
+            });
+          }}
+          disabled={!canSend}
+          placeholder={canSend ? "Write a message…" : "Configure your endpoint first"}
+          actions={<Slot name="composer.actions" />}
+          text={editorText}
+          onTextChange={setEditorText}
+        />
+        <Widgets placement="belowEditor" />
+        <StatusBar />
+      </div>
+    </main>
+  );
+
   return (
     <div className="flex h-full bg-canvas">
       <Sidebar
@@ -254,51 +316,34 @@ export function App() {
         onNew={() => navigate("/")}
         onDelete={(chatId) => void remove(chatId)}
         onSettings={() => void runCommand("settings")}
+        links={links}
+        activeLinkId={pathname}
+        onLink={(path) => navigate(path)}
         defaultCollapsed={window.innerWidth < 640}
         footer={<Slot name="sidebar.footer" />}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col bg-page">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-2xl px-4">
-            {empty ? (
-              <div className="flex h-full min-h-[60vh] items-end justify-center pb-6">
-                <p className="text-xl text-ink-3">Ask anything</p>
-              </div>
-            ) : (
-              <Thread messages={chat.messages} streaming={chat.streaming} error={chat.error} />
-            )}
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-2xl px-4 pb-4">
-          <Widgets placement="aboveEditor" />
-          <PromptBar
-            onSend={(text) => void chat.send(text)}
-            busy={chat.streaming !== undefined}
-            onStop={chat.stop}
-            models={models}
-            model={selectedModel}
-            onModelChange={(value) => {
-              if (settings === undefined) return;
-              const { providerId, model } = parseOption(value);
-              updateSettings({
-                ...settings,
-                model,
-                // The user's own endpoint is the absence of a provider, which is
-                // also how settings saved before providers existed look.
-                ...(providerId === OWN_ENDPOINT ? { providerId: undefined } : { providerId }),
-              });
-            }}
-            disabled={!canSend}
-            placeholder={canSend ? "Write a message…" : "Configure your endpoint first"}
-            actions={<Slot name="composer.actions" />}
-            text={editorText}
-            onTextChange={setEditorText}
-          />
-          <Widgets placement="belowEditor" />
-          <StatusBar />
-        </div>
-      </main>
+      {/* Plugin pages replace the thread and nothing else, so the sidebar and
+          the rail stay put and there is always a way back. The app's own routes
+          are listed first, because React Router breaks a tie in specificity by
+          declaration order — and `registerRoute` canonicalises what it stores,
+          so a plugin cannot dodge that tie by spelling the app's own path more
+          specifically (`/c/:id/`). */}
+      <Routes>
+        <Route path="/" element={thread} />
+        <Route path="/c/:id" element={thread} />
+        {pages.map((entry) => (
+          <Route key={entry.path} path={entry.path} element={<PluginPage entry={entry} />} />
+        ))}
+        {/* The fallback answers a path nothing else claimed — but only once the
+            factories have run, because until then no plugin page exists yet and
+            this would answer a bookmarked plugin URL with the chat. It still
+            matches in the meantime, holding the layout with an empty page
+            rather than leaving the router with nothing to render. */}
+        <Route path="*" element={ready ? thread : <main className="min-w-0 flex-1 bg-page" />} />
+      </Routes>
+
+      <Panels />
 
       <Slot name="app.overlays" />
     </div>

@@ -32,6 +32,11 @@ The union is closed on purpose. A slot is a promise the app makes about where
 something will appear and what props it will receive; adding one is an app change,
 not a plugin change.
 
+A slot is for a *fragment* placed among the app's own chrome. When you want a
+region of your own instead, there are two other surfaces —
+[`registerPanel` and `registerRoute`](panels.md) — and neither needs an app change
+to use.
+
 ## Props
 
 ```ts

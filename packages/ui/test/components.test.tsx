@@ -210,6 +210,58 @@ describe("Sidebar", () => {
     expect(events).toEqual(["select:b", "new", "delete:a", "settings"]);
   });
 
+  test("lists extra destinations above Settings and reports which was clicked", () => {
+    const clicked: string[] = [];
+    render(
+      <Sidebar
+        title="Tiny"
+        chats={chats}
+        activeId={undefined}
+        onSelect={() => {}}
+        onNew={() => {}}
+        onDelete={() => {}}
+        onSettings={() => {}}
+        links={[
+          { id: "/scratchpad", label: "Scratchpad" },
+          { id: "/report", label: "Report" },
+        ]}
+        activeLinkId="/scratchpad"
+        onLink={(id) => clicked.push(id)}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Scratchpad"));
+    expect(clicked).toEqual(["/scratchpad"]);
+
+    // "above Settings" is a claim about DOM order, so it has to be read off it.
+    const rows = [...document.querySelectorAll("[data-row][title]")].map((row) =>
+      row.getAttribute("title"),
+    );
+    expect(rows.slice(-3)).toEqual(["Scratchpad", "Report", "Settings"]);
+
+    // `activeLinkId` is what tells the user which page they are on.
+    expect(screen.getByTitle("Scratchpad").className).toContain("bg-hover-2");
+    expect(screen.getByTitle("Report").className).not.toContain("bg-hover-2");
+  });
+
+  test("has no extra destinations when none are given", () => {
+    render(
+      <Sidebar
+        title="Tiny"
+        chats={chats}
+        activeId={undefined}
+        onSelect={() => {}}
+        onNew={() => {}}
+        onDelete={() => {}}
+        onSettings={() => {}}
+      />,
+    );
+
+    // Only the rows the app itself owns.
+    expect(screen.getByText("Settings")).toBeDefined();
+    expect(screen.queryByText("Scratchpad")).toBeNull();
+  });
+
   test("collapsing hides the chat list", () => {
     render(
       <Sidebar

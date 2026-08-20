@@ -3,6 +3,19 @@ import { GlideMenu } from "./GlideMenu.tsx";
 
 export type SidebarChat = { readonly id: string; readonly title: string };
 
+/**
+ * A destination other than a chat — a page of its own, listed above Settings.
+ *
+ * The chat app fills these from the pages plugins registered with a `label`;
+ * `id` is whatever the caller wants back from `onLink`, and is compared against
+ * `activeLinkId` to decide which row is highlighted.
+ */
+export type SidebarLink = {
+  readonly id: string;
+  readonly label: string;
+  readonly icon?: ReactNode;
+};
+
 function Icon({ children, size = 17 }: { children: ReactNode; size?: number }) {
   return (
     <svg
@@ -36,6 +49,9 @@ export function Sidebar({
   onNew,
   onDelete,
   onSettings,
+  links = [],
+  activeLinkId,
+  onLink,
   defaultCollapsed = false,
   footer,
 }: {
@@ -46,6 +62,10 @@ export function Sidebar({
   onNew: () => void;
   onDelete: (id: string) => void;
   onSettings: () => void;
+  /** Extra destinations, rendered above Settings. */
+  links?: readonly SidebarLink[];
+  activeLinkId?: string | undefined;
+  onLink?: (id: string) => void;
   defaultCollapsed?: boolean;
   /** Rendered below the settings row; the app fills this with a plugin slot. */
   footer?: ReactNode;
@@ -141,6 +161,31 @@ export function Sidebar({
         className="flex flex-col gap-px"
         highlightClassName="inset-x-2 rounded-control bg-hover-2"
       >
+        {links.map((link) => (
+          <button
+            data-row
+            key={link.id}
+            type="button"
+            onClick={() => onLink?.(link.id)}
+            className={rowClass(link.id === activeLinkId)}
+            title={link.label}
+          >
+            <span className="flex size-5 shrink-0 items-center justify-center text-ink-2">
+              {link.icon ?? (
+                <Icon>
+                  <rect x="4" y="3" width="16" height="18" rx="2" />
+                  <path d="M8 8h8M8 12h8M8 16h5" />
+                </Icon>
+              )}
+            </span>
+            {!collapsed && (
+              <span className="ml-1.5 min-w-0 flex-1 truncate text-md font-medium text-ink-2">
+                {link.label}
+              </span>
+            )}
+          </button>
+        ))}
+
         <button
           data-row
           type="button"

@@ -6,11 +6,13 @@ import type {
   CommandOptions,
   MarkdownContext,
   MarkdownTransformer,
+  PanelOptions,
   Plugin,
   PluginAPI,
   PluginContext,
   PluginEventContext,
   PluginUIContext,
+  RouteOptions,
   ShortcutOptions,
 } from "./pi.ts";
 import type { ProviderEntry } from "./providers.ts";
@@ -41,6 +43,22 @@ export type ContributionEntry = {
   readonly component: Contribution;
 };
 
+export type PanelEntry = {
+  /** `<pluginId>:<panelId>` — unique across plugins that pick the same id. */
+  readonly id: string;
+  /** The id as the plugin registered it. */
+  readonly panelId: string;
+  readonly pluginId: string;
+  readonly options: PanelOptions;
+};
+
+export type RouteEntry = {
+  /** The address the router matches. Always starts with `/`. */
+  readonly path: string;
+  readonly pluginId: string;
+  readonly options: RouteOptions;
+};
+
 export type ToolEntry = {
   readonly pluginId: string;
   readonly tool: ToolDefinition;
@@ -55,6 +73,10 @@ export type Registry = {
   readonly commands: readonly CommandEntry[];
   readonly shortcuts: readonly ShortcutEntry[];
   readonly contributions: readonly ContributionEntry[];
+  /** Right-rail panels, in registration order — the rail's tab order. */
+  readonly panels: readonly PanelEntry[];
+  /** Pages, in registration order; a path claimed twice keeps the first. */
+  readonly routes: readonly RouteEntry[];
   /** Flattened for `streamChat`; a name registered twice keeps the first. */
   readonly tools: readonly ToolDefinition[];
   readonly toolEntries: readonly ToolEntry[];
@@ -70,6 +92,8 @@ export const emptyRegistry: Registry = {
   commands: [],
   shortcuts: [],
   contributions: [],
+  panels: [],
+  routes: [],
   tools: [],
   toolEntries: [],
   markdown: [],
@@ -101,6 +125,42 @@ export const transformMarkdown = (
 
 /** Whether an id was derived from list position rather than declared. */
 export const isPositionalId = (id: string): boolean => /^plugin-\d+$/.test(id);
+
+/**
+ * Characters that must not reach a route pattern.
+ *
+ * A router compiles the path into a regular expression and escapes the regex
+ * metacharacters — all except `?`, which survives as an optionality quantifier.
+ * So `/note?s` would match `/notes`, claiming an address that was never
+ * registered and that another plugin may own. `#` and whitespace never appear
+ * in a pathname either, and in a path are far likelier to be a typo than intent.
+ */
+const UNUSABLE_IN_PATH = /[?#\s]/;
+
+/**
+ * The path as it will be stored and routed on, or `undefined` if unusable.
+ *
+ * Collapsed and trailing-slash-trimmed because those spellings are *not* inert:
+ * `/notes/` scores higher than `/notes` in a router's ranking, so registering
+ * the slashed spelling of a path someone else owns silently outranks them —
+ * including the app's own. Canonicalising on the way in is what makes the clash
+ * check below able to see such a pair as the one address it really is.
+ */
+const canonicalPath = (path: string): string | undefined => {
+  if (!path.startsWith("/") || UNUSABLE_IN_PATH.test(path)) return undefined;
+  const collapsed = path.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+  return collapsed === "" ? "/" : collapsed;
+};
+
+/**
+ * What two canonical paths have to share to be a clash.
+ *
+ * Route matching is case-insensitive by default, so `/Notes` and `/notes` are
+ * one address however differently they are spelled. Only the comparison is
+ * lower-cased — the stored path keeps its case, because a path may carry
+ * `:paramName`s whose casing the page reads back.
+ */
+const addressOf = (path: string): string => path.toLowerCase();
 
 /**
  * A plugin's identity — the namespace for its `ctx.storage` and the label on
@@ -279,6 +339,8 @@ export const loadPlugins = async (
   const commands: Omit<CommandEntry, "invocationName">[] = [];
   const shortcuts: ShortcutEntry[] = [];
   const contributions: ContributionEntry[] = [];
+  const panels: PanelEntry[] = [];
+  const routes: RouteEntry[] = [];
   const toolEntries: ToolEntry[] = [];
   const markdown: MarkdownEntry[] = [];
 
@@ -292,12 +354,19 @@ export const loadPlugins = async (
 
   for (const [index, plugin] of plugins.entries()) {
     const id = pluginId(plugin, index);
+    // Annotated, not asserted. `as PluginAPI` over the whole literal would only
+    // check what is here against the interface, never that all of it is here —
+    // so a method added to `PluginAPI` and forgotten below would compile, and
+    // surface as `pi.<method> is not a function` when a plugin first calls it,
+    // swallowed by the host's load handler into one console line. The cast is
+    // therefore narrowed to the single property that needs it.
     const api: PluginAPI = {
-      // The overloads on PluginAPI keep callers honest; the recorder is
-      // deliberately untyped so unfired pi events are stored just the same.
-      on: (event: string, handler: unknown) => {
+      // `on` alone: its overloads cannot be satisfied by one implementation
+      // signature, and the recorder is deliberately untyped so pi events this
+      // host never fires are stored just the same.
+      on: ((event: string, handler: unknown) => {
         recorded.push([id, event, handler]);
-      },
+      }) as PluginAPI["on"],
       registerCommand: (name, options) => {
         commands.push({ name, pluginId: id, options });
       },
@@ -329,7 +398,35 @@ export const loadPlugins = async (
           component,
         });
       },
-    } as PluginAPI;
+      registerPanel: (panelId, options) => {
+        // Namespaced, so two plugins may both call their panel "notes"; only a
+        // plugin colliding with itself is a mistake worth reporting.
+        const key = `${id}:${panelId}`;
+        if (panels.some((panel) => panel.id === key)) {
+          console.error(`[plugin:${id}] panel "${panelId}" is already registered`);
+          return;
+        }
+        panels.push({ id: key, panelId, pluginId: id, options });
+      },
+      registerRoute: (declared, options) => {
+        const path = canonicalPath(declared);
+        if (path === undefined) {
+          console.error(
+            `[plugin:${id}] route "${declared}" is not a usable path — it must start ` +
+              `with "/" and contain no "?", "#" or whitespace`,
+          );
+          return;
+        }
+        // A path is an address, not a name: it cannot be suffixed the way a
+        // duplicate command is, so a clash has to be reported instead. Compared
+        // as a router matches, not as a string — see `addressOf`.
+        if (routes.some((route) => addressOf(route.path) === addressOf(path))) {
+          console.error(`[plugin:${id}] route "${declared}" is already registered`);
+          return;
+        }
+        routes.push({ path, pluginId: id, options });
+      },
+    };
     await plugin(api);
   }
 
@@ -369,6 +466,8 @@ export const loadPlugins = async (
     commands: withInvocationNames(commands),
     shortcuts,
     contributions,
+    panels,
+    routes,
     tools,
     toolEntries,
     markdown,

@@ -64,10 +64,14 @@ what that costs and what guards it.
 | `pi.on(event, handler)` | a hook on the request lifecycle |
 | `pi.events` | a bus for talking to other plugins |
 | `pi.contribute(slot, Component)` | React into one of five named regions |
+| `pi.registerPanel(id, opts)` | a [panel](panels.md) in the right-hand rail |
+| `pi.registerRoute(path, opts)` | a [page](panels.md#pages) of your own, at an address |
 
-Every one of those is pi's, with pi's name and signature, except the last.
-[`contribute`](slots.md) is the single addition — pi's answer to rich UI returns
-terminal components, which is exactly the half that cannot cross into a browser.
+Every one of those is pi's, with pi's name and signature, except the last three.
+[`contribute`](slots.md), [`registerPanel` and `registerRoute`](panels.md) are the
+additions — pi's answer to rich UI returns terminal components, which is exactly
+the half that cannot cross into a browser, and a terminal has neither a right-hand
+rail nor an address bar to inherit.
 
 There is more of the SDK than this: `setModel`, `sendUserMessage`,
 `getActiveTools`/`setActiveTools`, `setSessionName`, and on `ctx`, `abort`,

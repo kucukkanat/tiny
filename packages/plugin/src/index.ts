@@ -1,3 +1,4 @@
+export { PluginBoundary } from "./Boundary.tsx";
 export type { PluginEvents } from "./events.ts";
 export { createEvents } from "./events.ts";
 export type { ExternalStore } from "./externalStore.ts";
@@ -9,13 +10,17 @@ export {
   usePluginEvents,
   usePluginExtensions,
   usePluginHost,
+  usePluginPanels,
   usePluginProviders,
+  usePluginRoutes,
   usePluginTools,
   useProvideApp,
 } from "./hooks.ts";
 export type { KeyId } from "./keys.ts";
 export { matchesKey } from "./keys.ts";
+export { Panels } from "./Panels.tsx";
 export { PluginHost } from "./PluginHost.tsx";
+export { PluginPage } from "./PluginPage.tsx";
 export type {
   AutocompleteItem,
   CommandInfo,
@@ -26,6 +31,7 @@ export type {
   MarkdownContext,
   MarkdownTransformer,
   NotifyLevel,
+  PanelOptions,
   Plugin,
   PluginAPI,
   PluginChat,
@@ -37,6 +43,7 @@ export type {
   PluginStorage,
   PluginStreaming,
   PluginUIContext,
+  RouteOptions,
   ShortcutOptions,
   WidgetOptions,
   WidgetPlacement,
@@ -50,7 +57,9 @@ export type {
   HostActions,
   LoadOptions,
   MarkdownEntry,
+  PanelEntry,
   Registry,
+  RouteEntry,
   ShortcutEntry,
   ToolEntry,
 } from "./registry.ts";

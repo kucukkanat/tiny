@@ -5,6 +5,6 @@ export { Loader, ShimmerLabel } from "./Loader.tsx";
 export type { ModelOption } from "./PromptBar.tsx";
 export { PromptBar } from "./PromptBar.tsx";
 export { ReasoningTrace } from "./ReasoningTrace.tsx";
-export type { SidebarChat } from "./Sidebar.tsx";
+export type { SidebarChat, SidebarLink } from "./Sidebar.tsx";
 export { Sidebar } from "./Sidebar.tsx";
 export { StreamText } from "./StreamText.tsx";

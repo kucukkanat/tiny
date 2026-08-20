@@ -10,7 +10,7 @@
  * key matching in keys.ts, slots in Slot.tsx, providers in providers.ts.
  */
 import type { ApiType, EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
 import type { KeyId } from "./keys.ts";
 import type { ProviderConfig } from "./providers.ts";
@@ -276,6 +276,44 @@ type UnfiredEvent =
   | "user_bash";
 
 /* ------------------------------------------------------------------ *
+ * Panels and pages — ours. pi is a terminal: it has one column of output
+ * and no addresses, so neither of these has a pi equivalent to inherit.
+ * ------------------------------------------------------------------ */
+
+/**
+ * A panel in the app's right-hand rail.
+ *
+ * The rail does not exist until a plugin registers one, and it is the plugin's
+ * whole width to use — unlike `contribute`, which places a fragment among the
+ * app's own chrome. Several panels become a tab strip, in registration order.
+ */
+export type PanelOptions = {
+  /** The tab's label, and the panel's heading when it is the only one. */
+  readonly title: string;
+  /** Drawn in the tab and in the collapsed rail; the title's initial when absent. */
+  readonly icon?: ReactNode | undefined;
+  /** Rendered as the rail's body. Declare it outside the factory — see Slots. */
+  readonly component: ComponentType;
+};
+
+/**
+ * A page of the plugin's own, at a path the app routes to.
+ *
+ * The page replaces the thread; the app's chrome stays, so the user is never
+ * stranded somewhere with no way back.
+ */
+export type RouteOptions = {
+  /** Rendered as the whole main area. Declare it outside the factory. */
+  readonly component: ComponentType;
+  /**
+   * When set, the app links to this page from its navigation. Leave it out for
+   * a page reached some other way — a command, a button, `ctx.navigate`.
+   */
+  readonly label?: string | undefined;
+  readonly icon?: ReactNode | undefined;
+};
+
+/* ------------------------------------------------------------------ *
  * Markdown
  * ------------------------------------------------------------------ */
 
@@ -335,6 +373,24 @@ export interface PluginAPI {
 
   /** Ours: render a React component into a named slot. */
   contribute(slot: SlotName, component: Contribution): void;
+
+  /**
+   * Ours: add a panel to the app's right-hand rail.
+   *
+   * `id` is namespaced by the plugin, so two plugins may both call theirs
+   * `notes`; registering the same id twice within one plugin is a mistake and
+   * the second is dropped with an error.
+   */
+  registerPanel(id: string, options: PanelOptions): void;
+
+  /**
+   * Ours: add a page at `path`, which must start with `/`.
+   *
+   * Unlike a command, a path cannot be disambiguated — it is the address the
+   * router resolves — so the first registration wins and a later claim on the
+   * same path is reported rather than silently shadowing it.
+   */
+  registerRoute(path: string, options: RouteOptions): void;
 }
 
 export type Plugin = {

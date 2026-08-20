@@ -62,6 +62,12 @@ export const sections: readonly Section[] = [
         blurb: "Putting React into the app, and what happens when it throws.",
       },
       {
+        slug: "panels",
+        file: "panels.md",
+        title: "Panels and pages",
+        blurb: "A rail of your own down the right, and whole pages at an address.",
+      },
+      {
         slug: "tools",
         file: "tools.md",
         title: "Tools for the model",

@@ -113,6 +113,74 @@ Inside the message list, `message.actions` gets the message it belongs to:
 `<Slot>` renders nothing when no plugin has contributed to it, so every one of
 these is safe to leave in place.
 
+## Panels and pages
+
+[Panels](panels.md) need one component, placed wherever a right-hand rail belongs:
+
+```tsx
+import { Panels } from "@tiny/plugin";
+
+<div className="flex h-full">
+  <YourSidebar />
+  <YourMain />
+  <Panels />          {/* renders nothing until a plugin registers a panel */}
+</div>
+```
+
+`<Panels />` owns the rail's chrome — the tab strip, the collapse toggle, and
+remembering which panel was open — so there is nothing to wire but the placement.
+It renders `null` while no plugin has registered a panel, which is what keeps the
+rail out of an app that has no use for one.
+
+Pages are the one surface that needs *you*, because this package ships no router
+and should not pick yours. `usePluginRoutes()` gives you the entries; map them
+onto whatever routing you already have, and render `<PluginPage>` as the element:
+
+```tsx
+import { PluginPage, usePluginRoutes } from "@tiny/plugin";
+
+const pages = usePluginRoutes();
+
+<Routes>
+  <Route path="/" element={thread} />
+  <Route path="/c/:id" element={thread} />
+  {pages.map((entry) => (
+    <Route key={entry.path} path={entry.path} element={<PluginPage entry={entry} />} />
+  ))}
+</Routes>;
+```
+
+**Declare your own routes first.** React Router breaks a tie in specificity by
+declaration order, and that is the whole of what stops a plugin claiming a path
+your app already owns. `registerRoute` canonicalises what it stores — collapsing
+repeated slashes, dropping the trailing one — so a plugin cannot slip past that
+tie by spelling your path more specifically.
+
+**Wait for `ready` before rendering a fallback route.** Factories run in an
+effect, so there is a window in which the registry is empty and no plugin page
+exists yet. A catch-all that answers during that window confidently paints the
+wrong screen at a bookmarked plugin URL:
+
+```tsx
+const { ready } = usePluginHost();
+
+<Route path="*" element={ready ? thread : <main className="flex-1" />} />;
+```
+
+`ready` turns true when the factories have finished, however they finished — a
+load that threw still counts, or the app would wait forever on plugins that are
+never coming. A `reload()` leaves it true, because the previous registry stays
+live until the new one lands.
+
+An entry whose `options.label` is set is asking for a link in your navigation; one
+without is reached some other way and should not be listed:
+
+```tsx
+const links = pages.flatMap(({ path, options: { label, icon } }) =>
+  label === undefined ? [] : [{ id: path, label, ...(icon === undefined ? {} : { icon }) }],
+);
+```
+
 ## Hand the registry to your client
 
 Two hooks return what plugins registered for the model:
@@ -133,9 +201,11 @@ const chat = useChat({
 | `usePluginExtensions()` | the `@tiny/ai` extensions the registry collected |
 | `usePluginTools()` | the `ToolDefinition[]` plugins registered, minus any `setActiveTools` switched off |
 | `usePluginProviders()` | the endpoints registered with [`registerProvider`](providers.md) |
+| `usePluginPanels()` | the [panels](panels.md) registered, in tab order — empty means no rail |
+| `usePluginRoutes()` | the [pages](panels.md#pages) registered, for your router |
 | `usePluginEvents()` | the bus behind `pi.events` |
 | `useMarkdown(text, context)` | that text after every registered transformer |
-| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `setEditorText`, `commands`, `activeTools`, the registry |
+| `usePluginHost()` | the whole host value — `runCommand`, `editorText`, `setEditorText`, `commands`, `activeTools`, `ready`, the registry |
 
 `usePluginHost()` gives you `editorText` and `setEditorText`. **Control your
 composer with them** rather than keeping a draft of your own: they are what
@@ -155,6 +225,8 @@ const registry = await loadPlugins([fileSystem(), notion({ token })]);
 registry.commands;      // [{ name, invocationName, pluginId, options }]
 registry.tools;         // ToolDefinition[], duplicates dropped
 registry.contributions; // [{ id, slot, pluginId, component }]
+registry.panels;        // [{ id, panelId, pluginId, options }], in tab order
+registry.routes;        // [{ path, pluginId, options }], first claim on a path wins
 registry.markdown;      // [{ pluginId, transformer }], in load order
 registry.providers;     // [{ id, pluginId, config }] — a snapshot, see below
 registry.extensions;    // [Extension] — one, replaying every `on()` call
@@ -210,7 +282,7 @@ render is not a request:
 
 | Throws in | Result |
 | --- | --- |
-| A contributed component | replaced by a `<pluginId> failed` marker; the rest of the app renders |
+| A contributed component, a panel or a page | replaced by a `<pluginId> failed` marker; the rest of the app renders |
 | A command handler | logged, and surfaced as an error toast |
 | A shortcut handler | logged |
 | A plugin factory | `[plugin] failed to load` — the registry keeps its previous value |

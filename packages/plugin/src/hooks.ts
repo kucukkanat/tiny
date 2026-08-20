@@ -10,7 +10,7 @@ import type {
   WidgetPlacement,
 } from "./pi.ts";
 import type { ProviderEntry } from "./providers.ts";
-import type { MarkdownEntry, Registry } from "./registry.ts";
+import type { MarkdownEntry, PanelEntry, Registry, RouteEntry } from "./registry.ts";
 import { emptyRegistry, transformMarkdown } from "./registry.ts";
 
 export type Widget = { readonly lines: readonly string[]; readonly placement: WidgetPlacement };
@@ -40,6 +40,16 @@ export type AppBridge = {
 
 export type HostValue = {
   readonly registry: Registry;
+  /**
+   * False until the plugin factories have finished, however they finished.
+   *
+   * The app renders before that — an `async` factory must not block the first
+   * frame — so anything whose *absence* would be rendered as a decision has to
+   * wait for this. A route table is the case that matters: until the registry
+   * arrives no plugin page exists, and a fallback route would confidently paint
+   * the wrong screen at a bookmarked plugin URL.
+   */
+  readonly ready: boolean;
   readonly widgets: ReadonlyMap<string, Widget>;
   readonly statuses: ReadonlyMap<string, string>;
   readonly commands: readonly CommandInfo[];
@@ -61,6 +71,7 @@ const noop = () => {};
 
 export const HostContext = createContext<HostValue>({
   registry: emptyRegistry,
+  ready: false,
   widgets: new Map(),
   statuses: new Map(),
   commands: [],
@@ -113,6 +124,21 @@ export function usePluginTools() {
     () => registry.tools.filter((tool) => activeTools.includes(tool.name)),
     [registry, activeTools],
   );
+}
+
+/** The right-rail panels plugins registered, in tab order. Empty means no rail. */
+export function usePluginPanels(): readonly PanelEntry[] {
+  return usePluginHost().registry.panels;
+}
+
+/**
+ * The pages plugins registered, for the app to hand to its router.
+ *
+ * An entry with a `label` is asking for a link in the app's navigation; one
+ * without is reached some other way, and the app should not list it.
+ */
+export function usePluginRoutes(): readonly RouteEntry[] {
+  return usePluginHost().registry.routes;
 }
 
 /** The endpoints plugins registered with `pi.registerProvider`. */

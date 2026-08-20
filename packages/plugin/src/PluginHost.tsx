@@ -52,6 +52,10 @@ export function PluginHost({
   children: ReactNode;
 }) {
   const [registry, setRegistry] = useState<Registry>(emptyRegistry);
+  // Whether the factories have run at all. A reload leaves this true: the
+  // previous registry stays live until the new one lands, so there is no moment
+  // where the app has to pretend it knows nothing.
+  const [ready, setReady] = useState(false);
   const [dialogs, setDialogs] = useState<readonly DialogRequest[]>([]);
   const [toasts, setToasts] = useState<readonly Toast[]>([]);
   const [widgets, setWidgets] = useState<ReadonlyMap<string, Widget>>(new Map());
@@ -123,13 +127,17 @@ export function PluginHost({
         // Appended rather than registered as a plugin: it is the host's own
         // bookkeeping, and must not show up in anything plugins can enumerate.
         setRegistry({ ...loaded, extensions: [...loaded.extensions, usageRecorder] });
+        setReady(true);
         settleReloads();
       },
       (error: unknown) => {
         console.error("[plugin] failed to load", error);
         // A failed load still ends the wait — `reload()` promises that the
-        // attempt is over, not that it succeeded.
-        if (live) settleReloads();
+        // attempt is over, not that it succeeded — and still counts as ready,
+        // or the app would wait forever on plugins that are never coming.
+        if (!live) return;
+        setReady(true);
+        settleReloads();
       },
     );
     return () => {
@@ -385,6 +393,7 @@ export function PluginHost({
   const value = useMemo<HostValue>(
     () => ({
       registry,
+      ready,
       widgets,
       statuses,
       commands,
@@ -399,6 +408,7 @@ export function PluginHost({
     }),
     [
       registry,
+      ready,
       widgets,
       statuses,
       commands,

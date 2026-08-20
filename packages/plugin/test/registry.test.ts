@@ -1,10 +1,29 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import type { Extension, ExtensionAPI } from "@tiny/ai";
 import { matchesKey } from "../src/keys.ts";
 import type { Plugin } from "../src/pi.ts";
 import { definePlugin } from "../src/pi.ts";
 import { loadPlugins } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
+
+/**
+ * Runs `body` with `console.error` captured, returning what it reported.
+ *
+ * The registry drops a clashing or malformed registration rather than throwing,
+ * so this line is the whole of the feedback a plugin author gets — which makes
+ * it part of the contract rather than noise, and worth asserting.
+ */
+const reported = async (body: () => Promise<void>): Promise<string[]> => {
+  const lines: string[] = [];
+  const original = console.error;
+  console.error = mock((...args: unknown[]) => void lines.push(args.join(" ")));
+  try {
+    await body();
+  } finally {
+    console.error = original;
+  }
+  return lines;
+};
 
 /** Collect what a synthesised extension registers, the way streamChat would. */
 const replayed = (extensions: readonly Extension[]): string[] => {
@@ -152,6 +171,133 @@ describe("contributions and shortcuts", () => {
     expect(shortcuts[0]?.shortcut).toBe("ctrl+k");
     expect(shortcuts[0]?.pluginId).toBe("toolbar");
   });
+});
+
+describe("panels", () => {
+  test('namespaces the id, so two plugins may both register "notes"', async () => {
+    const Left = () => null;
+    const Right = () => null;
+    const { panels } = await loadPlugins([
+      definePlugin("a", (pi) => pi.registerPanel("notes", { title: "A", component: Left })),
+      definePlugin("b", (pi) => pi.registerPanel("notes", { title: "B", component: Right })),
+    ]);
+
+    expect(panels.map((panel) => panel.id)).toEqual(["a:notes", "b:notes"]);
+    expect(panels.map((panel) => panel.panelId)).toEqual(["notes", "notes"]);
+    expect(panels[0]?.options.component).toBe(Left);
+  });
+
+  test("keeps the first when one plugin claims an id twice, and says so", async () => {
+    const First = () => null;
+    let panels: Awaited<ReturnType<typeof loadPlugins>>["panels"] = [];
+    const lines = await reported(async () => {
+      ({ panels } = await loadPlugins([
+        definePlugin("a", (pi) => {
+          pi.registerPanel("notes", { title: "First", component: First });
+          pi.registerPanel("notes", { title: "Second", component: () => null });
+        }),
+      ]));
+    });
+
+    expect(panels).toHaveLength(1);
+    expect(panels[0]?.options.component).toBe(First);
+    expect(lines).toEqual(['[plugin:a] panel "notes" is already registered']);
+  });
+
+  test("registers nothing when no plugin asks for a panel", async () => {
+    const { panels } = await loadPlugins([definePlugin("a", () => {})]);
+    expect(panels).toEqual([]);
+  });
+});
+
+describe("routes", () => {
+  test("records the path, options and owning plugin", async () => {
+    const Page = () => null;
+    const { routes } = await loadPlugins([
+      definePlugin("notes", (pi) =>
+        pi.registerRoute("/notes", { component: Page, label: "Notes" }),
+      ),
+    ]);
+
+    expect(routes).toEqual([
+      { path: "/notes", pluginId: "notes", options: { component: Page, label: "Notes" } },
+    ]);
+  });
+
+  test("keeps the first claim on a path — an address cannot be suffixed", async () => {
+    const First = () => null;
+    let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
+    const lines = await reported(async () => {
+      ({ routes } = await loadPlugins([
+        definePlugin("a", (pi) => pi.registerRoute("/notes", { component: First })),
+        definePlugin("b", (pi) => pi.registerRoute("/notes", { component: () => null })),
+      ]));
+    });
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]?.pluginId).toBe("a");
+    expect(routes[0]?.options.component).toBe(First);
+    expect(lines).toEqual(['[plugin:b] route "/notes" is already registered']);
+  });
+
+  /**
+   * The spellings a router treats as one address. Comparing the strings would
+   * let each of these past the clash check, and then let the router choose —
+   * and `/notes/` outranks `/notes`, so the *second* plugin would win.
+   */
+  test.each([["/Notes"], ["/notes/"], ["//notes"], ["/notes//"]])(
+    "sees %s as the same address as /notes",
+    async (spelling) => {
+      const First = () => null;
+      let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
+      const lines = await reported(async () => {
+        ({ routes } = await loadPlugins([
+          definePlugin("a", (pi) => pi.registerRoute("/notes", { component: First })),
+          definePlugin("b", (pi) => pi.registerRoute(spelling, { component: () => null })),
+        ]));
+      });
+
+      expect(routes).toHaveLength(1);
+      expect(routes[0]?.options.component).toBe(First);
+      expect(lines).toEqual([`[plugin:b] route "${spelling}" is already registered`]);
+    },
+  );
+
+  test("stores the canonical spelling, so a slashed path cannot outrank a plain one", async () => {
+    const { routes } = await loadPlugins([
+      definePlugin("a", (pi) => pi.registerRoute("//deep//page//", { component: () => null })),
+    ]);
+
+    expect(routes[0]?.path).toBe("/deep/page");
+  });
+
+  test("keeps the case of a path, because a page reads its own params back", async () => {
+    const { routes } = await loadPlugins([
+      definePlugin("a", (pi) => pi.registerRoute("/report/:userId", { component: () => null })),
+    ]);
+
+    expect(routes[0]?.path).toBe("/report/:userId");
+  });
+
+  /**
+   * `?` is the one regex metacharacter a router does not escape when it compiles
+   * a path, so it would survive as a quantifier: `/note?s` matches `/notes`.
+   */
+  test.each([["notes"], ["/note?s"], ["/search?q="], ["/a#b"], ["/two words"], [""]])(
+    "drops the unusable path %p",
+    async (path) => {
+      let routes: Awaited<ReturnType<typeof loadPlugins>>["routes"] = [];
+      const lines = await reported(async () => {
+        ({ routes } = await loadPlugins([
+          definePlugin("a", (pi) => pi.registerRoute(path, { component: () => null })),
+        ]));
+      });
+
+      expect(routes).toEqual([]);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain(`route "${path}" is not a usable path`);
+    },
+  );
 });
 
 describe("matchesKey", () => {

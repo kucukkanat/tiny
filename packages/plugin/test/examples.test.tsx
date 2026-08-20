@@ -1,13 +1,18 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useMemo } from "react";
 import { clearChat } from "../examples/clearChat.ts";
 import { copyButton } from "../examples/copyButton.tsx";
 import { greet } from "../examples/greet.ts";
+import { outlinePanel } from "../examples/outlinePanel.tsx";
 import { savedPrompts } from "../examples/savedPrompts.tsx";
+import { scratchpadPage } from "../examples/scratchpadPage.tsx";
 import { tokenMeter } from "../examples/tokenMeter.ts";
-import { usePluginHost } from "../src/hooks.ts";
+import { usePluginHost, useProvideApp } from "../src/hooks.ts";
+import { Panels } from "../src/Panels.tsx";
 import { PluginHost } from "../src/PluginHost.tsx";
-import type { Plugin } from "../src/pi.ts";
+import { PluginPage } from "../src/PluginPage.tsx";
+import type { Plugin, PluginMessage } from "../src/pi.ts";
 import { emptyRegistry, loadPlugins } from "../src/registry.ts";
 import { Slot, Widgets } from "../src/Slot.tsx";
 
@@ -23,6 +28,37 @@ afterEach(() => {
 let host: ReturnType<typeof usePluginHost> | undefined;
 function Probe() {
   host = usePluginHost();
+  return null;
+}
+
+// Hoisted: an inline default would be a new identity on every render, and the
+// bridge is memoised on it — which is the re-render loop `useProvideApp` warns
+// about, and a good demonstration of how easy it is to write.
+const ignore = (_text: string) => {};
+
+/** Publishes a fixed thread, so an example that reads chat state has one. */
+function Thread({
+  messages,
+  onSend = ignore,
+}: {
+  messages: readonly PluginMessage[];
+  onSend?: (text: string) => void;
+}) {
+  useProvideApp(
+    useMemo(
+      () => ({
+        messages,
+        streaming: undefined,
+        settings: undefined,
+        signal: undefined,
+        send: onSend,
+        stop: () => {},
+        updateSettings: () => {},
+        navigate: () => {},
+      }),
+      [messages, onSend],
+    ),
+  );
   return null;
 }
 
@@ -110,6 +146,70 @@ describe("examples run", () => {
       await host?.runCommand("tokens:hide");
     });
     await waitFor(() => expect(screen.queryByTestId("plugin-widgets-aboveEditor")).toBeNull());
+  });
+
+  test("outlinePanel puts a rail on the app and replays a question into the composer", async () => {
+    localStorage.clear();
+    const messages: readonly PluginMessage[] = [
+      { role: "user", content: "What is a monoid?" },
+      { role: "assistant", content: "A set with an associative op and an identity." },
+    ];
+    await mount(
+      [outlinePanel()],
+      <>
+        <Thread messages={messages} />
+        <Panels />
+      </>,
+    );
+
+    // The rail exists because a panel was registered — nothing else asked for it.
+    await waitFor(() => expect(screen.getByTestId("plugin-panels")).toBeDefined());
+    // Only the questions, not the answers.
+    const entries = screen.getAllByTestId("outline-entry");
+    expect(entries.map((node) => node.textContent)).toEqual(["What is a monoid?"]);
+
+    await act(async () => entries[0]?.click());
+    await waitFor(() => expect(host?.editorText).toBe("What is a monoid?"));
+  });
+
+  test("scratchpadPage registers a labelled page that persists what is typed", async () => {
+    localStorage.clear();
+    const { routes } = await loadPlugins([scratchpadPage()]);
+    const entry = routes[0];
+    expect(entry?.path).toBe("/scratchpad");
+    // The label is the page asking the app for a navigation row.
+    expect(entry?.options.label).toBe("Scratchpad");
+    if (entry === undefined) return;
+
+    await mount([scratchpadPage()], <PluginPage entry={entry} />);
+
+    const notes = await waitFor(() => screen.getByTestId("scratchpad") as HTMLTextAreaElement);
+    await act(async () => {
+      fireEvent.change(notes, { target: { value: "Ask about monoids" } });
+    });
+    expect(localStorage.getItem("tiny-plugin:scratchpadPage:text")).toBe('"Ask about monoids"');
+
+    // Notes that "outlive the conversation" have to be read back on the next
+    // visit, which is a fresh mount — asserting the write alone would pass even
+    // if the textarea always started empty and the first keystroke wiped them.
+    cleanup();
+    await mount([scratchpadPage()], <PluginPage entry={entry} />);
+    const reopened = await waitFor(() => screen.getByTestId("scratchpad") as HTMLTextAreaElement);
+    expect(reopened.value).toBe("Ask about monoids");
+
+    // And the button hands them to the chat, through the app's own `send`.
+    cleanup();
+    const sent: string[] = [];
+    await mount(
+      [scratchpadPage()],
+      <>
+        <Thread messages={[]} onSend={(text) => sent.push(text)} />
+        <PluginPage entry={entry} />
+      </>,
+    );
+    await waitFor(() => expect(screen.getByTestId("scratchpad-ask")).toBeDefined());
+    await act(async () => screen.getByTestId("scratchpad-ask").click());
+    expect(sent).toEqual(["Ask about monoids"]);
   });
 
   test("savedPrompts stores in its own namespace and offers a picker", async () => {

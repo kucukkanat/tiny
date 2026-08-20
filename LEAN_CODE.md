@@ -48,7 +48,7 @@ packages. Every collision below cost real time here:
 | `memory.ts`, in an LLM repo | conversation memory | `inMemoryRoot.ts` |
 | `Thinking` beside `Loader` | both render "Thinking" | `ReasoningTrace` |
 | `resolve()` exported | `Promise.resolve` | `decideCall()` |
-| `opfs.ts` | the file that touches OPFS | `paths.ts` — it is the one that doesn't |
+| `opfs.ts` | tied to one backend | `paths.ts` — it walks any directory handle |
 
 **Use one word for one concept, end to end.** A value that is `modelOptions`,
 then `selectedOptions`, then `options.model`, then `descriptor` is four things to

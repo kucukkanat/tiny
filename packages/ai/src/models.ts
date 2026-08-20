@@ -1,6 +1,7 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { type ApiType, DEFAULT_API } from "./apis.ts";
-import { ChatApiError, type Endpoint } from "./types.ts";
+import type { Endpoint } from "./chat.ts";
+import { ChatApiError } from "./errors.ts";
 
 /** Tags models as coming from the user's endpoint rather than a known provider. */
 export const PROVIDER_ID = "endpoint";

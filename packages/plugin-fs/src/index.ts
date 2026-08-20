@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 import { fileSystemTools, type RootResolver } from "./tools.ts";
 
@@ -28,13 +28,13 @@ const originPrivateRoot: RootResolver = () => {
  * Filesystem tools for the model, backed by the Origin Private File System.
  *
  * OPFS is sandboxed to this origin and invisible to the real disk, so the tools
- * run without confirmation: the worst they can reach is data this app wrote.
+ * run without confirmation unless a gate like `@tiny/plugin-hitl` is loaded (the chat app loads one): the worst they can reach is data this app wrote.
  *
  * ```ts
  * export const plugins: readonly Plugin[] = [fileSystem()];
  * ```
  */
-export const fileSystem = (options: FileSystemOptions = {}): Plugin =>
+export const fileSystem = (options: FileSystemOptions = {}): IdentifiedPlugin =>
   definePlugin("fileSystem", (pi) => {
     const tools = fileSystemTools(options.root ?? originPrivateRoot);
     for (const tool of tools) pi.registerTool(tool);

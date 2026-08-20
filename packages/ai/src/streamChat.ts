@@ -10,6 +10,8 @@ import type {
   Usage,
 } from "@earendil-works/pi-ai";
 import { type ApiType, apiFor } from "./apis.ts";
+import type { ChatMessage, Endpoint, StreamDelta } from "./chat.ts";
+import { ChatApiError } from "./errors.ts";
 import {
   BLOCKED_MESSAGE,
   type Extension,
@@ -22,16 +24,7 @@ import {
   notify,
 } from "./extension.ts";
 import { endpointModel, fetchModelIds, type ModelSpec } from "./models.ts";
-import {
-  ChatApiError,
-  type ChatMessage,
-  type Endpoint,
-  type StreamDelta,
-  type ToolDefinition,
-  type ToolResult,
-  type ToolUpdate,
-  toolText,
-} from "./types.ts";
+import { type ToolDefinition, type ToolResult, type ToolUpdate, toolText } from "./tools.ts";
 
 /** Replayed history carries no token accounting of its own. */
 const NO_USAGE: Usage = {

@@ -1,7 +1,18 @@
 # Anatomy of a plugin
 
 ```ts
-export type Plugin = (pi: PluginAPI) => void | Promise<void>;
+// A plugin is a function. `definePlugin` gives it the id that namespaces its
+// storage — see "Identity" below.
+export type Plugin = {
+  (pi: PluginAPI): void | Promise<void>;
+  readonly id?: string | undefined;
+};
+export type IdentifiedPlugin = Plugin & { readonly id: string };
+
+export const definePlugin: (
+  id: string,
+  setup: (pi: PluginAPI) => void | Promise<void>,
+) => IdentifiedPlugin;
 ```
 
 A plugin is a function that receives the plugin API and registers things. It is
@@ -12,18 +23,20 @@ in the chat app needed no edit when this package arrived.
 Export a **named factory**, not a default, and not the plugin itself:
 
 ```ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
-export const tokenMeter = (options: { limit?: number } = {}): Plugin => (pi) => {
-  // …registrations
-};
+export const tokenMeter = (options: { limit?: number } = {}): IdentifiedPlugin =>
+  definePlugin("tokenMeter", (pi) => {
+    // …registrations
+  });
 ```
 
 The factory is where configuration goes, so the registry reads as a list of
 configured plugins rather than a list of imports:
 
 ```ts
-export const plugins: readonly Plugin[] = [fileSystem(), notion({ token })];
+export const plugins: readonly IdentifiedPlugin[] = [fileSystem(), notion({ token })];
 ```
 
 The one exception is a plugin meant to be installed at
@@ -270,7 +283,7 @@ rather than throwing — `loadPlugins` is usable on its own, in a test or a scri
 
 ## Slots
 
-`pi.contribute(slot, Component)` renders React into one of four named regions:
+`pi.contribute(slot, Component)` renders React into one of five named regions:
 [Slots and rendering](slots.md).
 
 ## Unregistering

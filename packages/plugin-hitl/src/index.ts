@@ -1,4 +1,4 @@
-import type { Plugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
+import type { IdentifiedPlugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 import { inlineApproval, type Verdict } from "./inlineApproval.tsx";
 import { createPendingStore } from "./pending.ts";
@@ -44,7 +44,7 @@ const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(S
  * export const plugins = [humanInTheLoop({ allow: ["fs_read"] })];
  * ```
  */
-export const humanInTheLoop = (options: HitlOptions = {}): Plugin =>
+export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
   definePlugin("humanInTheLoop", (pi) => {
     // The question lives here rather than in a dialog: the card is contributed
     // into the reply, and this is what the two halves talk through.

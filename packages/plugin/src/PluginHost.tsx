@@ -18,6 +18,7 @@ import { createProviderStore, type ProviderStore } from "./providers.ts";
 import {
   emptyRegistry,
   type HostActions,
+  isPositionalId,
   loadPlugins,
   type Registry,
   terminalFallbacks,
@@ -244,7 +245,7 @@ export function PluginHost({
       /* — terminal-only: pi's documented RPC fallbacks — */
       ...terminalFallbacks,
 
-      // Overrides one of those fallbacks: this host owns the composer's text —
+      // Not a fallback: this host owns the composer's text —
       // `PromptBar` is controlled by `editorText` — so a plugin reading the
       // draft gets the draft, including what the user typed by hand.
       getEditorText: () => editorTextRef.current,
@@ -462,8 +463,22 @@ const sameBridge = (a: AppBridge, b: AppBridge): boolean => {
 /** Per-plugin localStorage, so a plugin cannot reach the app's own keys. */
 const namespacedStorage = (pluginId: string) => {
   const prefix = `tiny-plugin:${pluginId}:`;
+  // Warned here rather than at load: an id derived from list position only
+  // matters once something is stored under it, because that is what moves when
+  // the list is reordered. Plugins that never touch storage are unaffected.
+  let warned = false;
+  const warnIfPositional = () => {
+    if (warned || !isPositionalId(pluginId)) return;
+    warned = true;
+    console.warn(
+      `[plugin] "${pluginId}" declared no id, so this data is namespaced by its ` +
+        `position in the plugin list and moves if that list changes. ` +
+        `Wrap the plugin in definePlugin("<name>", …).`,
+    );
+  };
   return {
     get<T>(key: string): T | undefined {
+      warnIfPositional();
       const raw = localStorage.getItem(prefix + key);
       if (raw === null) return undefined;
       try {
@@ -473,6 +488,7 @@ const namespacedStorage = (pluginId: string) => {
       }
     },
     set(key: string, value: unknown) {
+      warnIfPositional();
       localStorage.setItem(prefix + key, JSON.stringify(value));
     },
     remove(key: string) {

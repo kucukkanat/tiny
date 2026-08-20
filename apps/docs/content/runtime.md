@@ -14,7 +14,7 @@ There is no runtime-plugin subsystem in the host. `@tiny/plugin-manager` is an
 **ordinary plugin** — it appears in the app's registry alongside every other one:
 
 ```ts
-export const plugins: readonly Plugin[] = [
+export const plugins: readonly IdentifiedPlugin[] = [
   // …the plugins that ship with the build…
 
   // Lets the user install further plugins at runtime, from a URL or pasted

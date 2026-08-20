@@ -1,24 +1,9 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type { ApiType } from "./apis.ts";
 
-export type ChatRole = "system" | "user" | "assistant";
-
-export type ChatMessage = {
-  readonly role: ChatRole;
-  readonly content: string;
-};
-
-/** Connection details for one endpoint. */
-export type Endpoint = {
-  /** e.g. "https://api.openai.com/v1" — with or without trailing slash. */
-  readonly baseUrl: string;
-  readonly apiKey: string;
-  /**
-   * Which pi streaming implementation the endpoint speaks. Defaults to
-   * `openai-completions`, so an endpoint that omits it behaves as it always did.
-   */
-  readonly api?: ApiType | undefined;
-};
+/**
+ * The tool contract: what a tool is, what it returns, and what it is handed.
+ * pi's shapes, with the one deliberate difference noted on `ToolDefinition`.
+ */
 
 /** One block of tool output. pi carries more kinds; text is what a chat reads. */
 export type ToolContent = { readonly type: "text"; readonly text: string };
@@ -107,42 +92,3 @@ export const toolOutput = (text: string, rest: Omit<ToolResult, "content"> = {})
   content: [{ type: "text", text }],
   ...rest,
 });
-
-/** What a tool call did, as the UI sees it. */
-export type ToolStatus = "running" | "ok" | "error";
-
-/** One incremental piece of a streamed reply. */
-export type StreamDelta =
-  | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "reasoning"; readonly text: string }
-  | {
-      readonly kind: "tool";
-      readonly id: string;
-      readonly name: string;
-      readonly status: ToolStatus;
-      /** A one-line summary — the arguments while running, the result after. */
-      readonly summary: string;
-    };
-
-/**
- * A failed request. `status` is set when the failure came from a response this
- * package reads itself (model listing). Streaming failures come back from pi-ai
- * with the status already folded into the message, so `status` is undefined there.
- */
-export class ChatApiError extends Error {
-  constructor(
-    message: string,
-    readonly status?: number,
-  ) {
-    super(message);
-    this.name = "ChatApiError";
-  }
-}
-
-/** `"401: bad key"` when the status is known, otherwise just the message. */
-export const describeError = (error: unknown): string =>
-  error instanceof ChatApiError && error.status !== undefined
-    ? `${error.status}: ${error.message}`
-    : error instanceof Error
-      ? error.message
-      : String(error);

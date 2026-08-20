@@ -9,7 +9,7 @@ UI is `ctx.ui.custom()` and `(tui, theme) => Component` factories — which is
 exactly the terminal-only half of its SDK, the part that cannot cross into a
 browser. So this is ours.
 
-## The four slots
+## The five slots
 
 ```ts
 type SlotName =
@@ -48,7 +48,7 @@ asked where that tool call is, instead of interrupting the whole app. See
 [Approvals](tools.md#approvals-are-just-an-event).
 
 Only `message.actions` fills them — with the message it is rendered under and that
-message's position in the thread. The other three slots pass `undefined` for both,
+message's position in the thread. The other four slots pass `undefined` for both,
 so a component shared between slots must handle their absence:
 
 ```tsx

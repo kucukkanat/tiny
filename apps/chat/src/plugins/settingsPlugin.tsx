@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { settingsComplete } from "../settings.ts";
@@ -13,7 +13,7 @@ import { SettingsDialog } from "./SettingsDialog.tsx";
  * `App` keeps no settings state of its own, and `Sidebar`'s gear simply runs
  * the command.
  */
-export const settingsPlugin = (): Plugin => {
+export const settingsPlugin = (): IdentifiedPlugin => {
   // Open/closed lives in the plugin's own closure: the command handler and the
   // contributed component are separate call sites that need the same switch.
   const open = createExternalStore(false);

@@ -13,8 +13,8 @@ Counted against pi's documented surface.
 
 | Area | pi | Here |
 | --- | --- | --- |
-| `ctx.ui.*` | 26 methods | all 26 — 10 functional, 16 degraded as RPC degrades them — plus `open()` |
-| Events for `pi.on` | 34 | all 34 accepted; 5 fire |
+| `ctx.ui.*` | 28 methods | all 28 — 11 functional, 17 degraded as RPC degrades them — plus `open()` |
+| Events for `pi.on` | 34 | all 34 accepted; 6 fire |
 | `pi.*` methods | 26 | 15, plus `contribute()` |
 | `ExtensionContext` | 18 members | 9, plus 7 of the app's own |
 | `ExtensionCommandContext` extras | 7 | `reload()` |
@@ -64,6 +64,7 @@ Same names, argument order and return values.
 | `ctx.ui.select / confirm / input` | including `{ timeout, signal }` and pi's dismissal values |
 | `ctx.ui.editor(title, prefill)` | pi takes no options here, so neither do we |
 | `ctx.ui.notify / setStatus / setWidget / setTitle / setEditorText / pasteToEditor` | fire-and-forget |
+| `ctx.ui.getEditorText()` | the composer's draft, including what the user typed — this host owns it |
 | `ctx.mode`, `ctx.hasUI`, `ctx.signal` | `mode` is `"react"` |
 | `ctx.abort()`, `ctx.isIdle()`, `ctx.hasPendingMessages()` | one reply at a time, so the last two are opposites |
 | `ctx.getContextUsage()` | tokens for the turn |

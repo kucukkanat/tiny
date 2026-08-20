@@ -22,6 +22,7 @@ export type {
   CommandOptions,
   ContextUsage,
   DialogOptions,
+  IdentifiedPlugin,
   MarkdownContext,
   MarkdownTransformer,
   NotifyLevel,

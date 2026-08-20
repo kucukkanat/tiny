@@ -129,19 +129,12 @@ describe("plugin identity", () => {
     expect(commands[0]?.pluginId).toBe("real-id");
   });
 
-  test("falls back to position, loudly, when no id is declared", async () => {
-    const warn = console.warn;
-    const warnings: string[] = [];
-    console.warn = (message: string) => void warnings.push(message);
-    try {
-      const { commands } = await loadPlugins([
-        (pi) => pi.registerCommand("y", { handler: () => {} }),
-      ]);
-      expect(commands[0]?.pluginId).toBe("plugin-0");
-      expect(warnings.join(" ")).toContain("definePlugin");
-    } finally {
-      console.warn = warn;
-    }
+  test("falls back to its position when no id is declared", async () => {
+    const { commands } = await loadPlugins([
+      (pi) => pi.registerCommand("y", { handler: () => {} }),
+    ]);
+
+    expect(commands[0]?.pluginId).toBe("plugin-0");
   });
 });
 

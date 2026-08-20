@@ -99,23 +99,24 @@ export const transformMarkdown = (
   return current;
 };
 
+/** The id given to a plugin that declared none: its position in the list. */
+export const positionalId = (index: number): string => `plugin-${index}`;
+
+/** Whether an id was derived from list position rather than declared. */
+export const isPositionalId = (id: string): boolean => /^plugin-\d+$/.test(id);
+
 /**
  * A plugin's identity — the namespace for its `ctx.storage` and the label on
  * its errors, so it has to be the same in every build.
  *
  * Deliberately not `plugin.name`: minifiers erase function names, so that would
  * differ between `bun run dev` and `bun run build` and move the user's stored
- * data on release. `definePlugin` is how a plugin says who it is.
+ * data on release. `definePlugin` is how a plugin says who it is; a plugin that
+ * does not is identified by position, and warns the first time it uses storage,
+ * which is the only moment the difference can cost anything.
  */
-const pluginId = (plugin: Plugin, index: number): string => {
-  if (plugin.id !== undefined && plugin.id !== "") return plugin.id;
-  console.warn(
-    `[plugin] the plugin at position ${index} declares no id, so its storage is ` +
-      `namespaced "plugin-${index}" and moves if the list is reordered. ` +
-      `Wrap it in definePlugin("<name>", …).`,
-  );
-  return `plugin-${index}`;
-};
+const pluginId = (plugin: Plugin, index: number): string =>
+  plugin.id !== undefined && plugin.id !== "" ? plugin.id : positionalId(index);
 
 /**
  * pi keeps every registration of a duplicated command name and disambiguates

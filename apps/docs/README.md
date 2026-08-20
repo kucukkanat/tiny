@@ -57,7 +57,7 @@ a documented example cannot rot into something that no longer compiles.
 | `src/render.ts` | markdown → HTML via `marked`, highlighted by `shiki` at build time |
 | `src/shell.ts` | the page template: top bar, sidebar, on-this-page, pager |
 | `src/build.ts` | renders every page, writes assets, emits the search index |
-| `src/client.ts` | the only browser JavaScript: search and the mobile nav toggle |
+| `src/browser.ts` | the only browser JavaScript: search and the mobile nav toggle |
 | `src/docs.css` | layout only — every colour comes from `@tiny/ui/tokens.css` |
 
 Code is highlighted once, at build time, in both themes at once — Shiki emits

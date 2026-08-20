@@ -156,12 +156,19 @@ ctx.storage.remove("saved");
 ```
 
 JSON-serialised into `localStorage` under `tiny-plugin:<pluginId>:<key>`, so
-nothing you write can collide with the app's keys or another plugin's. A value
-that fails to parse reads back as `undefined` rather than throwing.
+nothing you write can collide with the app's own keys. A value that fails to
+parse reads back as `undefined` rather than throwing.
 
-The `pluginId` half of that prefix is your factory's function name — see
-[plugin identity](anatomy.md#when-factories-run-and-what-identity-they-get) for
-why an anonymous factory gets a positional id instead, and how to avoid it.
+The `pluginId` half of that prefix is **the id you passed to `definePlugin`** —
+see [plugin identity](anatomy.md). A plugin that declares none is namespaced by
+its position in the list, which moves when the list does; it warns the first
+time it stores anything.
+
+> Two exceptions to "cannot collide". Plugins installed at runtime all share
+> `@tiny/plugin-manager`'s identity, so they share one namespace with it and
+> with each other — see [runtime plugins](runtime.md). And `localStorage` is not
+> a boundary: any plugin can read any key directly, since a plugin is ordinary
+> code in the page.
 
 ## Commands
 

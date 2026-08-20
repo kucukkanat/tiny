@@ -10,6 +10,8 @@ export type {
 } from "@earendil-works/pi-ai";
 export type { ApiType } from "./apis.ts";
 export { API_TYPES, apiFor, DEFAULT_API, isApiType } from "./apis.ts";
+export type { ChatMessage, ChatRole, Endpoint, StreamDelta, ToolStatus } from "./chat.ts";
+export { ChatApiError, describeError } from "./errors.ts";
 export type {
   BeforeAgentStartEvent,
   BeforeAgentStartEventResult,
@@ -31,15 +33,10 @@ export type { ModelSpec } from "./models.ts";
 export { endpointModel, fetchModelIds, PROVIDER_ID } from "./models.ts";
 export { listModels, streamChat } from "./streamChat.ts";
 export type {
-  ChatMessage,
-  ChatRole,
-  Endpoint,
-  StreamDelta,
   ToolContent,
   ToolDefinition,
   ToolExecuteContext,
   ToolResult,
-  ToolStatus,
   ToolUpdate,
-} from "./types.ts";
-export { ChatApiError, describeError, toolOutput, toolText } from "./types.ts";
+} from "./tools.ts";
+export { toolOutput, toolText } from "./tools.ts";

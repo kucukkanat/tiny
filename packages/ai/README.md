@@ -333,7 +333,7 @@ The app owns its extensions; this package only runs them. Write the extension in
 ```ts
 import { beTerse } from "./beTerse.ts";
 
-export const plugins: readonly Plugin[] = [
+export const plugins: readonly IdentifiedPlugin[] = [
   // …the plugins already there…
   beTerse(),
 ];

@@ -28,16 +28,18 @@ for some of them.
 Create `apps/chat/src/plugins/greet.ts`:
 
 ```ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
-export const greet = (): Plugin => (pi) => {
-  pi.registerCommand("greet", {
-    description: "Say hello",
-    handler: (args, ctx) => {
-      ctx.ui.notify(`Hello, ${args === "" ? "world" : args}`, "info");
-    },
+export const greet = (): IdentifiedPlugin =>
+  definePlugin("greet", (pi) => {
+    pi.registerCommand("greet", {
+      description: "Say hello",
+      handler: (args, ctx) => {
+        ctx.ui.notify(`Hello, ${args === "" ? "world" : args}`, "info");
+      },
+    });
   });
-};
 ```
 
 Add it to the registry in `apps/chat/src/plugins/index.ts` — an import and one
@@ -47,7 +49,7 @@ line in the list:
 import { greet } from "./greet.ts";        // specifiers carry the extension;
                                            // a plugin that renders React is .tsx
 
-export const plugins: readonly Plugin[] = [
+export const plugins: readonly IdentifiedPlugin[] = [
   // …the plugins already there…
   greet(),
 ];

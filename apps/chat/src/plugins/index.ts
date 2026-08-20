@@ -1,4 +1,5 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 import { fileSystem } from "@tiny/plugin-fs";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 import { pluginManager } from "@tiny/plugin-manager";
@@ -27,9 +28,12 @@ export { historyWindow, settingsPlugin, streamTrace, systemPrompt, usageLogger }
  * calls rather than the request. The two commented out do rewrite it, so they
  * are left opt-in rather than quietly changing how every conversation behaves.
  */
-export const plugins: readonly Plugin[] = [
-  usageLogger(),
-  streamTrace(),
+export const plugins: readonly IdentifiedPlugin[] = [
+  // Wrapped rather than declared inside: these two are plain `@tiny/ai`
+  // extensions, and the point of them is that an extension *is* a plugin. The
+  // app is what decides their identity, and the type above insists it does.
+  definePlugin("usageLogger", usageLogger()),
+  definePlugin("streamTrace", streamTrace()),
   settingsPlugin(),
   // Ask before the model runs a tool. Listed before the plugins that register
   // tools only for readability — `tool_call` fires for every tool in the

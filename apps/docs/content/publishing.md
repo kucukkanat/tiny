@@ -17,8 +17,7 @@ way to anyone arriving from npm:
 | Third-party, scoped | `@<vendor>/tiny-plugin-<name>` |
 | The host itself | `@tiny/plugin` — never a plugin |
 
-The rule of thumb: **`tiny-plugin-` appears in every plugin package name, and
-nowhere else.** `@tiny/ai` and `@tiny/ui` are libraries, not plugins, and their
+The rule of thumb: **`plugin-` follows the scope in every plugin package name.** `@tiny/ai` and `@tiny/ui` are libraries, not plugins, and their
 names say so.
 
 ## Shape of a package
@@ -32,13 +31,14 @@ import type { Plugin } from "@tiny/plugin";
 
 export type NotionOptions = { readonly token: string };
 
-export const notion = ({ token }: NotionOptions): Plugin => (pi) => {
-  pi.registerTool({ name: "notion_search", /* … */ });
-};
+export const notion = ({ token }: NotionOptions): IdentifiedPlugin =>
+  definePlugin("notion", (pi) => {
+    pi.registerTool({ name: "notion_search", /* … */ });
+  });
 ```
 
 ```ts
-export const plugins: readonly Plugin[] = [fileSystem(), notion({ token })];
+export const plugins: readonly IdentifiedPlugin[] = [fileSystem(), notion({ token })];
 ```
 
 Take `@tiny/plugin` as a **peer dependency**, not a dependency — the host must be
@@ -123,7 +123,7 @@ Keep one implementation and wrap it:
 
 ```ts
 // src/index.ts        — for apps that bundle it
-export const shout = (): Plugin => (pi) => { /* … */ };
+export const shout = (): IdentifiedPlugin => definePlugin("shout", (pi) => { /* … */ });
 
 // src/standalone.ts   — for the Plugins dialog
 import { shout } from "./index.ts";

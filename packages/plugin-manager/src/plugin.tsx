@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
 import { useSyncExternalStore } from "react";
 import { activate } from "./activate.ts";
@@ -20,7 +20,7 @@ export type PluginManagerOptions = InstalledOptions;
  * registry: that is what makes a removed plugin actually stop running, since
  * registrations have no undo of their own.
  */
-export const pluginManager = (options: PluginManagerOptions = {}): Plugin => {
+export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlugin => {
   const store = openInstalled(options);
 
   // Open/closed lives in the factory's closure, the same arrangement the

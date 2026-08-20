@@ -70,11 +70,16 @@ safe. What it cannot defend against is a field that genuinely changes:
 send: (text) => chat.send(text),   // …if `chat.send` itself is unstable
 
 // Wrong — the callback gets folded into `send`, so `send` is unstable too.
-const chat = useChat(id, endpoint, model, (createdId) => navigate(`/c/${createdId}`));
+const chat = useChat({
+  conversationId: id,
+  endpoint,
+  model,
+  onConversationCreated: (createdId) => navigate(`/c/${createdId}`),
+});
 
 // Right.
 const onCreated = useCallback((createdId: string) => navigate(`/c/${createdId}`), [navigate]);
-const chat = useChat(id, endpoint, model, onCreated);
+const chat = useChat({ conversationId: id, endpoint, model, onConversationCreated });
 ```
 
 Watch for callbacks that get folded into others. An inline `onConversationCreated`
@@ -113,7 +118,14 @@ these is safe to leave in place.
 Two hooks return what plugins registered for the model:
 
 ```tsx
-const chat = useChat(id, endpoint, model, onCreated, usePluginExtensions(), usePluginTools());
+const chat = useChat({
+  conversationId: id,
+  endpoint,
+  model,
+  onConversationCreated,
+  extensions: usePluginExtensions(),
+  tools: usePluginTools(),
+});
 ```
 
 | Hook | Returns |
@@ -181,7 +193,7 @@ const replay: Extension = (pi) => {
     const on = pi.on as (event: string, handler: unknown) => void;
     // Events this facade never fires are dropped rather than registered, so a
     // pi extension subscribing to `session_start` loads without erroring.
-    if (FIRED_EVENTS.has(event)) on(event, handler);
+    if (firesEvent(event)) on(event, handler);
   }
 };
 ```

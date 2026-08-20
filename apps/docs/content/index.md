@@ -15,14 +15,16 @@ non-terminal frontend runs here unmodified.
 That is the whole shape. It receives `pi`, registers what it wants, and returns.
 
 ```ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
+import { definePlugin } from "@tiny/plugin";
 
-export const shout = (): Plugin => (pi) => {
-  pi.registerCommand("shout", {
-    description: "Send the draft in caps",
-    handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
+export const shout = (): IdentifiedPlugin =>
+  definePlugin("shout", (pi) => {
+    pi.registerCommand("shout", {
+      description: "Send the draft in caps",
+      handler: (_args, ctx) => ctx.chat.send(ctx.ui.getEditorText().toUpperCase()),
+    });
   });
-};
 ```
 
 Registering is all a factory does. Everything it registered is collected into one
@@ -61,7 +63,7 @@ what that costs and what guards it.
 | `pi.registerMarkdownTransformer(fn)` | a rewrite of message text on its way to the screen |
 | `pi.on(event, handler)` | a hook on the request lifecycle |
 | `pi.events` | a bus for talking to other plugins |
-| `pi.contribute(slot, Component)` | React into one of four named regions |
+| `pi.contribute(slot, Component)` | React into one of five named regions |
 
 Every one of those is pi's, with pi's name and signature, except the last.
 [`contribute`](slots.md) is the single addition — pi's answer to rich UI returns

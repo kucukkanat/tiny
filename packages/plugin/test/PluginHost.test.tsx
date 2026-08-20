@@ -282,6 +282,28 @@ describe("context and commands", () => {
     console.error = consoleError;
   });
 
+  test("warns when a plugin without an id stores something, and not before", async () => {
+    const warn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (message: string) => void warnings.push(message);
+    try {
+      // No `definePlugin`, so its id is its position — which moves when the
+      // list does, taking whatever it stored with it.
+      await mount([
+        (pi) => pi.registerCommand("keep", { handler: (_a, ctx) => ctx.storage.set("k", 1) }),
+      ]);
+      expect(warnings).toEqual([]);
+
+      await runCommand("keep");
+
+      expect(warnings.join(" ")).toContain("definePlugin");
+      expect(localStorage.getItem("tiny-plugin:plugin-0:k")).toBe("1");
+    } finally {
+      console.warn = warn;
+      localStorage.clear();
+    }
+  });
+
   test("storage is namespaced per plugin", async () => {
     const alpha = definePlugin("alpha", (pi) => {
       pi.registerCommand("write", { handler: (_a, ctx) => ctx.storage.set("k", 1) });

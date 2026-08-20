@@ -357,5 +357,17 @@ export type Plugin = {
  * with a warning. That is fine for a throwaway, and wrong for anything that
  * stores something.
  */
-export const definePlugin = (id: string, setup: (pi: PluginAPI) => void | Promise<void>): Plugin =>
-  Object.assign(setup, { id });
+export const definePlugin = (
+  id: string,
+  setup: (pi: PluginAPI) => void | Promise<void>,
+): IdentifiedPlugin => Object.assign(setup, { id });
+
+/**
+ * A plugin that has declared its id — what `definePlugin` returns.
+ *
+ * `Plugin` stays permissive so a bare pi extension runs here unmodified, which
+ * is the point of this package. An application that ships a fixed list should
+ * type it as `readonly IdentifiedPlugin[]` instead, and let the compiler insist
+ * on identity rather than finding out from a console warning in production.
+ */
+export type IdentifiedPlugin = Plugin & { readonly id: string };

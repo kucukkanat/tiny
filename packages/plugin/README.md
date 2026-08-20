@@ -54,7 +54,18 @@ The same shape `@tiny/ai` extensions already use, so a plugin that only subscrib
 events *is* an `@tiny/ai` extension:
 
 ```ts
-export type Plugin = (pi: PluginAPI) => void | Promise<void>;
+// A plugin is a function. `definePlugin` gives it the id that namespaces its
+// storage — see "Identity" below.
+export type Plugin = {
+  (pi: PluginAPI): void | Promise<void>;
+  readonly id?: string | undefined;
+};
+export type IdentifiedPlugin = Plugin & { readonly id: string };
+
+export const definePlugin: (
+  id: string,
+  setup: (pi: PluginAPI) => void | Promise<void>,
+) => IdentifiedPlugin;
 ```
 
 ## Usage
@@ -311,6 +322,7 @@ for full SDK conformance.
 | `ctx.ui.select / confirm / input` | including `{ timeout, signal }` and pi's dismissal values |
 | `ctx.ui.editor(title, prefill)` | pi takes no options here, so neither do we |
 | `ctx.ui.notify / setStatus / setWidget / setTitle / setEditorText / pasteToEditor` | fire-and-forget |
+| `ctx.ui.getEditorText()` | the composer's draft, including what the user typed — this host owns it |
 | `ctx.mode`, `ctx.hasUI`, `ctx.signal` | `mode` is `"react"` |
 
 **Degraded exactly as pi's RPC mode degrades them** — present, never throwing:
@@ -379,14 +391,13 @@ A plugin big enough to live on its own becomes a package. The convention follows
 | Third-party, scoped | `@<vendor>/tiny-plugin-<name>` |
 | This package | `@tiny/plugin` — the host, never a plugin itself |
 
-The rule of thumb: **`tiny-plugin-` appears in every plugin package name, and nowhere
-else.** `@tiny/ai` and `@tiny/ui` are libraries, not plugins, and their names say so.
+The rule of thumb: **`plugin-` follows the scope in every plugin package name.** `@tiny/ai` and `@tiny/ui` are libraries, not plugins, and their names say so.
 
 A plugin package should default-export nothing and instead export a named factory
 returning a `Plugin`, so the registry reads as a list of configured plugins:
 
 ```ts
-export const plugins: readonly Plugin[] = [fileSystem(), notion({ token })];
+export const plugins: readonly IdentifiedPlugin[] = [fileSystem(), notion({ token })];
 ```
 
 ## Registering tools
@@ -551,7 +562,7 @@ component changes:
 ```ts
 import { greet } from "./greet.ts";
 
-export const plugins: readonly Plugin[] = [
+export const plugins: readonly IdentifiedPlugin[] = [
   // …the plugins already there…
   greet(),
 ];

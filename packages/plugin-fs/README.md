@@ -27,7 +27,7 @@ for (const tool of tools) console.log(`${tool.name} — ${tool.description.split
 In the chat app that is one entry in `apps/chat/src/plugins/index.ts`:
 
 ```ts
-export const plugins: readonly Plugin[] = [fileSystem()];
+export const plugins: readonly IdentifiedPlugin[] = [fileSystem()];
 ```
 
 ## The tools

@@ -1,6 +1,5 @@
 import type { IdentifiedPlugin } from "@tiny/plugin";
-import { createExternalStore, definePlugin, usePluginContext } from "@tiny/plugin";
-import { useSyncExternalStore } from "react";
+import { createExternalStore, definePlugin, usePluginContext, useStore } from "@tiny/plugin";
 import { activate } from "./activate.ts";
 import { type InstalledOptions, openInstalled } from "./installed.ts";
 import { ManagerDialog } from "./ManagerDialog.tsx";
@@ -35,7 +34,7 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
 
   function ManagerOverlay() {
     const ctx = usePluginContext();
-    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+    const shown = useStore(open);
     if (!shown) return null;
 
     return (

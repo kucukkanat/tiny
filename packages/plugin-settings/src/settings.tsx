@@ -4,8 +4,8 @@ import {
   definePlugin,
   settingsComplete,
   usePluginContext,
+  useStore,
 } from "@tiny/plugin";
-import { useSyncExternalStore } from "react";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 
 /**
@@ -25,7 +25,7 @@ export const settings = (): IdentifiedPlugin => {
 
   function SettingsOverlay() {
     const ctx = usePluginContext();
-    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+    const shown = useStore(open);
     // An unconfigured app has nothing to chat with, so the dialog is forced
     // open and cannot be dismissed until an endpoint answers.
     const required = !settingsComplete(ctx.settings);

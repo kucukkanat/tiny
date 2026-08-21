@@ -1,8 +1,8 @@
 export { PluginBoundary } from "./Boundary.tsx";
 export type { PluginEvents } from "./events.ts";
 export { createEvents } from "./events.ts";
-export type { ExternalStore } from "./externalStore.ts";
-export { createExternalStore } from "./externalStore.ts";
+export type { ExternalStore, ReadableStore } from "./externalStore.ts";
+export { createExternalStore, useStore } from "./externalStore.ts";
 export type { AppBridge } from "./hooks.ts";
 export {
   useMarkdown,

@@ -1,5 +1,5 @@
+import { useStore } from "@tiny/plugin";
 import { ApprovalCard, type ApprovalOption } from "@tiny/ui";
-import { useSyncExternalStore } from "react";
 import type { PendingStore } from "./pending.ts";
 
 /** What the user chose. Dismissing the card returns nothing at all, which denies. */
@@ -25,7 +25,7 @@ const OPTIONS: readonly ApprovalOption[] = [
  */
 export const inlineApproval = (store: PendingStore) =>
   function InlineApproval() {
-    const pending = useSyncExternalStore(store.subscribe, store.get, store.get);
+    const pending = useStore(store);
     if (pending === undefined) return null;
 
     return (

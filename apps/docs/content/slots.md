@@ -152,7 +152,7 @@ export const settings = (): Plugin => {
   const open = createExternalStore(false);
 
   function SettingsOverlay() {
-    const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+    const shown = useStore(open);
     return shown ? <Dialog onClose={() => open.set(false)} /> : null;
   }
 
@@ -166,8 +166,12 @@ export const settings = (): Plugin => {
 The switch lives in the factory's closure rather than in component state,
 because the command handler and the contributed component are separate call
 sites that need to reach the same one — and only the second of them is a
-component. `createExternalStore` is that switch plus the subscription
-`useSyncExternalStore` wants; it holds any value, not just a boolean.
+component. `createExternalStore` is that switch plus the subscription React
+wants, and `useStore` reads it; it holds any value, not just a boolean.
+
+A store that should be read but not reassigned can be handed out as a
+`ReadableStore` — `useStore` takes either, and `@tiny/plugin-hitl` uses that to
+keep the pending approval answerable only through `ask`.
 
 That is the pattern the app's own settings dialog and the
 [Plugins dialog](runtime.md) both use.

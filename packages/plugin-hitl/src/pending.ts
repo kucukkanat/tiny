@@ -1,4 +1,4 @@
-import { createExternalStore } from "@tiny/plugin";
+import { createExternalStore, type ReadableStore } from "@tiny/plugin";
 import type { Verdict } from "./inlineApproval.tsx";
 import type { PendingCall } from "./policy.ts";
 
@@ -16,14 +16,15 @@ export type Pending = {
  * A store rather than a dialog: the `tool_call` handler runs inside the request,
  * the card renders inside the reply, and neither can hand the other a promise.
  * The same shape `settings` uses for its overlay — an external store the
- * contributed component subscribes to with `useSyncExternalStore`.
+ * contributed component subscribes to with `useStore`.
+ *
+ * Readable rather than writable on purpose: a question is settled by answering
+ * it, so `ask` owns every write and nothing outside can assign one away.
  *
  * One at a time is not a limitation to design around: `streamChat` executes tool
  * calls in sequence, so a second question cannot exist while the first is open.
  */
-export type PendingStore = {
-  subscribe(listener: () => void): () => void;
-  get(): Pending | undefined;
+export type PendingStore = ReadableStore<Pending | undefined> & {
   /** Resolves when the user answers, or with `undefined` if the wait is cut short. */
   ask(
     request: Omit<Pending, "settle">,

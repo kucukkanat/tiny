@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 /**
  * A value React can subscribe to from outside React.
  *
@@ -10,7 +12,7 @@
  * const open = createExternalStore(false);
  *
  * function Overlay() {
- *   const shown = useSyncExternalStore(open.subscribe, open.get, open.get);
+ *   const shown = useStore(open);
  *   return shown ? <Dialog onClose={() => open.set(false)} /> : null;
  * }
  *
@@ -18,13 +20,36 @@
  * tiny.contribute("app.overlays", Overlay);
  * ```
  */
-export type ExternalStore<T> = {
+/**
+ * The half of a store a component needs: watch it, read it.
+ *
+ * Separate from `ExternalStore` so a plugin can hand components a value to read
+ * while keeping the writes to itself — `@tiny/plugin-hitl`'s pending question is
+ * settled by answering it, never by assignment, and its store says so by
+ * exposing this and not `set`.
+ */
+export type ReadableStore<T> = {
   /** Registers a listener and returns the function that removes it. */
   subscribe(listener: () => void): () => void;
   get(): T;
+};
+
+export type ExternalStore<T> = ReadableStore<T> & {
   /** Replaces the value and notifies every listener. */
   set(next: T): void;
 };
+
+/**
+ * Reads a store from a component, re-rendering when it changes.
+ *
+ * `useSyncExternalStore(store.subscribe, store.get, store.get)` is the whole
+ * body, and every plugin that kept state outside React was writing that line —
+ * including the third argument twice, which is the part that is easy to get
+ * wrong: omit it and the component throws when the app is server-rendered.
+ * A store's value is the same on both sides here, so the getter serves as both.
+ */
+export const useStore = <T>(store: ReadableStore<T>): T =>
+  useSyncExternalStore(store.subscribe, store.get, store.get);
 
 export const createExternalStore = <T>(initial: T): ExternalStore<T> => {
   let current = initial;

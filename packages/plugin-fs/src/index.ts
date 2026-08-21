@@ -35,7 +35,7 @@ const originPrivateRoot: RootResolver = () => {
  * ```
  */
 export const fileSystem = (options: FileSystemOptions = {}): IdentifiedPlugin =>
-  definePlugin("fileSystem", (tiny) => {
+  definePlugin("fileSystem", { needs: ["tools"] }, (tiny) => {
     const tools = fileSystemTools(options.root ?? originPrivateRoot);
     for (const tool of tools) tiny.registerTool(tool);
   });

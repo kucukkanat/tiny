@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import type { AppBridge } from "../src/hooks.ts";
 import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
 import { definePlugin } from "../src/tiny.ts";
 
@@ -9,7 +10,7 @@ const STABLE_MESSAGES: readonly [] = [];
 import { PluginHost } from "../src/PluginHost.tsx";
 import { emptyRegistry } from "../src/registry.ts";
 import { Slot, StatusBar, Widgets } from "../src/Slot.tsx";
-import type { Plugin, PluginContext } from "../src/tiny.ts";
+import type { Capability, Plugin, PluginContext } from "../src/tiny.ts";
 
 afterEach(() => {
   cleanup();
@@ -529,5 +530,119 @@ describe("disposing a plugin in a mounted host", () => {
 
     expect(runs).toBe(1);
     expect(host?.commands.map((command) => command.name)).toEqual(["c"]);
+  });
+});
+
+describe("declared capabilities", () => {
+  const settings = { baseUrl: "https://e.test/v1", apiKey: "secret", model: "m" };
+  const bridge: AppBridge = {
+    messages: [{ role: "user", content: "hi" }],
+    streaming: undefined,
+    settings,
+    signal: undefined,
+    send: noop,
+    stop: noop,
+    updateSettings: noop,
+    navigate: noop,
+  };
+  function Publishes() {
+    useProvideApp(bridge);
+    return null;
+  }
+
+  /**
+   * What a plugin declaring `needs` is actually handed, in a host publishing
+   * real settings and a real thread.
+   */
+  const contextOf = async (needs?: readonly Capability[]): Promise<PluginContext | undefined> => {
+    let seen: PluginContext | undefined;
+    const read = (tiny: Parameters<Plugin>[0]) =>
+      tiny.registerCommand("read", {
+        handler: (_a, ctx) => {
+          seen = ctx;
+        },
+      });
+    const plugin =
+      needs === undefined
+        ? definePlugin("under-test", read)
+        : definePlugin("under-test", { needs }, read);
+
+    await mount([plugin], <Publishes />);
+    await runCommand("read");
+    return seen;
+  };
+
+  test("a plugin that declares nothing is handed everything, as before", async () => {
+    const ctx = await contextOf();
+
+    // The default has to stay wide, or declaring would be a breaking change for
+    // every plugin that already exists — including every pi extension.
+    expect(ctx?.settings?.apiKey).toBe("secret");
+    expect(ctx?.chat.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
+  test('declaring narrows: needs ["chat"] is handed no settings', async () => {
+    const ctx = await contextOf(["chat"]);
+
+    // The point of the whole thing: a plugin that never said it wanted the key
+    // is not handed the key.
+    expect(ctx?.settings).toBeUndefined();
+    expect(ctx?.chat.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
+  test('needs ["settings"] is handed the settings and no conversation', async () => {
+    const ctx = await contextOf(["settings"]);
+
+    expect(ctx?.settings?.apiKey).toBe("secret");
+    expect(ctx?.chat.messages).toEqual([]);
+  });
+
+  test("updateSettings is refused, and says which capability was missing", async () => {
+    const warned: string[] = [];
+    const consoleError = console.error;
+    console.error = (...args: unknown[]) => void warned.push(args.join(" "));
+    try {
+      const ctx = await contextOf([]);
+      ctx?.updateSettings({ baseUrl: "x", apiKey: "y", model: "z" });
+    } finally {
+      console.error = consoleError;
+    }
+
+    expect(warned.join(" ")).toContain('"settings" capability');
+  });
+
+  test("registerTool is refused for a plugin that did not ask for tools", async () => {
+    const warned: string[] = [];
+    const consoleError = console.error;
+    console.error = (...args: unknown[]) => void warned.push(args.join(" "));
+    try {
+      await mount([
+        definePlugin("sneaky", { needs: ["chat"] }, (tiny) =>
+          tiny.registerTool({
+            name: "exfiltrate",
+            description: "d",
+            parameters: { type: "object" },
+            execute: () => ({ content: [{ type: "text", text: "" }] }),
+          }),
+        ),
+      ]);
+    } finally {
+      console.error = consoleError;
+    }
+
+    expect(warned.join(" ")).toContain('"tools" capability');
+    expect(host?.registry.tools).toEqual([]);
+  });
+
+  test("what each plugin declared is on the registry, for a UI to show", async () => {
+    await mount([
+      definePlugin("asks", { needs: ["tools", "chat"] }, () => {}),
+      definePlugin("quiet", () => {}),
+    ]);
+
+    expect(host?.registry.needs.get("asks")).toEqual(["tools", "chat"]);
+    // Absent, not empty: "declared nothing" and "declared it wants nothing" are
+    // different answers, and only the second one narrows.
+    expect(host?.registry.needs.has("quiet")).toBe(false);
   });
 });

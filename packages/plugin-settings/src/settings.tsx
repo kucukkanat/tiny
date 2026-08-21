@@ -43,7 +43,7 @@ export const settings = (): IdentifiedPlugin => {
     );
   }
 
-  return definePlugin("settings", (tiny) => {
+  return definePlugin("settings", { needs: ["settings"] }, (tiny) => {
     tiny.registerCommand("settings", {
       description: "Configure the endpoint",
       handler: () => open.set(true),

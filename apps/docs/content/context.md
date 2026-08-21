@@ -137,8 +137,12 @@ ctx.navigate("/c/abc123");  // hash routes: "/" is a new conversation
 ```
 
 `ctx.settings` includes the user's API key, because a plugin that talks to the
-same endpoint needs it. That is a real capability, and it is one of the reasons
-[installing a runtime plugin is a trust decision](runtime.md#the-trust-boundary).
+same endpoint needs it — so a plugin that does not should say so and not be
+handed one. Declaring [`needs`](anatomy.md#what-a-plugin-asks-for) narrows what
+arrives here; declaring nothing keeps all of it. Either way, installing a
+runtime plugin remains
+[a trust decision](runtime.md#the-trust-boundary): what a plugin is not handed
+it can still read out of `localStorage`.
 
 `settings.api` is the [api type](providers.md#api-types) the user's own endpoint
 speaks, absent meaning `openai-completions`. `settings.providerId` names the

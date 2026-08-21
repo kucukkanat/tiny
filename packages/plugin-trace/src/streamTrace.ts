@@ -11,7 +11,7 @@ import { definePlugin } from "@tiny/plugin";
  * by the bundler).
  */
 export const streamTrace = (log: (message: string) => void = console.debug): IdentifiedPlugin =>
-  definePlugin("streamTrace", (tiny) => {
+  definePlugin("streamTrace", { needs: [] }, (tiny) => {
     if (process.env.NODE_ENV === "production") return;
 
     // One extension instance serves every request, so the tally resets on start.

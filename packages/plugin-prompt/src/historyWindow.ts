@@ -10,7 +10,7 @@ import { definePlugin } from "@tiny/plugin";
  * *request* only; the conversation on disk is untouched.
  */
 export const historyWindow = (turns: number): IdentifiedPlugin =>
-  definePlugin("historyWindow", (tiny) => {
+  definePlugin("historyWindow", { needs: [] }, (tiny) => {
     tiny.on("context", (event) =>
       event.messages.length <= turns ? undefined : { messages: event.messages.slice(-turns) },
     );

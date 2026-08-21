@@ -494,6 +494,8 @@ export type Plugin = {
   readonly after?: readonly string[] | undefined;
   /** Ids this plugin loads before; `"*"` for all of them. See `PluginOrder`. */
   readonly before?: readonly string[] | undefined;
+  /** What this plugin asked for. Absent means it asked for nothing, and gets all. */
+  readonly needs?: readonly Capability[] | undefined;
 };
 
 /**
@@ -541,27 +543,66 @@ export type PluginOrder = {
   readonly before?: readonly string[] | undefined;
 };
 
+/**
+ * Something a plugin has to ask for.
+ *
+ * Deliberately three, and only things this package can actually withhold. A
+ * longer list would read as a permission system, and most of what a plugin can
+ * do — `fetch`, the DOM, `localStorage` — is not this package's to grant or
+ * refuse. See `needs` for what the declaration is and is not.
+ */
+export type Capability =
+  /** Read `ctx.settings`, which carries the user's API key, and change it. */
+  | "settings"
+  /** Read the conversation: `ctx.chat.messages` and `ctx.chat.streaming`. */
+  | "chat"
+  /** Register tools the model may call. */
+  | "tools";
+
+export type PluginOptions = PluginOrder & {
+  /**
+   * What this plugin needs, and by omission what it does not.
+   *
+   * **Opt-in and narrowing.** A plugin that declares nothing gets everything, as
+   * every plugin always has; one that declares `["tools"]` gets tools and is
+   * handed no settings and no conversation. So adding this breaks nothing and
+   * costs nothing to adopt, and the plugins in this repo have adopted it.
+   *
+   * **It is a declaration, not a cage.** A plugin is ordinary code in the page:
+   * the settings it is not handed are still in `localStorage` where it can read
+   * them, and nothing here stops a `fetch`. What it buys is real all the same —
+   * the plugin that only wanted to count tokens is no longer handed the user's
+   * API key by accident, and someone installing a plugin at runtime is shown
+   * what it asked for next to the hash they are approving. A plugin that
+   * declares `["chat"]` and then reads the key from `localStorage` has done
+   * something a reviewer can point at, which is the difference between a
+   * mistake and a lie.
+   */
+  readonly needs?: readonly Capability[] | undefined;
+};
+
 export function definePlugin(
   id: string,
   setup: (tiny: PluginAPI) => void | Promise<void> | Dispose,
 ): IdentifiedPlugin;
 export function definePlugin(
   id: string,
-  order: PluginOrder,
+  options: PluginOptions,
   setup: (tiny: PluginAPI) => void | Promise<void> | Dispose,
 ): IdentifiedPlugin;
 export function definePlugin(
   id: string,
-  second: PluginOrder | ((tiny: PluginAPI) => void | Promise<void> | Dispose),
+  second: PluginOptions | ((tiny: PluginAPI) => void | Promise<void> | Dispose),
   third?: (tiny: PluginAPI) => void | Promise<void> | Dispose,
 ): IdentifiedPlugin {
   const setup = typeof second === "function" ? second : third;
   if (setup === undefined) throw new TypeError(`definePlugin("${id}") was given no setup function`);
-  const order = typeof second === "function" ? {} : second;
+  const options = typeof second === "function" ? {} : second;
   return Object.assign(setup, {
     id,
-    ...(order.after === undefined ? {} : { after: order.after }),
-    ...(order.before === undefined ? {} : { before: order.before }),
+    ...(options.after === undefined ? {} : { after: options.after }),
+    ...(options.before === undefined ? {} : { before: options.before }),
+    ...(options.needs === undefined ? {} : { needs: options.needs }),
   });
 }
 

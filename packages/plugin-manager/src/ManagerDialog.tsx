@@ -133,8 +133,10 @@ export function ManagerDialog({
         {view.kind === "list" ? (
           <>
             <p className="mt-1 text-sm leading-relaxed text-ink-3">
-              Plugins you add run with the same access as the app itself — they can read your
-              conversations and call your endpoint. Only add code you trust.
+              Plugins you add run with the same access as the app itself: your conversations, your
+              API key, and any request they care to make. Unlike the plugins that ship with the app,
+              one added here cannot narrow what it is given — it runs through this plugin, so it
+              gets what this plugin gets. Only add code you trust.
             </p>
 
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto" data-testid="installed-list">

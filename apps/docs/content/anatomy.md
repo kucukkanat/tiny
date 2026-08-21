@@ -75,6 +75,43 @@ somewhere nothing looks for it.
 Factories run in an effect, so contributions appear just after first paint rather
 than blocking it.
 
+## What a plugin asks for
+
+By default a plugin is handed everything `ctx` carries, including the user's API
+key — which is right for the plugin that edits the settings and wrong for the
+one that counts tokens. Declaring `needs` narrows it:
+
+```ts
+definePlugin("fileSystem", { needs: ["tools"] }, (tiny) => { … });
+```
+
+| Capability | Grants |
+| --- | --- |
+| `settings` | `ctx.settings`, which carries the API key, and `ctx.updateSettings` |
+| `chat` | `ctx.chat.messages` and `ctx.chat.streaming` |
+| `tools` | `tiny.registerTool` |
+
+Everything else — dialogs, storage, commands, slots, `ctx.chat.send` — is
+ungated, because withholding it would only break the plugin without protecting
+anything.
+
+**Opt-in, and narrowing.** Declare nothing and you get what plugins have always
+got; declare `["tools"]` and you get tools, no settings and no conversation.
+Nothing existing breaks, including pi extensions, which never declare.
+
+> **It is a declaration, not a cage.** A plugin is ordinary code in your page:
+> the settings it was not handed are still in `localStorage`, and nothing stops
+> it calling `fetch`. What the declaration buys is real anyway — the plugin that
+> only wanted to count tokens is no longer handed your key by accident, and a
+> plugin that declares `["chat"]` and then reads the key out of `localStorage`
+> has done something a reviewer can point at. That is the difference between a
+> mistake and a lie, and it is the honest ceiling for a plugin that renders
+> React into the same page as the app.
+
+A plugin **installed at runtime** cannot narrow itself: it runs through
+`@tiny/plugin-manager`'s `tiny`, so it gets what that plugin gets. The Plugins
+dialog says so, next to the hash you are approving.
+
 ## Load order
 
 The list decides it, and for almost everything that is enough — `tool_call`

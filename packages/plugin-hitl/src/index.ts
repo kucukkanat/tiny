@@ -48,7 +48,7 @@ const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(S
  * ```
  */
 export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
-  definePlugin("humanInTheLoop", (tiny) => {
+  definePlugin("humanInTheLoop", { needs: [] }, (tiny) => {
     // The question lives here rather than in a dialog: the card is contributed
     // into the reply, and this is what the two halves talk through.
     const store = createPendingStore();

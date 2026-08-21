@@ -15,16 +15,30 @@ import {
   terminalFallbacks,
 } from "./registry.ts";
 import type {
+  Capability,
   CommandInfo,
   ContextUsage,
   DialogOptions,
   Plugin,
   PluginContext,
+  PluginMessage,
   PluginUIContext,
   WidgetOptions,
 } from "./tiny.ts";
 
 const newId = () => crypto.randomUUID();
+
+/** Stable, so a narrowed `ctx.chat.messages` does not re-render on every read. */
+const EMPTY_MESSAGES: readonly PluginMessage[] = [];
+
+/** Replaces an action a plugin did not ask for, and says so when it is called. */
+const withheld =
+  (pluginId: string, capability: Capability) =>
+  (..._ignored: never[]): void => {
+    console.error(
+      `[plugin:${pluginId}] this needs the "${capability}" capability, which it did not declare`,
+    );
+  };
 
 const emptyBridge: AppBridge = {
   messages: [],
@@ -294,33 +308,46 @@ export function PluginHost({
   );
 
   const contextFor = useCallback(
-    (pluginId: string): PluginContext => ({
-      ui,
-      mode: "react",
-      hasUI: true,
-      signal: bridge.signal,
-      chat: {
-        messages: bridge.messages,
-        streaming: bridge.streaming,
-        send: bridge.send,
-        stop: bridge.stop,
-      },
-      settings: bridge.settings,
-      updateSettings: bridge.updateSettings,
-      navigate: bridge.navigate,
-      storage: namespacedStorage(pluginId, forgetfulStores),
-      runCommand: (name, args) => runCommandRef.current(name, args),
-      commands,
-      abort: bridge.stop,
-      // Nothing is queued here — a reply is either streaming or it is not — so
-      // pi's two questions have the same answer, from opposite directions.
-      isIdle: () => bridge.streaming === undefined,
-      hasPendingMessages: () => bridge.streaming !== undefined,
-      getContextUsage: () => usage.current,
-      newSession: () => bridge.navigate("/"),
-      reload,
-    }),
-    [ui, commands, bridge, reload, forgetfulStores],
+    (pluginId: string): PluginContext => {
+      // Undeclared means everything, as it always did; declaring narrows. What
+      // is withheld is withheld from `ctx`, not from the page — see
+      // `PluginOptions.needs` for why that is still worth doing.
+      const declared = registry.needs.get(pluginId);
+      const granted = (capability: Capability) =>
+        declared === undefined || declared.includes(capability);
+
+      return {
+        ui,
+        mode: "react",
+        hasUI: true,
+        signal: bridge.signal,
+        chat: {
+          // The actions stay: sending is something the user can see happening,
+          // and reading the conversation is what a plugin has to ask for.
+          messages: granted("chat") ? bridge.messages : EMPTY_MESSAGES,
+          streaming: granted("chat") ? bridge.streaming : undefined,
+          send: bridge.send,
+          stop: bridge.stop,
+        },
+        settings: granted("settings") ? bridge.settings : undefined,
+        updateSettings: granted("settings")
+          ? bridge.updateSettings
+          : withheld(pluginId, "settings"),
+        navigate: bridge.navigate,
+        storage: namespacedStorage(pluginId, forgetfulStores),
+        runCommand: (name, args) => runCommandRef.current(name, args),
+        commands,
+        abort: bridge.stop,
+        // Nothing is queued here — a reply is either streaming or it is not — so
+        // pi's two questions have the same answer, from opposite directions.
+        isIdle: () => bridge.streaming === undefined,
+        hasPendingMessages: () => bridge.streaming !== undefined,
+        getContextUsage: () => usage.current,
+        newSession: () => bridge.navigate("/"),
+        reload,
+      };
+    },
+    [ui, commands, bridge, reload, forgetfulStores, registry],
   );
 
   const runCommand = useCallback(

@@ -19,7 +19,7 @@ const because = { user: "asked", policy: "by policy", remembered: "remembered", 
  * no publisher is silent, so this logs nothing and costs nothing.
  */
 export const approvalLog = (log: (message: string) => void = console.info): IdentifiedPlugin =>
-  definePlugin("approvalLog", (tiny) => {
+  definePlugin("approvalLog", { needs: [] }, (tiny) => {
     tiny.events.on(approvalDecided, ({ toolName, approved, by, reason }) => {
       const outcome = approved ? "allowed" : "blocked";
       const note = reason === undefined || reason === "" ? "" : ` — ${reason}`;

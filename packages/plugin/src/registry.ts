@@ -6,6 +6,7 @@ import { createProviderStore, type ProviderStore } from "./providers.ts";
 import type { Contribution, SlotName } from "./Slot.tsx";
 import { identityTheme } from "./theme.ts";
 import type {
+  Capability,
   CommandInfo,
   CommandOptions,
   Dispose,
@@ -87,6 +88,15 @@ export type Registry = {
   readonly providers: readonly ProviderEntry[];
   /** One `@tiny/ai` extension replaying every `on()` call, in registration order. */
   readonly extensions: readonly Extension[];
+  /**
+   * What each plugin that declared `needs` asked for, by id.
+   *
+   * Absent from the map means the plugin declared nothing and is narrowed by
+   * nothing — see `PluginOptions.needs`. The host reads this to decide what to
+   * put on that plugin's `ctx`, and the Plugins dialog reads it to tell a user
+   * what they are about to approve.
+   */
+  readonly needs: ReadonlyMap<string, readonly Capability[]>;
 };
 
 /**
@@ -128,6 +138,7 @@ export const emptyRegistry: PluginRuntime = {
   markdown: [],
   providers: [],
   extensions: [],
+  needs: new Map(),
   ...noRuntime,
 };
 
@@ -451,6 +462,8 @@ export const loadPlugins = async (
   const toolEntries: ToolEntry[] = [];
   const markdown: MarkdownEntry[] = [];
 
+  /** What each plugin declared, for the host to narrow its context with. */
+  const needs = new Map<string, readonly Capability[]>();
   const listeners = new Set<(next: PluginRuntime) => void>();
   /** False until the first snapshot exists, so clashes are reported once. */
   let built = false;
@@ -500,6 +513,10 @@ export const loadPlugins = async (
     plugins.map((plugin, index) => ({ plugin, id: pluginId(plugin, index) })),
   )) {
     let contributed = 0;
+    // Undeclared means everything, as it always did; declaring narrows.
+    const granted = (capability: Capability) =>
+      plugin.needs === undefined || plugin.needs.includes(capability);
+    if (plugin.needs !== undefined) needs.set(id, plugin.needs);
     // Annotated, not asserted. `as PluginAPI` over the whole literal would only
     // check what is here against the interface, never that all of it is here —
     // so a method added to `PluginAPI` and forgotten below would compile, and
@@ -520,6 +537,13 @@ export const loadPlugins = async (
         return record(shortcuts, { shortcut, pluginId: id, options });
       },
       registerTool: (tool) => {
+        if (!granted("tools")) {
+          console.error(
+            `[plugin:${id}] registerTool("${tool.name}") needs the "tools" capability, ` +
+              `which this plugin did not declare`,
+          );
+          return () => {};
+        }
         return record(toolEntries, { pluginId: id, tool });
       },
       registerMarkdownTransformer: (transformer) => {
@@ -653,6 +677,7 @@ export const loadPlugins = async (
     markdown: [...markdown],
     providers: providers.list(),
     extensions: recorded.length > 0 ? [replay] : [],
+    needs: new Map(needs),
     dispose,
     subscribe: (listener) => {
       listeners.add(listener);

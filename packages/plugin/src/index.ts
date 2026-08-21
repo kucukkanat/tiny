@@ -42,6 +42,7 @@ export type { ThemeLike } from "./theme.ts";
 export { identityTheme } from "./theme.ts";
 export type {
   AutocompleteItem,
+  Capability,
   CommandInfo,
   CommandOptions,
   ContextUsage,
@@ -62,6 +63,7 @@ export type {
   PluginEventContext,
   PluginEventHandler,
   PluginMessage,
+  PluginOptions,
   PluginOrder,
   PluginSettings,
   PluginStorage,

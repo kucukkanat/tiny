@@ -151,6 +151,7 @@ command, sitting in the same registry as everything above.
 | | |
 | --- | --- |
 | Host, types, slots, `PluginHost` | `packages/plugin` |
+| pi compatibility, opt-in | `packages/plugin-pi` |
 | Runtime install, the Plugins dialog | `packages/plugin-manager` |
 | Filesystem tools for the model | `packages/plugin-fs` |
 | The app and its plugin registry | `apps/chat/src/plugins.ts` |

@@ -3,9 +3,8 @@ import { type Extension, type ExtensionAPI, toolOutput } from "@tiny/ai";
 import { matchesKey } from "../src/keys.ts";
 import { createProviderStore } from "../src/providers.ts";
 import { loadPlugins, type PluginRuntime, type Registry } from "../src/registry.ts";
-import { identityTheme } from "../src/theme.ts";
 import type { Plugin } from "../src/tiny.ts";
-import { definePlugin, piExtension } from "../src/tiny.ts";
+import { definePlugin } from "../src/tiny.ts";
 
 /**
  * Runs `body` with `console.error` captured, returning what it reported.
@@ -74,19 +73,6 @@ describe("loadPlugins", () => {
     };
     const { extensions } = await loadPlugins([plugin]);
     expect(replayed(extensions)).toEqual(replayed(extensions));
-  });
-
-  test("accepts pi events this facade never fires, and drops them from replay", async () => {
-    // `piExtension`, not a bare factory: the unfired names are off the surface
-    // a new plugin sees, and reachable only by asking for pi's wider one.
-    const plugin = piExtension((tiny) => {
-      tiny.on("session_start", () => {});
-      tiny.on("turn_end", () => {});
-      tiny.on("context", () => {});
-    });
-    const { extensions } = await loadPlugins([plugin]);
-    // Registering did not throw, and only the event @tiny/ai emits is replayed.
-    expect(replayed(extensions)).toEqual(["context"]);
   });
 
   test("replays tool_call, which @tiny/ai does fire", async () => {
@@ -330,14 +316,6 @@ describe("matchesKey", () => {
     expect(matchesKey(event({ key: "Escape" }), "esc")).toBe(true);
     expect(matchesKey(event({ key: "Enter" }), "return")).toBe(true);
     expect(matchesKey(event({ key: "ArrowUp" }), "up")).toBe(true);
-  });
-});
-
-describe("identityTheme", () => {
-  test("returns text unstyled rather than throwing, so pi styling degrades", () => {
-    expect(identityTheme.fg("accent", "●")).toBe("●");
-    expect(identityTheme.bold("hi")).toBe("hi");
-    expect(identityTheme.getFgAnsi("accent")).toBe("");
   });
 });
 

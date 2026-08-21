@@ -12,7 +12,6 @@ import {
   isPositionalId,
   loadPlugins,
   type PluginRuntime,
-  terminalFallbacks,
 } from "./registry.ts";
 import type {
   Capability,
@@ -60,9 +59,21 @@ const emptyBridge: AppBridge = {
  */
 export function PluginHost({
   plugins,
+  uiFallbacks,
   children,
 }: {
   plugins: readonly Plugin[];
+  /**
+   * Extra `ctx.ui` members, for methods this host cannot implement.
+   *
+   * There is one use: `piTerminalUI` from `@tiny/plugin-pi`, which adds pi's
+   * terminal-only half so a ported extension calling `setFooter` degrades the
+   * way it would over pi's RPC transport rather than throwing. It used to be
+   * unconditional, which meant every app carried seventeen methods that do
+   * nothing so that some apps could run pi extensions. An app that does not
+   * want them now has a `ctx.ui` where everything works.
+   */
+  uiFallbacks?: Readonly<Record<string, unknown>> | undefined;
   children: ReactNode;
 }) {
   const [registry, setRegistry] = useState<PluginRuntime>(emptyRegistry);
@@ -223,6 +234,11 @@ export function PluginHost({
 
   const ui = useMemo<PluginUIContext>(
     () => ({
+      // First, so nothing an adapter adds can shadow a method this host really
+      // implements. Filling gaps is what it is for; replacing behaviour other
+      // plugins depend on is not.
+      ...uiFallbacks,
+
       /* — portable: dialogs — */
       select: (title, options, opts) =>
         ask<string | undefined>((id) => ({ kind: "select", id, title, options }), opts, undefined),
@@ -279,15 +295,12 @@ export function PluginHost({
           undefined,
         ),
 
-      /* — terminal-only: pi's documented RPC fallbacks — */
-      ...terminalFallbacks,
-
-      // Not a fallback: this host owns the composer's text —
+      // This host owns the composer's text —
       // `PromptBar` is controlled by `editorText` — so a plugin reading the
       // draft gets the draft, including what the user typed by hand.
       getEditorText: () => editorTextRef.current,
     }),
-    [ask],
+    [ask, uiFallbacks],
   );
 
   const commands = useMemo<readonly CommandInfo[]>(

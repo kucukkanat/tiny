@@ -4,7 +4,6 @@ import type { KeyId } from "./keys.ts";
 import type { ProviderEntry } from "./providers.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
 import type { Contribution, SlotName } from "./Slot.tsx";
-import { identityTheme } from "./theme.ts";
 import type {
   Capability,
   CommandInfo,
@@ -13,8 +12,8 @@ import type {
   MarkdownContext,
   MarkdownTransformer,
   PanelOptions,
-  PiPluginAPI,
   Plugin,
+  PluginAPI,
   PluginContext,
   PluginEventContext,
   PluginUIContext,
@@ -331,30 +330,6 @@ export type HostActions = {
   setSessionName(name: string): void;
 };
 
-/**
- * pi's documented RPC fallbacks for the terminal-only half of `ctx.ui`: present,
- * never throwing, returning what an extension would get over RPC.
- */
-export const terminalFallbacks = {
-  theme: identityTheme,
-  custom: async () => undefined,
-  getToolsExpanded: () => false,
-  setToolsExpanded: () => {},
-  setWorkingMessage: () => {},
-  setWorkingVisible: () => {},
-  setWorkingIndicator: () => {},
-  setHiddenThinkingLabel: () => {},
-  setFooter: () => {},
-  setHeader: () => {},
-  setEditorComponent: () => {},
-  getEditorComponent: () => undefined,
-  onTerminalInput: () => () => {},
-  addAutocompleteProvider: () => {},
-  getAllThemes: () => [],
-  getTheme: () => undefined,
-  setTheme: () => ({ success: false, error: "themes are not available in the React host" }),
-};
-
 /** What a host that has not published anything yet can honestly do: nothing. */
 const detachedHost = (): HostActions => {
   const unavailable = (method: string) => () => {
@@ -398,7 +373,6 @@ const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: fal
     // No host means no composer, so there is no draft to read. The mounted
     // host overrides this with the real one.
     getEditorText: () => "",
-    ...terminalFallbacks,
   };
   return {
     ui,
@@ -523,13 +497,13 @@ export const loadPlugins = async (
     // surface as `tiny.<method> is not a function` when a plugin first calls it,
     // swallowed by the host's load handler into one console line. The cast is
     // therefore narrowed to the single property that needs it.
-    const api: PiPluginAPI = {
+    const api: PluginAPI = {
       // `on` alone: its overloads cannot be satisfied by one implementation
       // signature, and the recorder is deliberately untyped so pi events this
       // host never fires are stored just the same.
       on: ((event: string, handler: unknown) => {
         return record(recorded, { pluginId: id, event, handler });
-      }) as PiPluginAPI["on"],
+      }) as PluginAPI["on"],
       registerCommand: (name, options) => {
         return record(commands, { name, pluginId: id, options });
       },

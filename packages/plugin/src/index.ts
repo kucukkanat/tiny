@@ -38,8 +38,6 @@ export type {
 export { emptyRegistry, loadPlugins, transformMarkdown } from "./registry.ts";
 export type { Contribution, EmptyProps, PropsOf, SlotName, SlotProps } from "./Slot.tsx";
 export { Slot, StatusBar, Widgets } from "./Slot.tsx";
-export type { ThemeLike } from "./theme.ts";
-export { identityTheme } from "./theme.ts";
 export type {
   AutocompleteItem,
   Capability,
@@ -53,9 +51,6 @@ export type {
   MarkdownTransformer,
   NotifyLevel,
   PanelOptions,
-  PiPluginAPI,
-  PiTerminalUI,
-  PiUIContext,
   Plugin,
   PluginAPI,
   PluginChat,
@@ -71,8 +66,7 @@ export type {
   PluginUIContext,
   RouteOptions,
   ShortcutOptions,
-  UnfiredEvent,
   WidgetOptions,
   WidgetPlacement,
 } from "./tiny.ts";
-export { definePlugin, piExtension, settingsComplete } from "./tiny.ts";
+export { definePlugin, settingsComplete } from "./tiny.ts";

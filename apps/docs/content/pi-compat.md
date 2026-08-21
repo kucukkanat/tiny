@@ -111,10 +111,11 @@ extension that subscribes to `session_start`, `turn_end` or
 `session_compact_failed` loads cleanly and simply never hears from them — which is
 the difference between "runs unmodified" and "compiles unmodified".
 
-Those names are reachable through `piExtension`, not through `tiny.on` directly:
+Those names are reachable through `piExtension`, from `@tiny/plugin-pi`, not
+through `tiny.on` directly:
 
 ```ts
-import { piExtension } from "@tiny/plugin";
+import { piExtension } from "@tiny/plugin-pi";
 
 export default piExtension((tiny) => {
   tiny.on("session_start", () => {}); // accepted, and never fired
@@ -130,12 +131,24 @@ you opt into rather than something you discover.
 Present, never throwing, returning exactly what pi's RPC mode returns. A ported
 extension degrades here precisely as it would over RPC.
 
-These seventeen are typed as `PiTerminalUI`, not as part of `PluginUIContext`, so
-they are absent from `ctx.ui` unless an extension asks for pi's wider surface
-(`PiUIContext`, which `piExtension` hands over). The runtime object carries them
-either way. A plugin written for this app does not see them, because sixteen dead
-entries mixed into twelve live ones is a worse deal than a missing method with a
-name to look up.
+**These seventeen live in `@tiny/plugin-pi`, and an app opts in:**
+
+```tsx
+import { piTerminalUI } from "@tiny/plugin-pi";
+
+<PluginHost plugins={plugins} uiFallbacks={piTerminalUI}>…</PluginHost>
+```
+
+Without that prop they are not on `ctx.ui` at all, and an extension calling
+`setFooter` gets a `TypeError` rather than silence — the better failure for an
+app that never meant to run pi extensions. With it, they behave as the table
+below says.
+
+They are typed as `PiTerminalUI` either way, never as part of
+`PluginUIContext`, so a plugin written for this app does not see them: sixteen
+dead entries mixed into twelve live ones is a worse deal than a missing method
+with a name to look up. An extension that wants the wide surface names
+`PiUIContext`, which `piExtension` hands over.
 
 | Method | Returns |
 | --- | --- |

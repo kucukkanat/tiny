@@ -21,6 +21,7 @@
         "@tiny/plugin-fs": "workspace:*",
         "@tiny/plugin-hitl": "workspace:*",
         "@tiny/plugin-manager": "workspace:*",
+        "@tiny/plugin-pi": "workspace:*",
         "@tiny/plugin-settings": "workspace:*",
         "@tiny/plugin-trace": "workspace:*",
         "@tiny/ui": "workspace:*",
@@ -112,6 +113,23 @@
         "@happy-dom/global-registrator": "^20.11.2",
         "@testing-library/react": "^16.3.2",
         "@tiny/plugin-fs": "workspace:*",
+        "@types/react": "^19.1.0",
+        "react-dom": "^19.2.8",
+      },
+      "peerDependencies": {
+        "react": "^19.2.8",
+      },
+    },
+    "packages/plugin-pi": {
+      "name": "@tiny/plugin-pi",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tiny/ai": "workspace:*",
+        "@tiny/plugin": "workspace:*",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.11.2",
+        "@testing-library/react": "^16.3.2",
         "@types/react": "^19.1.0",
         "react-dom": "^19.2.8",
       },
@@ -333,6 +351,8 @@
     "@tiny/plugin-hitl": ["@tiny/plugin-hitl@workspace:packages/plugin-hitl"],
 
     "@tiny/plugin-manager": ["@tiny/plugin-manager@workspace:packages/plugin-manager"],
+
+    "@tiny/plugin-pi": ["@tiny/plugin-pi@workspace:packages/plugin-pi"],
 
     "@tiny/plugin-prompt": ["@tiny/plugin-prompt@workspace:packages/plugin-prompt"],
 

@@ -1,5 +1,6 @@
 import type { IdentifiedPlugin, PluginEventContext, PluginStorage } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
+import { type ApprovalDecided, approvalDecided } from "./channel.ts";
 import { inlineApproval, type Verdict } from "./inlineApproval.tsx";
 import { createPendingStore } from "./pending.ts";
 import {
@@ -11,6 +12,8 @@ import {
   withoutDecision,
 } from "./policy.ts";
 
+export type { ApprovalDecided } from "./channel.ts";
+export { approvalDecided } from "./channel.ts";
 export type { Verdict } from "./inlineApproval.tsx";
 export type { Decision, PendingCall, Policy, Remembered } from "./policy.ts";
 export { decideCall, withDecision, withoutDecision } from "./policy.ts";
@@ -63,14 +66,35 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
         ctx.signal,
       );
 
+    /**
+     * Publish what was settled, then answer `tool_call` with it.
+     *
+     * Announcing every outcome rather than only the ones a user answered: an
+     * audit of what the model was allowed to do is wrong if it omits the calls
+     * that were allowed without asking.
+     */
+    const settle = (decided: ApprovalDecided) => {
+      tiny.events.emit(approvalDecided, decided);
+      return decided.approved ? undefined : { block: true, reason: decided.reason ?? "" };
+    };
+
     tiny.on("tool_call", async (event, ctx) => {
       const call: PendingCall = { toolName: event.toolName, input: event.input };
-      const decision = decideCall(options, stored(ctx.storage), call);
-      if (decision === "allow") return undefined;
-      if (decision === "deny") return { block: true, reason: options.denyReason ?? DEFAULT_DENIED };
+      const remembered = stored(ctx.storage);
+      const decision = decideCall(options, remembered, call);
+      const by = remembered[call.toolName] === undefined ? "policy" : "remembered";
+      if (decision === "allow") return settle({ toolName: call.toolName, approved: true, by });
+      if (decision === "deny")
+        return settle({
+          toolName: call.toolName,
+          approved: false,
+          by,
+          reason: options.denyReason ?? DEFAULT_DENIED,
+        });
 
       // pi's gates all make this check: with no one to ask, the safe answer is no.
-      if (!ctx.hasUI) return { block: true, reason: NO_UI };
+      if (!ctx.hasUI)
+        return settle({ toolName: call.toolName, approved: false, by: "no-ui", reason: NO_UI });
 
       const verdict = await ask(ctx, call);
       if (verdict?.remember === true)
@@ -80,8 +104,14 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
         );
       // A dismissed card is a refusal, not a pass: the only safe reading of
       // "the user closed the dialog" is that they did not agree.
-      if (verdict?.approved === true) return undefined;
-      return { block: true, reason: verdict?.reason ?? options.denyReason ?? DEFAULT_DENIED };
+      if (verdict?.approved === true)
+        return settle({ toolName: call.toolName, approved: true, by: "user" });
+      return settle({
+        toolName: call.toolName,
+        approved: false,
+        by: "user",
+        reason: verdict?.reason ?? options.denyReason ?? DEFAULT_DENIED,
+      });
     });
 
     tiny.registerCommand(options.command ?? "approvals", {

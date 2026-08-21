@@ -271,14 +271,45 @@ field is absent here.
 
 `tiny.events` is a bus plugins share — deliberately not the lifecycle events of
 `tiny.on`, so a plugin emitting `message_end` cannot fool another plugin's handler.
+It is the only place plugins compose with **each other** rather than with the
+host, which makes it the only place where the contract is between two plugins
+and nobody else can check it. So write it down:
 
 ```ts
-tiny.events.on("todo:changed", (data) => refresh(data));
-tiny.events.emit("todo:changed", { count: 3 });
+// The publisher exports this. It is the whole contract.
+export const changed = defineChannel<{ id: string; title: string }>("notes.changed");
+
+// In the publisher:
+tiny.events.emit(changed, { id, title });
+
+// In a subscriber, which imports the channel and nothing else:
+tiny.events.on(changed, (note) => refresh(note.id));   // `note` is typed
+```
+
+A channel is a name with a payload type attached. Emitting the wrong shape or
+reading a field that is not there is a compile error, where before both sides
+had a bare string and `unknown` and agreed by hope.
+
+Namespace the name with your plugin's id: the bus is one flat namespace, and
+`changed` is a claim every other plugin can also make.
+
+Bare strings still work and address the same channels, so a plugin written
+before yours — or one written in plain JavaScript and installed at runtime —
+still talks to one that uses them:
+
+```ts
+tiny.events.emit("notes.changed", { id, title });   // reaches `on(changed, …)`
 ```
 
 `on` returns an unsubscribe function; `once` and `off` are there too. A listener
 that throws is logged and the rest still run.
+
+**A worked pair.** `@tiny/plugin-hitl` exports `approvalDecided` and emits on it
+every time it settles a tool call; `@tiny/plugin-trace`'s `approvalLog`
+subscribes and writes the audit line. Neither imports anything else of the
+other's, the order they are listed in does not matter, and removing either
+leaves the other working — a channel with no publisher is silent, and one with
+no subscriber is a no-op.
 
 ## Reading and driving the app
 

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { endpointModel, toolOutput, toolText } from "@tiny/ai";
-import { createEvents } from "../src/events.ts";
+import { createEvents, defineChannel } from "../src/events.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
 import {
   type HostActions,
@@ -452,5 +452,77 @@ describe("the surface an author sees", () => {
     const unreachable: keyof PluginUIContext = "setFooter";
     // Named so the assertion is about the type, not an unused binding.
     expect(String(unreachable)).toBe("setFooter");
+  });
+});
+
+describe("typed channels", () => {
+  type Changed = { readonly id: string; readonly title: string };
+  const changed = defineChannel<Changed>("notes.changed");
+
+  test("carries a typed payload between two plugins", async () => {
+    const events = createEvents();
+    const heard: Changed[] = [];
+    await loadPlugins(
+      [
+        // The subscriber's handler is checked against what the publisher sends,
+        // because both name the same channel rather than the same string.
+        (tiny) => tiny.events.on(changed, (note) => void heard.push(note)),
+        (tiny) => tiny.events.emit(changed, { id: "n-1", title: "Groceries" }),
+      ],
+      { events },
+    );
+    expect(heard).toEqual([{ id: "n-1", title: "Groceries" }]);
+  });
+
+  test("a channel and its name are the same address", () => {
+    const events = createEvents();
+    const heard: unknown[] = [];
+    // So a plugin that predates the channel, or one written in plain JS at
+    // runtime, still talks to one that uses it.
+    events.on("notes.changed", (data) => void heard.push(data));
+    events.emit(changed, { id: "n-2", title: "Later" });
+    expect(heard).toEqual([{ id: "n-2", title: "Later" }]);
+
+    const typed: Changed[] = [];
+    events.on(changed, (note) => void typed.push(note));
+    events.emit("notes.changed", { id: "n-3", title: "Sooner" });
+    expect(typed).toEqual([{ id: "n-3", title: "Sooner" }]);
+  });
+
+  test("unsubscribing and once work through a channel", () => {
+    const events = createEvents();
+    const heard: string[] = [];
+    const off = events.on(changed, (note) => void heard.push(`on:${note.id}`));
+    events.once(changed, (note) => void heard.push(`once:${note.id}`));
+
+    events.emit(changed, { id: "a", title: "" });
+    off();
+    events.emit(changed, { id: "b", title: "" });
+
+    expect(heard).toEqual(["on:a", "once:a"]);
+  });
+
+  test("off removes a channel listener", () => {
+    const events = createEvents();
+    const heard: string[] = [];
+    const listener = (note: Changed) => void heard.push(note.id);
+    events.on(changed, listener);
+    events.off(changed, listener);
+    events.emit(changed, { id: "a", title: "" });
+    expect(heard).toEqual([]);
+  });
+
+  test("the payload is checked against the channel", () => {
+    const events = createEvents();
+    // @ts-expect-error — `title` is missing.
+    events.emit(changed, { id: "n-1" });
+    // @ts-expect-error — a channel's payload is not optional the way a bare
+    // name's is.
+    events.emit(changed);
+    events.on(changed, (note) => {
+      // @ts-expect-error — no such field on this channel's payload.
+      void note.body;
+    });
+    expect(true).toBe(true);
   });
 });

@@ -92,6 +92,7 @@
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.11.2",
         "@testing-library/react": "^16.3.2",
+        "@tiny/plugin-trace": "workspace:*",
         "@types/react": "^19.1.0",
         "react-dom": "^19.2.8",
       },
@@ -149,6 +150,7 @@
       "dependencies": {
         "@tiny/ai": "workspace:*",
         "@tiny/plugin": "workspace:*",
+        "@tiny/plugin-hitl": "workspace:*",
       },
     },
     "packages/ui": {

@@ -3,7 +3,7 @@ import { fileSystem } from "@tiny/plugin-fs";
 import { humanInTheLoop } from "@tiny/plugin-hitl";
 import { pluginManager } from "@tiny/plugin-manager";
 import { settings } from "@tiny/plugin-settings";
-import { streamTrace, usageLogger } from "@tiny/plugin-trace";
+import { approvalLog, streamTrace, usageLogger } from "@tiny/plugin-trace";
 import * as tinyUi from "@tiny/ui";
 
 /**
@@ -24,6 +24,10 @@ import * as tinyUi from "@tiny/ui";
 export const plugins: readonly IdentifiedPlugin[] = [
   usageLogger(),
   streamTrace(),
+  // Logs what the approval gate below decided, and how. It reaches that plugin
+  // over `tiny.events` rather than importing it, so the order of these two does
+  // not matter and removing either leaves the other working.
+  approvalLog(),
   settings(),
   // Ask before the model runs a tool. Listed before the plugins that register
   // tools only for readability — `tool_call` fires for every tool in the

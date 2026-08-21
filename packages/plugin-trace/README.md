@@ -1,14 +1,21 @@
 # @tiny/plugin-trace
 
-Two plugins that **watch** a request and change nothing about it.
+Three plugins that **watch** and change nothing.
 
 | Plugin | Does |
 | --- | --- |
 | `usageLogger(log?)` | reports tokens, and cost when the endpoint priced the call, once a reply completes |
 | `streamTrace(log?)` | counts pi's raw token-level events per reply — a no-op in production builds |
+| `approvalLog(log?)` | records every tool call the approval gate settles, and how it was settled |
 
-That neither can alter what the model is sent is the reason they are their own
-package: they are safe to leave on. The pair that *does* rewrite the request
+That none of them can alter what the model is sent is the reason they are their
+own package: they are safe to leave on.
+
+`approvalLog` watches another *plugin* rather than the request. It reaches
+[`@tiny/plugin-hitl`](../plugin-hitl) over `tiny.events`, importing one exported
+channel — `approvalDecided` — and nothing else, so the two need not be listed in
+any particular order and either can be removed without touching the other. With
+no approval plugin installed there is nothing publishing, and it logs nothing. The pair that *does* rewrite the request
 lives in [`@tiny/plugin-prompt`](../plugin-prompt), so the difference is a
 dependency rather than a comment you have to notice.
 

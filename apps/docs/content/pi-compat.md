@@ -67,7 +67,7 @@ Same names, argument order and return values.
 | `pi.registerTool(tool)` | pi's positional `execute` and content-block result — see [Tools](tools.md) |
 | `pi.getCommands()` | extension commands, in invocation order |
 | `pi.registerMarkdownTransformer(fn)` | chained in load order, each seeing the last one's output |
-| `pi.events` | the shared bus — `on` / `once` / `off` / `emit` |
+| `pi.events` | the shared bus — `on` / `once` / `off` / `emit`, widened to accept a typed [channel](anatomy.md#talking-to-other-plugins) as well as a name |
 | `pi.getAllTools()` / `getActiveTools()` / `setActiveTools(names)` | over the registry's tools |
 | `pi.setModel(model)` | writes through to the app's settings |
 | `pi.sendUserMessage(content)` | sends as the user |

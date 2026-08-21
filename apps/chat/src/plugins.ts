@@ -44,8 +44,9 @@ export const plugins: readonly IdentifiedPlugin[] = [
   // tool-calling model; endpoints without tool support simply ignore them.
   fileSystem(),
   // Lets the user install further plugins at runtime, from a URL or pasted
-  // source. It must come after the plugins that ship with the app so those own
-  // their command names.
+  // source. It declares `after: ["*"]` itself, so it loads last however this
+  // list is written and the plugins that ship with the app own their command
+  // names.
   //
   // `modules` is what an installed plugin may `import` by name. `react` and
   // `@tiny/plugin` come as standard; this app adds its design system, so a

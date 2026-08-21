@@ -67,9 +67,10 @@ That is the whole wiring. Nothing in `@tiny/ai`, `@tiny/plugin`, `useChat` or an
 component changes. Type `/greet` in the composer.
 
 > **Order matters a little.** Two plugins may claim the same command name; both
-> keep it and are disambiguated as `greet:1` and `greet:2` in load order. Put
-> `pluginManager()` last so the plugins that ship with your build claim their
-> names unsuffixed. See [Anatomy](anatomy.md#commands).
+> keep it and are disambiguated as `greet:1` and `greet:2` in load order, which
+> is this list's order. Where that matters, a plugin can declare it —
+> `pluginManager()` says `after: ["*"]` and loads last wherever you put it. See
+> [Load order](anatomy.md#load-order).
 
 ## Add a button
 

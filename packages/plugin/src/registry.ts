@@ -205,6 +205,82 @@ const addressOf = (path: string): string => path.toLowerCase();
 const pluginId = (plugin: Plugin, index: number): string =>
   plugin.id !== undefined && plugin.id !== "" ? plugin.id : `plugin-${index}`;
 
+/** A plugin and the identity the list it was written in gave it. */
+type Loading = { readonly plugin: Plugin; readonly id: string };
+
+/**
+ * The plugins in the order they should run, honouring `after` and `before`.
+ *
+ * The rule, applied until every plugin has run: **take the earliest-listed
+ * plugin whose prerequisites have already run.** So the list decides everything
+ * the constraints leave open, and a list with no constraints in it runs exactly
+ * as written. A plugin held back by a constraint lets the ones behind it past,
+ * which is the whole point of having said so.
+ *
+ * Constraints naming a plugin that is not installed are dropped rather than
+ * reported — `after: ["fs"]` is a preference about a plugin that may not be
+ * there, and treating it as an error would make optional ordering unusable.
+ *
+ * A cycle cannot be honoured, so it is reported and the plugins in it fall back
+ * to list order. Refusing to load them would turn a mistake about *when* two
+ * plugins run into the app losing them entirely.
+ */
+const inLoadOrder = (entries: readonly Loading[]): readonly Loading[] => {
+  const plugins = entries.map((entry) => entry.plugin);
+  if (!plugins.some((plugin) => plugin.after !== undefined || plugin.before !== undefined))
+    return entries;
+
+  // Ids come from the list as written, before any of this reorders it: a
+  // positional id that moved with the sort would name a different plugin than
+  // the one the author counted.
+  const positionOf = new Map(entries.map((entry, index) => [entry.id, index]));
+  // `edges[i]` holds the plugins that must wait for `i`.
+  const edges: Set<number>[] = plugins.map(() => new Set());
+  const waitingOn = plugins.map(() => 0);
+
+  const link = (before: number, afterwards: number) => {
+    if (before === afterwards || edges[before]?.has(afterwards) === true) return;
+    edges[before]?.add(afterwards);
+    waitingOn[afterwards] = (waitingOn[afterwards] ?? 0) + 1;
+  };
+
+  /** Every plugin `names` refers to — `"*"` meaning all of the others. */
+  const targets = (names: readonly string[], self: number): number[] =>
+    names.includes("*")
+      ? plugins.map((_, index) => index).filter((index) => index !== self)
+      : names.flatMap((name) => {
+          const found = positionOf.get(name);
+          return found === undefined ? [] : [found];
+        });
+
+  plugins.forEach((plugin, index) => {
+    for (const other of targets(plugin.after ?? [], index)) link(other, index);
+    for (const other of targets(plugin.before ?? [], index)) link(index, other);
+  });
+
+  const order: Loading[] = [];
+  const placed = plugins.map(() => false);
+  while (order.length < entries.length) {
+    // Scanned in list order rather than pulled from a queue: that is what makes
+    // the sort stable, and the list is short enough for it not to matter.
+    const next = plugins.findIndex((_, index) => !placed[index] && waitingOn[index] === 0);
+    if (next === -1) {
+      const stuck = entries.filter((_, index) => !placed[index]).map((entry) => entry.id);
+      console.error(
+        `[plugin] circular load order between ${stuck.join(", ")} — loading them as listed`,
+      );
+      for (const [index, entry] of entries.entries()) if (!placed[index]) order.push(entry);
+      break;
+    }
+    placed[next] = true;
+    const entry = entries[next];
+    if (entry !== undefined) order.push(entry);
+    for (const dependent of edges[next] ?? [])
+      waitingOn[dependent] = (waitingOn[dependent] ?? 1) - 1;
+  }
+  return order;
+};
+
 /**
  * pi keeps every registration of a duplicated command name and disambiguates
  * with numeric suffixes in load order (`/review:1`, `/review:2`); a name claimed
@@ -420,8 +496,9 @@ export const loadPlugins = async (
   // on top of the previous load's.
   providers.reset();
 
-  for (const [index, plugin] of plugins.entries()) {
-    const id = pluginId(plugin, index);
+  for (const { plugin, id } of inLoadOrder(
+    plugins.map((plugin, index) => ({ plugin, id: pluginId(plugin, index) })),
+  )) {
     let contributed = 0;
     // Annotated, not asserted. `as PluginAPI` over the whole literal would only
     // check what is here against the interface, never that all of it is here —

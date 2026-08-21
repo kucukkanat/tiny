@@ -18,7 +18,8 @@ export const plugins: readonly IdentifiedPlugin[] = [
   // …the plugins that ship with the build…
 
   // Lets the user install further plugins at runtime, from a URL or pasted
-  // source. Last, so the plugins that shipped claim their command names first.
+  // source. It declares `after: ["*"]`, so it loads last wherever it is listed
+  // and the plugins that shipped claim their command names first.
   pluginManager(),
 ];
 ```

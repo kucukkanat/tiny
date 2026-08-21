@@ -490,6 +490,10 @@ export type Plugin = {
    * inferred from the function's name.
    */
   readonly id?: string | undefined;
+  /** Ids this plugin loads after; `"*"` for all of them. See `PluginOrder`. */
+  readonly after?: readonly string[] | undefined;
+  /** Ids this plugin loads before; `"*"` for all of them. See `PluginOrder`. */
+  readonly before?: readonly string[] | undefined;
 };
 
 /**
@@ -513,10 +517,53 @@ export type Plugin = {
  * with a warning. That is fine for a throwaway, and wrong for anything that
  * stores something.
  */
-export const definePlugin = (
+/**
+ * When a plugin needs to load relative to another, rather than where it happens
+ * to sit in the list.
+ *
+ * Load order is mostly not load-bearing — `tool_call` fires for every tool in
+ * the registry however late it was registered — but where it *is*, it was kept
+ * in a comment: "list this last so the plugins that ship with the app claim
+ * their command names first". A comment cannot stop the next person reordering
+ * the array, and getting it wrong is silent.
+ *
+ * Names that are not installed are ignored, deliberately: `after: ["fs"]` from a
+ * plugin that works better alongside the filesystem tools should not fail, or
+ * warn, when they are absent.
+ *
+ * The list's own order decides everything these constraints leave open, so a
+ * plugin that declares nothing loads exactly where it always did.
+ */
+export type PluginOrder = {
+  /** Load after these ids. `"*"` means after every other plugin. */
+  readonly after?: readonly string[] | undefined;
+  /** Load before these ids. `"*"` means before every other plugin. */
+  readonly before?: readonly string[] | undefined;
+};
+
+export function definePlugin(
   id: string,
   setup: (tiny: PluginAPI) => void | Promise<void> | Dispose,
-): IdentifiedPlugin => Object.assign(setup, { id });
+): IdentifiedPlugin;
+export function definePlugin(
+  id: string,
+  order: PluginOrder,
+  setup: (tiny: PluginAPI) => void | Promise<void> | Dispose,
+): IdentifiedPlugin;
+export function definePlugin(
+  id: string,
+  second: PluginOrder | ((tiny: PluginAPI) => void | Promise<void> | Dispose),
+  third?: (tiny: PluginAPI) => void | Promise<void> | Dispose,
+): IdentifiedPlugin {
+  const setup = typeof second === "function" ? second : third;
+  if (setup === undefined) throw new TypeError(`definePlugin("${id}") was given no setup function`);
+  const order = typeof second === "function" ? {} : second;
+  return Object.assign(setup, {
+    id,
+    ...(order.after === undefined ? {} : { after: order.after }),
+    ...(order.before === undefined ? {} : { before: order.before }),
+  });
+}
 
 /**
  * A plugin that has declared its id — what `definePlugin` returns.

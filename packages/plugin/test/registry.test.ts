@@ -608,3 +608,96 @@ describe("withdrawing a registration", () => {
     expect(latest.tools.map((t) => t.description)).toEqual(["second"]);
   });
 });
+
+describe("declared load order", () => {
+  /** Records the order factories actually ran in. */
+  const recorder = () => {
+    const ran: string[] = [];
+    const mark = (id: string, order?: { after?: readonly string[]; before?: readonly string[] }) =>
+      order === undefined
+        ? definePlugin(id, () => void ran.push(id))
+        : definePlugin(id, order, () => void ran.push(id));
+    return { ran, mark };
+  };
+
+  test("the list's order stands when nothing is declared", async () => {
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("a"), mark("b"), mark("c")]);
+    expect(ran).toEqual(["a", "b", "c"]);
+  });
+
+  test("after moves a plugin behind the one it names", async () => {
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("a", { after: ["c"] }), mark("b"), mark("c")]);
+    expect(ran).toEqual(["b", "c", "a"]);
+  });
+
+  test("before moves a plugin ahead of the one it names", async () => {
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("a"), mark("b"), mark("c", { before: ["a"] })]);
+    // The rule is "the earliest-listed plugin whose prerequisites have run",
+    // applied repeatedly — so `a` waits for `c`, and `b`, which waits for
+    // nothing, goes while it does. `c` before `a` is what was asked for and
+    // what happened; where `b` lands was never constrained.
+    expect(ran).toEqual(["b", "c", "a"]);
+  });
+
+  test('after "*" loads last, however the list is written', async () => {
+    // The app's one real ordering requirement: the plugin that installs other
+    // plugins must not let them claim command names first.
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("manager", { after: ["*"] }), mark("a"), mark("b")]);
+    expect(ran).toEqual(["a", "b", "manager"]);
+  });
+
+  test('before "*" loads first', async () => {
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("a"), mark("b"), mark("first", { before: ["*"] })]);
+    expect(ran).toEqual(["first", "a", "b"]);
+  });
+
+  test("a name that is not installed is ignored, not an error", async () => {
+    const { ran, mark } = recorder();
+    const lines = await reported(async () => {
+      await loadPlugins([mark("a", { after: ["absent"] }), mark("b")]);
+    });
+    expect(ran).toEqual(["a", "b"]);
+    // Optional by nature: a plugin that prefers to follow another must not
+    // break, or complain, when that other one is simply not there.
+    expect(lines).toEqual([]);
+  });
+
+  test("everything not constrained keeps its place", async () => {
+    const { ran, mark } = recorder();
+    await loadPlugins([mark("a"), mark("b"), mark("c", { after: ["a"] }), mark("d")]);
+    // `c` was already after `a`, so nothing needed to move.
+    expect(ran).toEqual(["a", "b", "c", "d"]);
+  });
+
+  test("a cycle is reported, and every plugin still loads", async () => {
+    const { ran, mark } = recorder();
+    const lines = await reported(async () => {
+      await loadPlugins([mark("a", { after: ["b"] }), mark("b", { after: ["a"] }), mark("c")]);
+    });
+    expect(lines.join(" ")).toContain("circular load order");
+    // Losing plugins entirely would be a far worse answer to "these two
+    // disagree about which goes first".
+    expect(ran.sort()).toEqual(["a", "b", "c"]);
+  });
+
+  test("the order decides which plugin claims a command name unsuffixed", async () => {
+    const claim = (id: string, order?: { after?: readonly string[] }) =>
+      order === undefined
+        ? definePlugin(id, (tiny) => tiny.registerCommand("go", { handler: () => {} }))
+        : definePlugin(id, order, (tiny) => tiny.registerCommand("go", { handler: () => {} }));
+
+    const { commands } = await loadPlugins([claim("late", { after: ["*"] }), claim("early")]);
+
+    // Both keep the name, as pi does; the suffixes follow load order, so the
+    // plugin that declared itself last is the one that gets `go:2`.
+    expect(commands.map((command) => `${command.pluginId}=${command.invocationName}`)).toEqual([
+      "early=go:1",
+      "late=go:2",
+    ]);
+  });
+});

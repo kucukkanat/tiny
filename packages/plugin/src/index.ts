@@ -62,6 +62,7 @@ export type {
   PluginEventContext,
   PluginEventHandler,
   PluginMessage,
+  PluginOrder,
   PluginSettings,
   PluginStorage,
   PluginStreaming,

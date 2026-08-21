@@ -68,7 +68,11 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
     );
   }
 
-  return definePlugin("pluginManager", async (tiny) => {
+  // `after: ["*"]` rather than a note asking to be listed last. The requirement
+  // is real — a plugin installed at runtime that loads first claims `plugins`
+  // and pushes this one to `plugins:2`, leaving the user no obvious way in to
+  // remove it — and a comment cannot stop the next person reordering the array.
+  return definePlugin("pluginManager", { after: ["*"] }, async (tiny) => {
     // Registered before the stored plugins run, so an installed plugin cannot
     // claim the `plugins` command name and push this one to `plugins:2` —
     // leaving the user no way in to remove it.

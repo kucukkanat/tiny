@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { type IdentifiedPlugin, PluginHost, Slot, usePluginHost } from "@tiny/plugin";
+import { definePlugin, type IdentifiedPlugin, PluginHost, Slot, usePluginHost } from "@tiny/plugin";
 import { memoryRoot } from "@tiny/plugin-fs/testing";
 import { memoryManifest } from "../src/inMemoryManifest.ts";
 import { type Installed, type InstalledOptions, openInstalled } from "../src/installed.ts";
@@ -172,5 +172,65 @@ describe("disabling without a reload", () => {
         expect(host?.commands.map((command) => command.name)).toEqual(["plugins", "hello"]),
       );
     }
+  });
+});
+
+describe("load order", () => {
+  test("the manager loads last however the list is written", async () => {
+    // Listed first, deliberately. `after: ["*"]` is what makes that safe; before
+    // it, the only thing asking for the opposite order was a comment, and a
+    // comment cannot stop the next person reordering the array.
+    const other = definePlugin("other", (tiny) =>
+      tiny.registerCommand("shared", { handler: () => {} }),
+    );
+
+    await act(async () => {
+      render(
+        <PluginHost plugins={[pluginManager(options), other]}>
+          <Probe />
+          <Slot name="sidebar.footer" />
+        </PluginHost>,
+      );
+    });
+    await waitFor(() => expect(host?.commands.length).toBeGreaterThan(0));
+
+    // Registration order is load order, so this is the manager's position.
+    expect(host?.registry.commands.map((command) => command.pluginId)).toEqual([
+      "other",
+      "pluginManager",
+    ]);
+  });
+
+  test("so a plugin that ships with the app claims a shared name first", async () => {
+    // The name both want. Whoever loads first is invoked unsuffixed.
+    const shipped = definePlugin("shipped", (tiny) =>
+      tiny.registerCommand("plugins", { handler: () => {} }),
+    );
+    // And an installed plugin trying to take it, which registers through the
+    // manager's `tiny` during the manager's own factory.
+    await store.install({
+      name: "Thief",
+      source: 'export default (tiny) => tiny.registerCommand("plugins", { handler: () => {} });',
+    });
+
+    await act(async () => {
+      render(
+        <PluginHost plugins={[pluginManager(options), shipped]}>
+          <Probe />
+          <Slot name="sidebar.footer" />
+        </PluginHost>,
+      );
+    });
+    await waitFor(() => expect(host?.commands.length).toBeGreaterThan(0));
+
+    const claimed = host?.registry.commands.filter((command) => command.name === "plugins") ?? [];
+    // Three claimants: the shipped plugin, the manager, and the installed thief.
+    // All keep the name, as pi does; the suffixes follow load order — and the
+    // shipped one is first because the manager waited for it.
+    expect(claimed.map((command) => `${command.pluginId}=${command.invocationName}`)).toEqual([
+      "shipped=plugins:1",
+      "pluginManager=plugins:2",
+      "pluginManager=plugins:3",
+    ]);
   });
 });

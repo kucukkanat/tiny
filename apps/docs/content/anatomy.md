@@ -75,6 +75,38 @@ somewhere nothing looks for it.
 Factories run in an effect, so contributions appear just after first paint rather
 than blocking it.
 
+## Load order
+
+The list decides it, and for almost everything that is enough — `tool_call`
+fires for every tool in the registry however late it was registered. Where the
+order really matters, say so rather than writing it in a comment:
+
+```ts
+definePlugin("pluginManager", { after: ["*"] }, (tiny) => { … });
+```
+
+| Declared | Means |
+| --- | --- |
+| `after: ["fs"]` | load after the plugin whose id is `fs` |
+| `before: ["fs"]` | load before it |
+| `after: ["*"]` | load after every other plugin |
+| `before: ["*"]` | load before every other plugin |
+
+The rule, applied until every plugin has run: **take the earliest-listed plugin
+whose prerequisites have already run.** So a list with no constraints in it runs
+exactly as written, and a plugin held back lets the ones behind it past.
+
+A name that is not installed is ignored rather than reported — `after: ["fs"]`
+from a plugin that merely prefers to follow the filesystem tools must not break
+when they are absent. A cycle is reported and the plugins in it fall back to
+list order, because losing them entirely is a worse answer to "these two
+disagree about which goes first".
+
+`@tiny/plugin-manager` is the real case: a plugin installed at runtime that
+loaded first would claim `plugins` and push the manager to `plugins:2`, leaving
+the user no obvious way back in to remove it. It declares `after: ["*"]`, so it
+loads last however the app's list is written.
+
 ## Commands
 
 ```ts

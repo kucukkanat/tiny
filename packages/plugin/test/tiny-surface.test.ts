@@ -2,8 +2,14 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { endpointModel, toolOutput, toolText } from "@tiny/ai";
 import { createEvents } from "../src/events.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
-import { type HostActions, loadPlugins, transformMarkdown } from "../src/registry.ts";
-import type { Plugin } from "../src/tiny.ts";
+import {
+  type HostActions,
+  loadPlugins,
+  terminalFallbacks,
+  transformMarkdown,
+} from "../src/registry.ts";
+import type { PiTerminalUI, Plugin, PluginUIContext } from "../src/tiny.ts";
+import { piExtension } from "../src/tiny.ts";
 
 describe("registerProvider", () => {
   test("collects an endpoint a plugin adds", async () => {
@@ -373,13 +379,78 @@ describe("registerTool", () => {
 
 describe("events accepted by tiny.on", () => {
   test("session_compact_failed loads without error, like every unfired pi event", async () => {
-    const registry = await loadPlugins([
-      (tiny) => {
-        tiny.on("session_compact_failed", () => {});
-        tiny.on("session_start", () => {});
-      },
-    ]);
+    const extension = piExtension((tiny) => {
+      tiny.on("session_compact_failed", () => {});
+      tiny.on("session_start", () => {});
+    });
+    const registry = await loadPlugins([extension]);
     // Neither fires, so neither is replayed into `@tiny/ai`.
     expect(registry.extensions).toHaveLength(1);
+  });
+});
+
+/**
+ * The size of the surface, asserted rather than described.
+ *
+ * `ctx.ui` used to carry twenty-nine methods, sixteen of which did nothing here
+ * — so more than half of what autocomplete offered a new plugin author was
+ * dead, and indistinguishable from the live half. The dead ones still exist at
+ * runtime, because a pi extension may call them; they are simply not in the
+ * type a plugin sees. These tests fail if either half drifts.
+ */
+describe("the surface an author sees", () => {
+  test("every method typed on PluginUIContext is one the host implements", () => {
+    // Written out, and checked by `keyof`: a name added to the type without an
+    // implementation fails to compile here, and the count fails if one is added
+    // without being considered.
+    const live: readonly (keyof PluginUIContext)[] = [
+      "confirm",
+      "editor",
+      "getEditorText",
+      "input",
+      "notify",
+      "open",
+      "pasteToEditor",
+      "select",
+      "setEditorText",
+      "setStatus",
+      "setTitle",
+      "setWidget",
+    ];
+    expect(live).toHaveLength(12);
+    // None of the live half is a terminal fallback — that is what makes them live.
+    for (const name of live) expect(Object.keys(terminalFallbacks)).not.toContain(name);
+  });
+
+  test("pi's terminal half is present at runtime and absent from the type", () => {
+    const terminalOnly: readonly (keyof PiTerminalUI)[] = [
+      "addAutocompleteProvider",
+      "custom",
+      "getAllThemes",
+      "getEditorComponent",
+      "getTheme",
+      "getToolsExpanded",
+      "onTerminalInput",
+      "setEditorComponent",
+      "setFooter",
+      "setHeader",
+      "setHiddenThinkingLabel",
+      "setTheme",
+      "setToolsExpanded",
+      "setWorkingIndicator",
+      "setWorkingMessage",
+      "setWorkingVisible",
+      "theme",
+    ];
+    // Reachable at runtime, so a pi extension calling one does not throw.
+    expect(Object.keys(terminalFallbacks).sort()).toEqual([...terminalOnly].sort());
+    expect(terminalOnly).toHaveLength(17);
+  });
+
+  test("a terminal-only method is not on the type a plugin author sees", () => {
+    // @ts-expect-error — the whole point of the split.
+    const unreachable: keyof PluginUIContext = "setFooter";
+    // Named so the assertion is about the type, not an unused binding.
+    expect(String(unreachable)).toBe("setFooter");
   });
 });

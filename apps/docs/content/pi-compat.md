@@ -111,10 +111,31 @@ extension that subscribes to `session_start`, `turn_end` or
 `session_compact_failed` loads cleanly and simply never hears from them — which is
 the difference between "runs unmodified" and "compiles unmodified".
 
+Those names are reachable through `piExtension`, not through `tiny.on` directly:
+
+```ts
+import { piExtension } from "@tiny/plugin";
+
+export default piExtension((tiny) => {
+  tiny.on("session_start", () => {}); // accepted, and never fired
+});
+```
+
+`tiny.on` on its own takes only the six events that do fire. Both spellings reach
+the same runtime object; the wrapper is what makes "this never happens" something
+you opt into rather than something you discover.
+
 ## Degraded
 
 Present, never throwing, returning exactly what pi's RPC mode returns. A ported
 extension degrades here precisely as it would over RPC.
+
+These seventeen are typed as `PiTerminalUI`, not as part of `PluginUIContext`, so
+they are absent from `ctx.ui` unless an extension asks for pi's wider surface
+(`PiUIContext`, which `piExtension` hands over). The runtime object carries them
+either way. A plugin written for this app does not see them, because sixteen dead
+entries mixed into twelve live ones is a worse deal than a missing method with a
+name to look up.
 
 | Method | Returns |
 | --- | --- |

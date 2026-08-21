@@ -4,7 +4,7 @@ import { matchesKey } from "../src/keys.ts";
 import { loadPlugins } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
 import type { Plugin } from "../src/tiny.ts";
-import { definePlugin } from "../src/tiny.ts";
+import { definePlugin, piExtension } from "../src/tiny.ts";
 
 /**
  * Runs `body` with `console.error` captured, returning what it reported.
@@ -76,11 +76,13 @@ describe("loadPlugins", () => {
   });
 
   test("accepts pi events this facade never fires, and drops them from replay", async () => {
-    const plugin: Plugin = (tiny) => {
+    // `piExtension`, not a bare factory: the unfired names are off the surface
+    // a new plugin sees, and reachable only by asking for pi's wider one.
+    const plugin = piExtension((tiny) => {
       tiny.on("session_start", () => {});
       tiny.on("turn_end", () => {});
       tiny.on("context", () => {});
-    };
+    });
     const { extensions } = await loadPlugins([plugin]);
     // Registering did not throw, and only the event @tiny/ai emits is replayed.
     expect(replayed(extensions)).toEqual(["context"]);

@@ -11,8 +11,8 @@ import type {
   MarkdownContext,
   MarkdownTransformer,
   PanelOptions,
+  PiPluginAPI,
   Plugin,
-  PluginAPI,
   PluginContext,
   PluginEventContext,
   PluginUIContext,
@@ -360,13 +360,13 @@ export const loadPlugins = async (
     // surface as `tiny.<method> is not a function` when a plugin first calls it,
     // swallowed by the host's load handler into one console line. The cast is
     // therefore narrowed to the single property that needs it.
-    const api: PluginAPI = {
+    const api: PiPluginAPI = {
       // `on` alone: its overloads cannot be satisfied by one implementation
       // signature, and the recorder is deliberately untyped so pi events this
       // host never fires are stored just the same.
       on: ((event: string, handler: unknown) => {
         recorded.push([id, event, handler]);
-      }) as PluginAPI["on"],
+      }) as PiPluginAPI["on"],
       registerCommand: (name, options) => {
         commands.push({ name, pluginId: id, options });
       },

@@ -51,6 +51,9 @@ export type {
   MarkdownTransformer,
   NotifyLevel,
   PanelOptions,
+  PiPluginAPI,
+  PiTerminalUI,
+  PiUIContext,
   Plugin,
   PluginAPI,
   PluginChat,
@@ -64,7 +67,8 @@ export type {
   PluginUIContext,
   RouteOptions,
   ShortcutOptions,
+  UnfiredEvent,
   WidgetOptions,
   WidgetPlacement,
 } from "./tiny.ts";
-export { definePlugin, settingsComplete } from "./tiny.ts";
+export { definePlugin, piExtension, settingsComplete } from "./tiny.ts";

@@ -39,12 +39,14 @@ export type WorkingIndicatorOptions = {
 };
 
 /**
- * The UI surface handed to plugins.
+ * The UI surface handed to plugins: what this host actually does.
  *
- * Everything pi's RPC mode keeps functional is implemented with pi's exact
- * signature; everything RPC no-ops is present and returns pi's documented
- * fallback, so a pi extension degrades here precisely as it would over RPC
- * rather than throwing on a missing method. See the README's divergence table.
+ * Every method here is implemented, with pi's exact signature where pi has one.
+ * pi's terminal-only half is deliberately absent — it is still there at runtime,
+ * returning pi's documented RPC fallbacks, but it is typed separately as
+ * `PiTerminalUI` so it does not fill an author's autocomplete with seventeen
+ * methods that do nothing. A plugin written against pi's full `ctx.ui` can name
+ * `PiUIContext` and get the wide surface back.
  */
 export type PluginUIContext = {
   /* — portable: dialogs — */
@@ -76,8 +78,22 @@ export type PluginUIContext = {
     render: (done: (result: T) => void) => ReactNode,
     opts?: DialogOptions,
   ): Promise<T | undefined>;
+};
 
-  /* — terminal-only: pi's documented RPC fallbacks — */
+/**
+ * pi's terminal-only `ctx.ui`: present at runtime, doing what RPC mode does.
+ *
+ * Every one of these is a no-op or a fixed answer here — a browser has no
+ * footer, no terminal input and no theme registry — so an extension calling one
+ * degrades exactly as it would over pi's RPC transport rather than throwing.
+ * They are typed apart from `PluginUIContext` because a method that cannot work
+ * should not be offered to someone writing a new plugin: sixteen dead entries in
+ * autocomplete are indistinguishable from the live ones, and finding out which
+ * is which costs a debugging session.
+ *
+ * See the divergence table in [pi compatibility](../../../apps/docs/content/pi-compat.md).
+ */
+export type PiTerminalUI = {
   readonly theme: ThemeLike;
   custom<T>(): Promise<T | undefined>;
   getToolsExpanded(): boolean;
@@ -96,6 +112,9 @@ export type PluginUIContext = {
   getTheme(name: string): ThemeLike | undefined;
   setTheme(theme: unknown): { success: boolean; error?: string };
 };
+
+/** pi's whole `ctx.ui`, for an extension written against pi's SDK. */
+export type PiUIContext = PluginUIContext & PiTerminalUI;
 
 /* ------------------------------------------------------------------ *
  * Context
@@ -244,8 +263,16 @@ export type PluginEventHandler<E, R = undefined> = (
   // biome-ignore lint/suspicious/noConfusingVoidType: pi's signature, kept verbatim
 ) => Promise<R | void> | R | void;
 
-/** Every pi event name, so a pi extension can subscribe without a type error. */
-type UnfiredEvent =
+/**
+ * pi event names this host never fires.
+ *
+ * Kept so a pi extension can subscribe without a type error, and off `PluginAPI`
+ * so a new plugin cannot reach for one by accident: `tiny.on("turn_start", …)`
+ * used to typecheck, autocomplete, and never run — a silence with no error
+ * message anywhere to explain it. `PiPluginAPI` is how an extension that wants
+ * these asks for them, and the answer is still that they never arrive.
+ */
+export type UnfiredEvent =
   | "agent_end"
   | "agent_settled"
   | "agent_start"
@@ -327,13 +354,11 @@ export type MarkdownContext = {
 export type MarkdownTransformer = (markdown: string, context: MarkdownContext) => string;
 
 export interface PluginAPI {
-  /** Subscribe to a lifecycle event `@tiny/ai` fires. */
+  /** Subscribe to a lifecycle event `@tiny/ai` fires. Every name here is live. */
   on<K extends keyof EventMap>(
     event: K,
     handler: PluginEventHandler<EventMap[K][0], EventMap[K][1]>,
   ): void;
-  /** Accepted so pi extensions load; these events never fire here. */
-  on(event: UnfiredEvent, handler: (...args: never[]) => unknown): void;
 
   registerCommand(name: string, options: CommandOptions): void;
   registerShortcut(shortcut: KeyId, options: ShortcutOptions): void;
@@ -392,6 +417,45 @@ export interface PluginAPI {
    */
   registerRoute(path: string, options: RouteOptions): void;
 }
+
+/**
+ * `PluginAPI` widened to what a pi extension expects: the events this host never
+ * fires are subscribable, and `ctx.ui` carries pi's terminal-only half.
+ *
+ * The runtime object is the same one either way — nothing is added by naming
+ * this type, and nothing that only exists here will ever run. It is a way to
+ * compile an extension written for pi without editing it, and the honest
+ * summary of what it buys is in
+ * [pi compatibility](../../../apps/docs/content/pi-compat.md).
+ */
+export type PiPluginAPI = Omit<PluginAPI, "on"> & {
+  on<K extends keyof EventMap>(
+    event: K,
+    handler: PluginEventHandler<EventMap[K][0], EventMap[K][1]>,
+  ): void;
+  /** Accepted so a pi extension loads; these never fire here. */
+  on(event: UnfiredEvent, handler: (...args: never[]) => unknown): void;
+};
+
+/**
+ * Loads an extension written against pi's surface.
+ *
+ * The wrapper exists so the loader's parameter can stay `Plugin`: a union there
+ * would leave every inline `(tiny) => …` without a contextual type, which costs
+ * every plugin author inference to buy something only a pi extension wants. The
+ * widening is a cast in one place instead, and it is sound — the runtime object
+ * has pi's terminal methods on it, returning pi's RPC fallbacks.
+ *
+ * ```ts
+ * export default piExtension((tiny) => {
+ *   tiny.on("session_start", () => {}); // accepted, and never fired
+ * });
+ * ```
+ */
+export const piExtension =
+  (setup: (tiny: PiPluginAPI) => void | Promise<void>): Plugin =>
+  (tiny) =>
+    setup(tiny as PiPluginAPI);
 
 export type Plugin = {
   (tiny: PluginAPI): void | Promise<void>;

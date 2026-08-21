@@ -1,14 +1,17 @@
-import type { IdentifiedPlugin } from "@tiny/plugin";
+import type { IdentifiedPlugin, PropsOf } from "@tiny/plugin";
 import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * A button on every finished reply. `contribute` is the one part of the API pi
  * has no portable equivalent of — everything else here is pi's.
+ *
+ * `PropsOf<"message.actions">` is what that slot passes: a message and its
+ * position, both always present. No hand-written prop type to drift from the
+ * slot, and no null check for a value the slot guarantees.
  */
 export const copyButton = (): IdentifiedPlugin => {
-  function CopyAction({ message }: { message?: { content: string } | undefined }) {
+  function CopyAction({ message }: PropsOf<"message.actions">) {
     const ctx = usePluginContext();
-    if (message === undefined) return null;
 
     return (
       <button

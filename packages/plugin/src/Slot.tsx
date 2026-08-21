@@ -4,41 +4,72 @@ import { usePluginHost } from "./hooks.ts";
 import type { PluginMessage, WidgetPlacement } from "./tiny.ts";
 
 /**
- * Named regions of the app a plugin can render into.
+ * What each named region passes to the components rendered into it.
+ *
+ * An interface, not a union, so **a plugin can declare a region of its own** and
+ * have contributors to it typed as precisely as contributors to the app's:
+ *
+ * ```ts
+ * declare module "@tiny/plugin" {
+ *   interface SlotProps {
+ *     "notes.toolbar": { readonly noteId: string };
+ *   }
+ * }
+ * ```
+ *
+ * Then `<Slot name="notes.toolbar" noteId={id} />` renders it — from a panel, a
+ * page, or another slot's component — and `tiny.contribute("notes.toolbar", C)`
+ * requires `C` to take a `noteId`. Rendering a `Slot` is the whole of declaring
+ * one; there is nothing to register, and a slot nobody contributes to renders
+ * nothing.
+ *
+ * The five below are the app's. They are entries here like any other, with no
+ * standing the app's own plugins do not share — which is what "the extension
+ * points are not owned by the core" has to mean to be worth saying.
  *
  * `message.pending` is the one inside a reply still being written — for anything
  * the run is waiting on, which is where an approval belongs: a question about
  * this tool call, asked where the tool call is, rather than over the whole app.
  *
- * A slot is for a *fragment* placed among the app's own chrome. For a region of
+ * A slot is for a *fragment* placed among someone else's chrome. For a region of
  * one's own there are two other surfaces: `tiny.registerPanel` for the right-hand
  * rail, and `tiny.registerRoute` for a whole page — see Panels.tsx.
  */
-export type SlotName =
-  | "app.overlays"
-  | "composer.actions"
-  | "sidebar.footer"
-  | "message.actions"
-  | "message.pending";
+export interface SlotProps {
+  "app.overlays": EmptyProps;
+  "composer.actions": EmptyProps;
+  "sidebar.footer": EmptyProps;
+  "message.actions": { readonly message: PluginMessage; readonly index: number };
+  "message.pending": EmptyProps;
+}
 
-/** Props a slot passes down; `message.actions` is the only one that carries data. */
-export type SlotProps = {
-  readonly message?: PluginMessage | undefined;
-  readonly index?: number | undefined;
-};
+/** A slot that passes nothing. Spelled once so the entries above read as a table. */
+export type EmptyProps = Record<never, never>;
 
-export type Contribution = ComponentType<SlotProps>;
+/**
+ * A slot's name.
+ *
+ * `(string & {})` keeps the union open while leaving the declared names in
+ * autocomplete — a plugin may render into a slot whose owner never declared its
+ * props, and typing that as an error would make the open half unusable.
+ */
+export type SlotName = keyof SlotProps | (string & {});
+
+/** What a component contributed to `name` is handed. */
+export type PropsOf<S extends SlotName> = S extends keyof SlotProps ? SlotProps[S] : EmptyProps;
+
+/**
+ * A contributed component with its props erased.
+ *
+ * The registry holds contributions to every slot in one list, so the entry type
+ * cannot name any one slot's props. `contribute` is where the typed check
+ * happens; this is only how the result is stored.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: the one place props are erased, so `contribute` can be exact
+export type Contribution = ComponentType<any>;
 
 /** Renders every component contributed to `name`, each independently isolated. */
-export function Slot({
-  name,
-  message,
-  index,
-}: {
-  name: SlotName;
-  message?: PluginMessage | undefined;
-  index?: number | undefined;
-}) {
+export function Slot<S extends SlotName>({ name, ...props }: { name: S } & PropsOf<S>) {
   const { registry } = usePluginHost();
   const entries = registry.contributions.filter((entry) => entry.slot === name);
   if (entries.length === 0) return null;
@@ -47,7 +78,7 @@ export function Slot({
     <>
       {entries.map(({ component: Contributed, pluginId, id }) => (
         <PluginBoundary key={id} pluginId={pluginId}>
-          <Contributed message={message} index={index} />
+          <Contributed {...props} />
         </PluginBoundary>
       ))}
     </>

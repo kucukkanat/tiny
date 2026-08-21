@@ -68,7 +68,7 @@ what that costs and what guards it.
 | `tiny.registerMarkdownTransformer(fn)` | a rewrite of message text on its way to the screen |
 | `tiny.on(event, handler)` | a hook on the request lifecycle |
 | `tiny.events` | a bus for talking to other plugins |
-| `tiny.contribute(slot, Component)` | React into one of five named regions |
+| `tiny.contribute(slot, Component)` | React into a named region; the app declares five, plugins may declare more |
 | `tiny.registerPanel(id, opts)` | a [panel](panels.md) in the right-hand rail |
 | `tiny.registerRoute(path, opts)` | a [page](panels.md#pages) of your own, at an address |
 

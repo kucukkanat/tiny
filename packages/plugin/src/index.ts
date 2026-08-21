@@ -36,7 +36,7 @@ export type {
   ToolEntry,
 } from "./registry.ts";
 export { emptyRegistry, loadPlugins, transformMarkdown } from "./registry.ts";
-export type { Contribution, SlotName, SlotProps } from "./Slot.tsx";
+export type { Contribution, EmptyProps, PropsOf, SlotName, SlotProps } from "./Slot.tsx";
 export { Slot, StatusBar, Widgets } from "./Slot.tsx";
 export type { ThemeLike } from "./theme.ts";
 export { identityTheme } from "./theme.ts";

@@ -9,15 +9,16 @@ UI is `ctx.ui.custom()` and `(tui, theme) => Component` factories — which is
 exactly the terminal-only half of its SDK, the part that cannot cross into a
 browser. So this is ours.
 
-## The five slots
+## The slots the app declares
 
 ```ts
-type SlotName =
-  | "app.overlays"
-  | "composer.actions"
-  | "sidebar.footer"
-  | "message.actions"
-  | "message.pending";
+interface SlotProps {
+  "app.overlays": EmptyProps;
+  "composer.actions": EmptyProps;
+  "sidebar.footer": EmptyProps;
+  "message.actions": { readonly message: PluginMessage; readonly index: number };
+  "message.pending": EmptyProps;
+}
 ```
 
 | Slot | Renders | Rendered by |
@@ -28,40 +29,76 @@ type SlotName =
 | `message.actions` | under each finished assistant reply | `apps/chat/src/Thread.tsx` |
 | `message.pending` | inside the reply still being written | `apps/chat/src/Thread.tsx` |
 
-The union is closed on purpose. A slot is a promise the app makes about where
-something will appear and what props it will receive; adding one is an app change,
-not a plugin change.
-
-A slot is for a *fragment* placed among the app's own chrome. When you want a
-region of your own instead, there are two other surfaces —
-[`registerPanel` and `registerRoute`](panels.md) — and neither needs an app change
-to use.
-
-## Props
-
-```ts
-type SlotProps = {
-  readonly message?: PluginMessage | undefined;
-  readonly index?: number | undefined;
-};
-```
-
 `message.pending` is the slot for something the run is *waiting on*, which is why it
 renders only while the reply is live and disappears with it. An approval belongs
 here rather than in `app.overlays`: the question is about one tool call, so it is
 asked where that tool call is, instead of interrupting the whole app. See
 [Approvals](tools.md#approvals-are-just-an-event).
 
-Only `message.actions` fills them — with the message it is rendered under and that
-message's position in the thread. The other four slots pass `undefined` for both,
-so a component shared between slots must handle their absence:
+## Declaring a slot of your own
 
-```tsx
-function CopyAction({ message }: SlotProps) {
-  if (message === undefined) return null;
-  // …
+`SlotProps` is an interface, so it is **open**. A plugin declares a region and
+says what it passes:
+
+```ts
+declare module "@tiny/plugin" {
+  interface SlotProps {
+    "notes.toolbar": { readonly noteId: string };
+  }
 }
 ```
+
+Then render it wherever you own the space — inside your
+[panel](panels.md), your page, or another slot's component:
+
+```tsx
+function NotesPanel() {
+  const noteId = useCurrentNote();
+  return (
+    <div>
+      <Slot name="notes.toolbar" noteId={noteId} />
+      …
+    </div>
+  );
+}
+```
+
+That is all of it. There is nothing to register, no lifecycle, and no core
+change: **rendering a `Slot` is declaring one.** A slot nobody contributes to
+renders nothing, and another plugin can now do this without asking you:
+
+```tsx
+tiny.contribute("notes.toolbar", ({ noteId }) => <Stamp id={noteId} />);
+```
+
+The five above are the app's, and they are entries in the same interface with no
+standing yours does not have.
+
+> **The names are open, the props are checked.** `SlotName` is
+> `keyof SlotProps | (string & {})`, so contributing to a slot whose owner never
+> declared its props still compiles — which also means a typo compiles and
+> silently renders nowhere. Declaring your slot in `SlotProps` is what buys the
+> typo back, for you and for anyone extending you.
+
+## Props are per slot
+
+A component is checked against the slot it is contributed to:
+
+```tsx
+tiny.contribute("message.actions", ({ message, index }) => …);  // both required
+tiny.contribute("sidebar.footer", () => …);                     // no props at all
+```
+
+`PropsOf<"message.actions">` names that type if you want to declare the
+component separately:
+
+```tsx
+function CopyAction({ message }: PropsOf<"message.actions">) { … }
+```
+
+Before this, every slot shared one `{ message?, index? }` — so a component in
+`message.actions` had to null-check a message that is always there, and a
+component in `sidebar.footer` was offered one that never is.
 
 ## Reading app state
 

@@ -14,7 +14,7 @@ import type { ComponentType, ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
 import type { KeyId } from "./keys.ts";
 import type { ProviderConfig } from "./providers.ts";
-import type { Contribution, SlotName } from "./Slot.tsx";
+import type { PropsOf, SlotName } from "./Slot.tsx";
 import type { ThemeLike } from "./theme.ts";
 
 /* ------------------------------------------------------------------ *
@@ -408,8 +408,15 @@ export interface PluginAPI {
   /** The bus plugins talk to each other over — not the lifecycle events above. */
   readonly events: PluginEvents;
 
-  /** Ours: render a React component into a named slot. */
-  contribute(slot: SlotName, component: Contribution): Dispose;
+  /**
+   * Ours: render a React component into a named slot.
+   *
+   * `component`'s props are inferred from the slot — `message.actions` hands its
+   * component a `message` and an `index`, and says so — so a mismatch is a
+   * compile error rather than an `undefined` read at render time. A plugin
+   * declaring a slot of its own gets the same by augmenting `SlotProps`.
+   */
+  contribute<S extends SlotName>(slot: S, component: ComponentType<PropsOf<S>>): Dispose;
 
   /**
    * Ours: add a panel to the app's right-hand rail.

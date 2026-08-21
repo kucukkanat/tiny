@@ -49,8 +49,7 @@ function Assistant({
   done,
   reasoningLive,
   tools,
-  message,
-  index,
+  stored,
 }: {
   content: string;
   reasoning: string | undefined;
@@ -58,8 +57,13 @@ function Assistant({
   done: boolean;
   reasoningLive: boolean;
   tools: readonly StoredToolRun[];
-  message?: StoredMessage;
-  index?: number;
+  /**
+   * The finished message and where it sits, or nothing while one is streaming.
+   *
+   * One prop rather than two, because `message.actions` needs both and they are
+   * never separately available: a reply being written has neither.
+   */
+  stored?: { readonly message: StoredMessage; readonly index: number };
 }) {
   // `isStreaming` is pi's flag for a partial assistant update, so a transformer
   // can skip work until the text settles.
@@ -84,9 +88,9 @@ function Assistant({
       {(content !== "" || done) && <StreamText text={body} done={done} />}
       {/* Only finished replies carry actions — there is nothing to copy or
           retry while the tokens are still arriving. */}
-      {done && message !== undefined && (
+      {done && stored !== undefined && (
         <div className="flex items-center gap-1">
-          <Slot name="message.actions" message={message} index={index} />
+          <Slot name="message.actions" message={stored.message} index={stored.index} />
         </div>
       )}
     </div>
@@ -138,8 +142,7 @@ export function Thread({
             done
             reasoningLive={false}
             tools={message.tools ?? []}
-            message={message}
-            index={index}
+            stored={{ message, index }}
           />
         ),
       )}

@@ -300,7 +300,8 @@ rather than throwing — `loadPlugins` is usable on its own, in a test or a scri
 
 ## Slots
 
-`tiny.contribute(slot, Component)` renders React into one of five named regions:
+`tiny.contribute(slot, Component)` renders React into a named region — the app
+declares five, and a plugin can declare its own:
 [Slots and rendering](slots.md).
 
 ## Unregistering

@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -12,7 +12,7 @@ import { definePlugin } from "@tiny/plugin";
  * `anthropic-dangerous-direct-browser-access`, without which Anthropic refuses a
  * cross-origin request outright — so this works from a page with no proxy.
  */
-export const anthropic = (apiKey: () => string): Plugin =>
+export const anthropic = (apiKey: () => string): IdentifiedPlugin =>
   definePlugin("anthropic", (tiny) => {
     tiny.registerProvider("anthropic", {
       name: "Anthropic",

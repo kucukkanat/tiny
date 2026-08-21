@@ -6,7 +6,7 @@ more as it likes, in any of pi's browser-viable [api types](#api-types), and eac
 conversation remembers which one it belongs to.
 
 ```ts path=packages/plugin/examples/groqProvider.ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -18,7 +18,7 @@ import { definePlugin } from "@tiny/plugin";
  * actually travels: where to send the request, how to authenticate, and which
  * models exist.
  */
-export const groq = (): Plugin =>
+export const groq = (): IdentifiedPlugin =>
   definePlugin("groq", (tiny) => {
     tiny.registerProvider("groq", {
       name: "Groq",
@@ -111,7 +111,7 @@ Mistral each have their own.
 model — exactly the two levels pi allows.
 
 ```ts path=packages/plugin/examples/anthropicProvider.ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -125,7 +125,7 @@ import { definePlugin } from "@tiny/plugin";
  * `anthropic-dangerous-direct-browser-access`, without which Anthropic refuses a
  * cross-origin request outright — so this works from a page with no proxy.
  */
-export const anthropic = (apiKey: () => string): Plugin =>
+export const anthropic = (apiKey: () => string): IdentifiedPlugin =>
   definePlugin("anthropic", (tiny) => {
     tiny.registerProvider("anthropic", {
       name: "Anthropic",

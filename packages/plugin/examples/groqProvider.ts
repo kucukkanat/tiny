@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -10,7 +10,7 @@ import { definePlugin } from "@tiny/plugin";
  * actually travels: where to send the request, how to authenticate, and which
  * models exist.
  */
-export const groq = (): Plugin =>
+export const groq = (): IdentifiedPlugin =>
   definePlugin("groq", (tiny) => {
     tiny.registerProvider("groq", {
       name: "Groq",

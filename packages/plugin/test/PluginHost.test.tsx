@@ -282,22 +282,34 @@ describe("context and commands", () => {
     console.error = consoleError;
   });
 
-  test("warns when a plugin without an id stores something, and not before", async () => {
+  test("a plugin without an id gets storage that works but does not persist", async () => {
     const warn = console.warn;
     const warnings: string[] = [];
     console.warn = (message: string) => void warnings.push(message);
     try {
-      // No `definePlugin`, so its id is its position — which moves when the
-      // list does, taking whatever it stored with it.
+      // No `definePlugin`, so there is no stable name to file its data under.
+      // Persisting by list position would move that data the moment the list
+      // changes, so nothing is written to disk at all.
       await mount([
-        (tiny) => tiny.registerCommand("keep", { handler: (_a, ctx) => ctx.storage.set("k", 1) }),
+        (tiny) => {
+          tiny.registerCommand("keep", { handler: (_a, ctx) => ctx.storage.set("k", 1) });
+          tiny.registerCommand("read", {
+            handler: (_a, ctx) => ctx.ui.notify(`k=${ctx.storage.get("k")}`),
+          });
+        },
       ]);
+      // Warned on first use, not at load: a plugin that never stores anything
+      // has nothing to lose and nothing to be told about.
       expect(warnings).toEqual([]);
 
       await runCommand("keep");
 
       expect(warnings.join(" ")).toContain("definePlugin");
-      expect(localStorage.getItem("tiny-plugin:plugin-0:k")).toBe("1");
+      // Readable for the life of the page…
+      await runCommand("read");
+      await waitFor(() => expect(screen.getByTestId("plugin-toast").textContent).toContain("k=1"));
+      // …and absent from the positional namespace a reload would have looked in.
+      expect(localStorage.getItem("tiny-plugin:plugin-0:k")).toBeNull();
     } finally {
       console.warn = warn;
       localStorage.clear();

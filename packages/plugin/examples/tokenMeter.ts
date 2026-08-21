@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -8,7 +8,7 @@ import { definePlugin } from "@tiny/plugin";
  * already use, and `setWidget` carries plain string lines — all the RPC
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
-export const tokenMeter = (): Plugin =>
+export const tokenMeter = (): IdentifiedPlugin =>
   definePlugin("tokenMeter", (tiny) => {
     let total = 0;
 

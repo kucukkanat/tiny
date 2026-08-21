@@ -78,14 +78,14 @@ component changes. Type `/greet` in the composer.
 run by the test suite:
 
 ```tsx path=packages/plugin/examples/copyButton.tsx
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
  * A button on every finished reply. `contribute` is the one part of the API pi
  * has no portable equivalent of — everything else here is pi's.
  */
-export const copyButton = (): Plugin => {
+export const copyButton = (): IdentifiedPlugin => {
   function CopyAction({ message }: { message?: { content: string } | undefined }) {
     const ctx = usePluginContext();
     if (message === undefined) return null;
@@ -111,7 +111,7 @@ export const copyButton = (): Plugin => {
 };
 ```
 
-Four slots exist. `message.actions` is the only one that receives props — the
+Five slots exist. `message.actions` is the only one that receives props — the
 message it is rendered under, and its index. See [Slots](slots.md).
 
 ## Install a plugin at runtime
@@ -149,7 +149,7 @@ command, sitting in the same registry as everything above.
 | Host, types, slots, `PluginHost` | `packages/plugin` |
 | Runtime install, the Plugins dialog | `packages/plugin-manager` |
 | Filesystem tools for the model | `packages/plugin-fs` |
-| The app and its plugin registry | `apps/chat/src/plugins` |
+| The app and its plugin registry | `apps/chat/src/plugins.ts` |
 
 ## Run the tests
 

@@ -70,7 +70,7 @@ A contributed component is rendered inside the host, so it can call
 plugin — and re-renders when chat state moves.
 
 ```tsx path=packages/plugin/examples/savedPrompts.tsx
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
@@ -79,7 +79,7 @@ import { definePlugin, usePluginContext } from "@tiny/plugin";
  * `ctx.storage` is namespaced to this plugin, so nothing it writes can collide
  * with the app's own keys or with another plugin's.
  */
-export const savedPrompts = (): Plugin => {
+export const savedPrompts = (): IdentifiedPlugin => {
   function SaveButton() {
     const ctx = usePluginContext();
 
@@ -132,7 +132,7 @@ a shortcut and from the button, with one implementation.
 
 ```tsx
 // Good — one component identity for the life of the module.
-export const savedPrompts = (): Plugin => {
+export const savedPrompts = (): IdentifiedPlugin => {
   function SaveButton() { /* … */ }
   return (tiny) => tiny.contribute("composer.actions", SaveButton);
 };
@@ -148,7 +148,7 @@ Define it in the factory's closure or at module scope, never inline in the
 open state itself and contributes a component that renders `null` when closed:
 
 ```tsx
-export const settings = (): Plugin => {
+export const settings = (): IdentifiedPlugin => {
   const open = createExternalStore(false);
 
   function SettingsOverlay() {

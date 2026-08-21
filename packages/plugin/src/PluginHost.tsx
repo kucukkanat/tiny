@@ -89,6 +89,9 @@ export function PluginHost({
   providerStore.current ??= createProviderStore();
   const providers = useProviders(providerStore.current);
   const events = useRef(createEvents()).current;
+  // Held by the host, not the module: two hosts in one page — which is every
+  // test file — must not read each other's unidentified plugins' values.
+  const forgetfulStores = useRef<ForgetfulStores>(new Map()).current;
 
   // `undefined` means "everything the registry has"; pi's `setActiveTools`
   // replaces that with an explicit list.
@@ -293,7 +296,7 @@ export function PluginHost({
       settings: bridge.settings,
       updateSettings: bridge.updateSettings,
       navigate: bridge.navigate,
-      storage: namespacedStorage(pluginId),
+      storage: namespacedStorage(pluginId, forgetfulStores),
       runCommand: (name, args) => runCommandRef.current(name, args),
       commands,
       abort: bridge.stop,
@@ -305,7 +308,7 @@ export function PluginHost({
       newSession: () => bridge.navigate("/"),
       reload,
     }),
-    [ui, commands, bridge, reload],
+    [ui, commands, bridge, reload, forgetfulStores],
   );
 
   const runCommand = useCallback(
@@ -470,25 +473,60 @@ const sameBridge = (a: AppBridge, b: AppBridge): boolean => {
   return [...keys].every((key) => Object.is(a[key], b[key]));
 };
 
-/** Per-plugin localStorage, so a plugin cannot reach the app's own keys. */
-const namespacedStorage = (pluginId: string) => {
-  const prefix = `tiny-plugin:${pluginId}:`;
-  // Warned here rather than at load: an id derived from list position only
-  // matters once something is stored under it, because that is what moves when
-  // the list is reordered. Plugins that never touch storage are unaffected.
-  let warned = false;
-  const warnIfPositional = () => {
-    if (warned || !isPositionalId(pluginId)) return;
-    warned = true;
+/**
+ * Storage for a plugin that never said who it is: real, but only for this page.
+ *
+ * The alternative was persisting under the plugin's position in the list, which
+ * reads fine until someone inserts a plugin above it and every user's data moves
+ * to a namespace nothing looks in. That failure is silent, permanent, and
+ * discovered by the user rather than the author, so an unidentified plugin gets
+ * a store that works and forgets instead of one that persists and lies.
+ *
+ * Declaring an id with `definePlugin` is the whole fix, and the warning says so.
+ */
+type Forgetful = { readonly values: Map<string, unknown>; warned: boolean };
+
+/** Where unidentified plugins' values live, for as long as the host does. */
+export type ForgetfulStores = Map<string, Forgetful>;
+
+const forgetfulStorage = (pluginId: string, stores: ForgetfulStores) => {
+  // Keyed by plugin rather than built per context: a context is rebuilt for
+  // every command and every event, and a store that started empty each time
+  // would not be storage at all.
+  const store = stores.get(pluginId) ?? { values: new Map<string, unknown>(), warned: false };
+  stores.set(pluginId, store);
+  const { values } = store;
+  const warnOnce = () => {
+    if (store.warned) return;
+    store.warned = true;
     console.warn(
-      `[plugin] "${pluginId}" declared no id, so this data is namespaced by its ` +
-        `position in the plugin list and moves if that list changes. ` +
-        `Wrap the plugin in definePlugin("<name>", …).`,
+      `[plugin] "${pluginId}" declared no id, so its storage lasts only until ` +
+        `this page is reloaded — persisting it would namespace the data by the ` +
+        `plugin's position in the list, and move it whenever that list changes. ` +
+        `Wrap the plugin in definePlugin("<name>", …) to keep what it stores.`,
     );
   };
   return {
     get<T>(key: string): T | undefined {
-      warnIfPositional();
+      warnOnce();
+      return values.get(key) as T | undefined;
+    },
+    set(key: string, value: unknown) {
+      warnOnce();
+      values.set(key, value);
+    },
+    remove(key: string) {
+      values.delete(key);
+    },
+  };
+};
+
+/** Per-plugin localStorage, so a plugin cannot reach the app's own keys. */
+const namespacedStorage = (pluginId: string, forgetful: ForgetfulStores) => {
+  if (isPositionalId(pluginId)) return forgetfulStorage(pluginId, forgetful);
+  const prefix = `tiny-plugin:${pluginId}:`;
+  return {
+    get<T>(key: string): T | undefined {
       const raw = localStorage.getItem(prefix + key);
       if (raw === null) return undefined;
       try {
@@ -498,7 +536,6 @@ const namespacedStorage = (pluginId: string) => {
       }
     },
     set(key: string, value: unknown) {
-      warnIfPositional();
       localStorage.setItem(prefix + key, JSON.stringify(value));
     },
     remove(key: string) {

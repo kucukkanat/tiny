@@ -160,9 +160,10 @@ nothing you write can collide with the app's own keys. A value that fails to
 parse reads back as `undefined` rather than throwing.
 
 The `pluginId` half of that prefix is **the id you passed to `definePlugin`** —
-see [plugin identity](anatomy.md). A plugin that declares none is namespaced by
-its position in the list, which moves when the list does; it warns the first
-time it stores anything.
+see [plugin identity](anatomy.md). A plugin that declares none gets no prefix at
+all, because there is no stable name to build one from: its storage works for
+the life of the page and is never written to disk, and it warns the first time
+it stores anything.
 
 > Two exceptions to "cannot collide". Plugins installed at runtime all share
 > `@tiny/plugin-manager`'s identity, so they share one namespace with it and

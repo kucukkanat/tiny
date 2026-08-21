@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, usePluginContext } from "@tiny/plugin";
 
 /**
@@ -7,7 +7,7 @@ import { definePlugin, usePluginContext } from "@tiny/plugin";
  * `ctx.storage` is namespaced to this plugin, so nothing it writes can collide
  * with the app's own keys or with another plugin's.
  */
-export const savedPrompts = (): Plugin => {
+export const savedPrompts = (): IdentifiedPlugin => {
   function SaveButton() {
     const ctx = usePluginContext();
 

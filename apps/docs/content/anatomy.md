@@ -54,7 +54,7 @@ A plugin's id is **declared**, with `definePlugin`. It namespaces `ctx.storage`
 and labels the plugin's errors:
 
 ```ts
-export const greet = (): Plugin =>
+export const greet = (): IdentifiedPlugin =>
   definePlugin("greet", (tiny) => {
     // ctx.storage for this plugin lives under "greet"
   });
@@ -65,9 +65,12 @@ like the obvious source — but every minifier erases it, so a plugin identified
 that way has one identity under `bun run dev` and a different one in the build
 your users run, which quietly moves their stored data on release.
 
-A plugin with no id still loads: it falls back to its position in the list, with
-a warning. That is fine for a throwaway and wrong for anything that stores
-something, because the position moves whenever the list does.
+A plugin with no id still loads, and everything works except persistence: it is
+labelled by its position in the list, and `ctx.storage` keeps its values only
+until the page reloads, with a warning the first time it stores anything. That
+is fine for a throwaway. Persisting under a position would be worse than not
+persisting at all — the position moves whenever the list does, and the data goes
+somewhere nothing looks for it.
 
 Factories run in an effect, so contributions appear just after first paint rather
 than blocking it.
@@ -125,7 +128,7 @@ lost. Every call in this file is pi's, so it would run unchanged under
 parameter and pi never sees it:
 
 ```ts path=packages/plugin/examples/clearChat.ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -135,7 +138,7 @@ import { definePlugin } from "@tiny/plugin";
  * unmodified as a pi extension under `.pi/extensions/`. The object is named
  * `tiny` rather than `pi` only because it is this factory's parameter.
  */
-export const clearChat = (): Plugin =>
+export const clearChat = (): IdentifiedPlugin =>
   definePlugin("clearChat", (tiny) => {
     tiny.registerCommand("clear", {
       description: "Start a new conversation",
@@ -195,7 +198,7 @@ type error and without a runtime error — it just never hears from them. That i
 deliberate: it is what lets a real pi extension load unmodified.
 
 ```ts path=packages/plugin/examples/tokenMeter.ts
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -205,7 +208,7 @@ import { definePlugin } from "@tiny/plugin";
  * already use, and `setWidget` carries plain string lines — all the RPC
  * protocol supports, and therefore all a portable pi extension can rely on.
  */
-export const tokenMeter = (): Plugin =>
+export const tokenMeter = (): IdentifiedPlugin =>
   definePlugin("tokenMeter", (tiny) => {
     let total = 0;
 

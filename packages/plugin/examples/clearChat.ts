@@ -1,4 +1,4 @@
-import type { Plugin } from "@tiny/plugin";
+import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
@@ -8,7 +8,7 @@ import { definePlugin } from "@tiny/plugin";
  * unmodified as a pi extension under `.pi/extensions/`. The object is named
  * `tiny` rather than `pi` only because it is this factory's parameter.
  */
-export const clearChat = (): Plugin =>
+export const clearChat = (): IdentifiedPlugin =>
   definePlugin("clearChat", (tiny) => {
     tiny.registerCommand("clear", {
       description: "Start a new conversation",

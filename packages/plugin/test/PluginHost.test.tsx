@@ -487,3 +487,47 @@ describe("reload", () => {
     expect(names()).toEqual([]);
   });
 });
+
+describe("disposing a plugin in a mounted host", () => {
+  test("removes its contributions and leaves the others rendering", async () => {
+    const going = definePlugin("going", (tiny) => {
+      tiny.contribute("composer.actions", () => <span>going</span>);
+      tiny.registerCommand("go", { handler: () => {} });
+    });
+    const staying = definePlugin("staying", (tiny) => {
+      tiny.contribute("composer.actions", () => <span>staying</span>);
+      tiny.registerCommand("stay", { handler: () => {} });
+    });
+    await mount([going, staying], <Slot name="composer.actions" />);
+
+    await waitFor(() => expect(screen.getByText("going")).toBeDefined());
+    expect(screen.getByText("staying")).toBeDefined();
+
+    // No reload: the other plugin's factory does not run again.
+    await act(async () => {
+      host?.registry.dispose("going");
+    });
+
+    await waitFor(() => expect(screen.queryByText("going")).toBeNull());
+    expect(screen.getByText("staying")).toBeDefined();
+    expect(host?.commands.map((command) => command.name)).toEqual(["stay"]);
+  });
+
+  test("a factory is not re-run, unlike reload", async () => {
+    let runs = 0;
+    const counted = definePlugin("counted", (tiny) => {
+      runs += 1;
+      tiny.registerCommand("c", { handler: () => {} });
+    });
+    const other = definePlugin("other", (tiny) => tiny.registerCommand("o", { handler: () => {} }));
+    await mount([counted, other]);
+    expect(runs).toBe(1);
+
+    await act(async () => {
+      host?.registry.dispose("other");
+    });
+
+    expect(runs).toBe(1);
+    expect(host?.commands.map((command) => command.name)).toEqual(["c"]);
+  });
+});

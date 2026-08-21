@@ -87,7 +87,7 @@ it is **pi's**, adapted, not an invention here. pi reloads extensions, skills,
 prompts and themes from disk; this re-runs every plugin factory and rebuilds the
 registry. Both resolve once the new runtime is live, and in both, a plugin that no
 longer registers is gone. See
-[reloading](runtime.md#reloading-is-how-unloading-works).
+[reloading](runtime.md#disabling-and-reloading).
 
 ## Events
 

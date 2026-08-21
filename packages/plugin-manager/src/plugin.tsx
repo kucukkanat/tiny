@@ -1,6 +1,6 @@
 import type { IdentifiedPlugin } from "@tiny/plugin";
-import { createExternalStore, definePlugin, usePluginContext, useStore } from "@tiny/plugin";
-import { activate } from "./activate.ts";
+import { createExternalStore, definePlugin, useStore } from "@tiny/plugin";
+import { type Activator, createActivator } from "./activate.ts";
 import { type InstalledOptions, openInstalled } from "./installed.ts";
 import { ManagerDialog } from "./ManagerDialog.tsx";
 import { hostModules } from "./runtime.ts";
@@ -16,9 +16,11 @@ export type PluginManagerOptions = InstalledOptions;
  * everything one that shipped with the build can — including, for now, sharing
  * this plugin's storage namespace. See `activate.ts`.
  *
- * Adding, enabling or removing calls `ctx.reload()`, which rebuilds the whole
- * registry: that is what makes a removed plugin actually stop running, since
- * registrations have no undo of their own.
+ * Adding, enabling or removing reconciles the running set against the manifest —
+ * see `createActivator`. It used to call `ctx.reload()`, re-running every
+ * factory in the app to change one checkbox, because a registration could not be
+ * taken back; now each installed plugin has a disposer of its own and only the
+ * plugins that actually changed are stopped or started.
  */
 export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlugin => {
   const store = openInstalled(options);
@@ -32,13 +34,20 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
   // so the dialog stays open while plugins are being added.
   const open = createExternalStore(false);
 
+  // Set when the factory runs, which is before any UI can render — the dialog is
+  // contributed by that same factory, so there is no window where it is missing.
+  let activator: Activator | undefined;
+
   function ManagerOverlay() {
-    const ctx = usePluginContext();
     const shown = useStore(open);
     if (!shown) return null;
 
     return (
-      <ManagerDialog store={store} onChanged={() => ctx.reload()} onClose={() => open.set(false)} />
+      <ManagerDialog
+        store={store}
+        onChanged={async () => void (await activator?.apply())}
+        onClose={() => open.set(false)}
+      />
     );
   }
 
@@ -78,6 +87,7 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
     tiny.contribute("app.overlays", ManagerOverlay);
     tiny.contribute("sidebar.footer", ManagerButton);
 
-    await activate(store, tiny, modules);
+    activator = createActivator(store, tiny, modules);
+    await activator.apply();
   });
 };

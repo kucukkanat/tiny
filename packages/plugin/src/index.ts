@@ -46,6 +46,7 @@ export type {
   CommandOptions,
   ContextUsage,
   DialogOptions,
+  Dispose,
   IdentifiedPlugin,
   MarkdownContext,
   MarkdownTransformer,

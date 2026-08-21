@@ -24,10 +24,11 @@ at runtime registers is in the app's one registry, indistinguishable from a
 plugin that shipped with the build. Commands, tools, shortcuts and slot
 contributions all work.
 
-Applying a change — adding, enabling, disabling, removing — calls
-`ctx.reload()`, which re-runs every factory and rebuilds the registry. That is
-what makes a removed plugin actually stop running: registrations have no undo of
-their own, so unloading is rebuilding.
+Applying a change — adding, enabling, disabling, removing — reconciles what is
+running against the manifest. Each installed plugin's registrations hand back
+disposers, kept together so the one plugin can be stopped on its own; a plugin
+whose source was re-approved is stopped before the new revision starts, so it
+releases its command names first. Nothing else in the app is re-run.
 
 ## TypeScript, JSX, and what a plugin may import
 
@@ -157,7 +158,7 @@ console.log(`installed ${installed.name} — sha256 ${installed.sha256.slice(0, 
 const registry = await loadPlugins([pluginManager(options)]);
 console.log(`commands: ${registry.commands.map((command) => command.invocationName).join(", ")}`);
 
-// Disabling is immediate — the app calls `ctx.reload()` and the command is gone.
+// Disabling is immediate — the plugin's disposers run and the command is gone.
 store.setEnabled(installed.id, false);
 const withoutIt = await loadPlugins([pluginManager(options)]);
 console.log(`disabled: ${withoutIt.commands.map((command) => command.invocationName).join(", ")}`);

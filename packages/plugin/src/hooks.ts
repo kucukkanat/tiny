@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { createEvents, type PluginEvents } from "./events.ts";
 import type { ProviderEntry } from "./providers.ts";
-import type { MarkdownEntry, PanelEntry, Registry, RouteEntry } from "./registry.ts";
+import type { MarkdownEntry, PanelEntry, PluginRuntime, RouteEntry } from "./registry.ts";
 import { emptyRegistry, transformMarkdown } from "./registry.ts";
 import type {
   CommandInfo,
@@ -39,7 +39,12 @@ export type AppBridge = {
 };
 
 export type HostValue = {
-  readonly registry: Registry;
+  /**
+   * The live registry. A snapshot to read, and the handle a host disables a
+   * plugin through — `registry.dispose(pluginId)` withdraws what it registered
+   * without re-running every other factory, which is what `reload()` does.
+   */
+  readonly registry: PluginRuntime;
   /**
    * False until the plugin factories have finished, however they finished.
    *

@@ -37,7 +37,7 @@ console.log(`installed ${installed.name} — sha256 ${installed.sha256.slice(0, 
 const registry = await loadPlugins([pluginManager(options)]);
 console.log(`commands: ${registry.commands.map((command) => command.invocationName).join(", ")}`);
 
-// Disabling is immediate — the app calls `ctx.reload()` and the command is gone.
+// Disabling is immediate — the plugin's disposers run and the command is gone.
 store.setEnabled(installed.id, false);
 const withoutIt = await loadPlugins([pluginManager(options)]);
 console.log(`disabled: ${withoutIt.commands.map((command) => command.invocationName).join(", ")}`);

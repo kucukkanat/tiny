@@ -8,6 +8,7 @@ import { identityTheme } from "./theme.ts";
 import type {
   CommandInfo,
   CommandOptions,
+  Dispose,
   MarkdownContext,
   MarkdownTransformer,
   PanelOptions,
@@ -88,7 +89,35 @@ export type Registry = {
   readonly extensions: readonly Extension[];
 };
 
-export const emptyRegistry: Registry = {
+/**
+ * A registry that can still change, which is what `loadPlugins` returns.
+ *
+ * It *is* a `Registry` — every field is the snapshot taken when it was made — so
+ * anything reading `registry.commands` is unaffected. What it adds is the two
+ * operations a snapshot cannot express: retiring one plugin, and hearing that
+ * something was retired.
+ *
+ * Before this, the only way to remove anything was `ctx.reload()`, which re-runs
+ * every factory in the app to take one plugin out. Registrations hand back a
+ * disposer now, so a plugin can withdraw a command it no longer applies to, and
+ * a host can disable one plugin without disturbing its neighbours.
+ */
+export type PluginRuntime = Registry & {
+  /**
+   * Retire everything one plugin registered, including its providers.
+   * Returns whether there was anything to retire.
+   */
+  readonly dispose: (pluginId: string) => boolean;
+  /** Called with a fresh snapshot whenever a registration is added or withdrawn. */
+  readonly subscribe: (listener: (next: PluginRuntime) => void) => () => void;
+};
+
+const noRuntime = {
+  dispose: () => false,
+  subscribe: () => () => {},
+};
+
+export const emptyRegistry: PluginRuntime = {
   commands: [],
   shortcuts: [],
   contributions: [],
@@ -99,6 +128,7 @@ export const emptyRegistry: Registry = {
   markdown: [],
   providers: [],
   extensions: [],
+  ...noRuntime,
 };
 
 /**
@@ -334,8 +364,9 @@ export type LoadOptions = {
 export const loadPlugins = async (
   plugins: readonly Plugin[],
   options: LoadOptions = {},
-): Promise<Registry> => {
-  const recorded: [pluginId: string, event: string, handler: unknown][] = [];
+): Promise<PluginRuntime> => {
+  type Recorded = { readonly pluginId: string; readonly event: string; readonly handler: unknown };
+  const recorded: Recorded[] = [];
   const commands: Omit<CommandEntry, "invocationName">[] = [];
   const shortcuts: ShortcutEntry[] = [];
   const contributions: ContributionEntry[] = [];
@@ -343,6 +374,43 @@ export const loadPlugins = async (
   const routes: RouteEntry[] = [];
   const toolEntries: ToolEntry[] = [];
   const markdown: MarkdownEntry[] = [];
+
+  const listeners = new Set<(next: PluginRuntime) => void>();
+  /** False until the first snapshot exists, so clashes are reported once. */
+  let built = false;
+  /**
+   * Announce a change, once the lists already reflect it.
+   *
+   * Iterated over a copy for the same reason `events.ts` does: a listener that
+   * unsubscribes itself must not disturb the dispatch it is in.
+   */
+  const notify = () => {
+    if (listeners.size === 0) return;
+    const next = runtime();
+    for (const listener of [...listeners]) listener(next);
+  };
+
+  /**
+   * Records one registration and hands back the disposer that undoes it.
+   *
+   * Both halves announce themselves. pi allows registering long after the
+   * factory returns — from a command handler, or from a plugin the user just
+   * installed — and a command that appears in the registry but not in the
+   * command palette is not registered as far as the user is concerned. During
+   * the load itself there is nobody subscribed yet, so this costs nothing.
+   */
+  const record = <T>(list: T[], entry: T): Dispose => {
+    list.push(entry);
+    notify();
+    return () => {
+      const at = list.indexOf(entry);
+      // Already withdrawn — by a second call, or by `dispose` sweeping the
+      // plugin — so there is nothing to announce.
+      if (at === -1) return;
+      list.splice(at, 1);
+      notify();
+    };
+  };
 
   const providers = options.providers ?? createProviderStore();
   const events = options.events ?? createEvents();
@@ -354,6 +422,7 @@ export const loadPlugins = async (
 
   for (const [index, plugin] of plugins.entries()) {
     const id = pluginId(plugin, index);
+    let contributed = 0;
     // Annotated, not asserted. `as PluginAPI` over the whole literal would only
     // check what is here against the interface, never that all of it is here —
     // so a method added to `PluginAPI` and forgotten below would compile, and
@@ -365,19 +434,19 @@ export const loadPlugins = async (
       // signature, and the recorder is deliberately untyped so pi events this
       // host never fires are stored just the same.
       on: ((event: string, handler: unknown) => {
-        recorded.push([id, event, handler]);
+        return record(recorded, { pluginId: id, event, handler });
       }) as PiPluginAPI["on"],
       registerCommand: (name, options) => {
-        commands.push({ name, pluginId: id, options });
+        return record(commands, { name, pluginId: id, options });
       },
       registerShortcut: (shortcut, options) => {
-        shortcuts.push({ shortcut, pluginId: id, options });
+        return record(shortcuts, { shortcut, pluginId: id, options });
       },
       registerTool: (tool) => {
-        toolEntries.push({ pluginId: id, tool });
+        return record(toolEntries, { pluginId: id, tool });
       },
       registerMarkdownTransformer: (transformer) => {
-        markdown.push({ pluginId: id, transformer });
+        return record(markdown, { pluginId: id, transformer });
       },
       registerProvider: (providerId, config) => providers.register(id, providerId, config),
       unregisterProvider: (providerId) => providers.unregister(providerId),
@@ -391,8 +460,10 @@ export const loadPlugins = async (
       setSessionName: (name) => host().setSessionName(name),
       events,
       contribute: (slot, component) => {
-        contributions.push({
-          id: `${id}#${contributions.length}`,
+        // Counted per plugin, not across all of them: the id is a React key, so
+        // it has to stay stable when a neighbouring plugin is retired.
+        return record(contributions, {
+          id: `${id}#${contributed++}`,
           slot,
           pluginId: id,
           component,
@@ -404,9 +475,9 @@ export const loadPlugins = async (
         const key = `${id}:${panelId}`;
         if (panels.some((panel) => panel.id === key)) {
           console.error(`[plugin:${id}] panel "${panelId}" is already registered`);
-          return;
+          return () => {};
         }
-        panels.push({ id: key, panelId, pluginId: id, options });
+        return record(panels, { id: key, panelId, pluginId: id, options });
       },
       registerRoute: (declared, options) => {
         const path = canonicalPath(declared);
@@ -415,16 +486,16 @@ export const loadPlugins = async (
             `[plugin:${id}] route "${declared}" is not a usable path — it must start ` +
               `with "/" and contain no "?", "#" or whitespace`,
           );
-          return;
+          return () => {};
         }
         // A path is an address, not a name: it cannot be suffixed the way a
         // duplicate command is, so a clash has to be reported instead. Compared
         // as a router matches, not as a string — see `addressOf`.
         if (routes.some((route) => addressOf(route.path) === addressOf(path))) {
           console.error(`[plugin:${id}] route "${declared}" is already registered`);
-          return;
+          return () => {};
         }
-        routes.push({ path, pluginId: id, options });
+        return record(routes, { path, pluginId: id, options });
       },
     };
     await plugin(api);
@@ -436,8 +507,10 @@ export const loadPlugins = async (
   const fallbackContext = () => (detached ??= detachedContext());
 
   // Replay is idempotent: `loadExtensions` builds fresh handler arrays per call.
+  // It reads `recorded` when it runs rather than closing over a copy, so a
+  // handler withdrawn between requests is simply not registered on the next one.
   const replay: Extension = (tiny) => {
-    for (const [owner, event, handler] of recorded) {
+    for (const { pluginId: owner, event, handler } of recorded) {
       // Events this facade never fires are dropped rather than registered, so a
       // pi extension subscribing to `session_start` loads without erroring.
       if (!firesEvent(event)) continue;
@@ -452,26 +525,65 @@ export const loadPlugins = async (
     }
   };
 
-  // A tool name has to be unique for the model to address it, so unlike
-  // commands a duplicate cannot be suffixed — the first registration wins and
-  // the clash is reported rather than silently shadowing.
-  const tools: ToolDefinition[] = [];
-  for (const { pluginId: owner, tool } of toolEntries) {
-    const clash = tools.some((existing) => existing.name === tool.name);
-    if (clash) console.error(`[plugin:${owner}] tool "${tool.name}" is already registered`);
-    else tools.push(tool);
-  }
+  /**
+   * The tools the model may address, deduplicated.
+   *
+   * A tool name has to be unique for the model to address it, so unlike commands
+   * a duplicate cannot be suffixed — the first registration wins and the clash is
+   * reported. Recomputed per snapshot rather than once: when the plugin holding
+   * the winning `fs_read` is retired, the runner-up should get the name.
+   */
+  const activeTools = (report: boolean): ToolDefinition[] => {
+    const tools: ToolDefinition[] = [];
+    for (const { pluginId: owner, tool } of toolEntries) {
+      if (!tools.some((existing) => existing.name === tool.name)) tools.push(tool);
+      else if (report) console.error(`[plugin:${owner}] tool "${tool.name}" is already registered`);
+    }
+    return tools;
+  };
 
-  return {
+  /** Everything one plugin put in, taken back out in one step. */
+  const dispose = (owner: string): boolean => {
+    const owned = <T extends { readonly pluginId: string }>(list: T[]) => {
+      const kept = list.filter((entry) => entry.pluginId !== owner);
+      const removed = kept.length !== list.length;
+      list.splice(0, list.length, ...kept);
+      return removed;
+    };
+    const removed = [recorded, commands, shortcuts, contributions, panels, routes, toolEntries]
+      // `.map` before `.some`: every list must be swept, not just those up to
+      // the first that had something in it.
+      .map((list) => owned(list as { readonly pluginId: string }[]))
+      .includes(true);
+    const sweptMarkdown = owned(markdown);
+    // Providers live in a store of their own, since pi allows late registration.
+    const sweptProviders = providers.removeOwner(owner);
+    const any = removed || sweptMarkdown || sweptProviders;
+    if (any) notify();
+    return any;
+  };
+
+  const runtime = (): PluginRuntime => ({
     commands: withInvocationNames(commands),
-    shortcuts,
-    contributions,
-    panels,
-    routes,
-    tools,
-    toolEntries,
-    markdown,
+    shortcuts: [...shortcuts],
+    contributions: [...contributions],
+    panels: [...panels],
+    routes: [...routes],
+    // Only the first build reports clashes; a rebuild after a disposal would
+    // otherwise repeat every warning the load already printed.
+    tools: activeTools(!built),
+    toolEntries: [...toolEntries],
+    markdown: [...markdown],
     providers: providers.list(),
     extensions: recorded.length > 0 ? [replay] : [],
-  };
+    dispose,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+  });
+
+  const first = runtime();
+  built = true;
+  return first;
 };

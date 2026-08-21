@@ -353,27 +353,39 @@ export type MarkdownContext = {
 /** pi's transformer, minus `availableWidth` — a browser has no column count. */
 export type MarkdownTransformer = (markdown: string, context: MarkdownContext) => string;
 
+/**
+ * Withdraws one registration.
+ *
+ * Every `register*` hands one back, so a plugin can take back a command that no
+ * longer applies, or a host can retire a plugin without `reload()` re-running
+ * every factory in the app to remove one. Calling it twice is harmless.
+ *
+ * Ignoring it is the normal case — a plugin that registers for the life of the
+ * page has nothing to do with it — so nothing warns when it goes unused.
+ */
+export type Dispose = () => void;
+
 export interface PluginAPI {
   /** Subscribe to a lifecycle event `@tiny/ai` fires. Every name here is live. */
   on<K extends keyof EventMap>(
     event: K,
     handler: PluginEventHandler<EventMap[K][0], EventMap[K][1]>,
-  ): void;
+  ): Dispose;
 
-  registerCommand(name: string, options: CommandOptions): void;
-  registerShortcut(shortcut: KeyId, options: ShortcutOptions): void;
+  registerCommand(name: string, options: CommandOptions): Dispose;
+  registerShortcut(shortcut: KeyId, options: ShortcutOptions): Dispose;
   /**
    * Register a tool the model may call. pi's shape, including `execute`'s
    * positional arguments and content-block result, except that `parameters` is
    * a plain JSON Schema object rather than a typebox `TSchema` — see
    * `ToolDefinition` in `@tiny/ai` for why.
    */
-  registerTool(tool: ToolDefinition): void;
+  registerTool(tool: ToolDefinition): Dispose;
   /** Every command available to `runCommand`, in invocation order. */
   getCommands(): readonly CommandInfo[];
 
   /** Transform the markdown of a message before it is displayed. */
-  registerMarkdownTransformer(transformer: MarkdownTransformer): void;
+  registerMarkdownTransformer(transformer: MarkdownTransformer): Dispose;
 
   /** Add an endpoint to the model picker. A repeat id replaces the earlier one. */
   registerProvider(id: string, config: ProviderConfig): void;
@@ -397,7 +409,7 @@ export interface PluginAPI {
   readonly events: PluginEvents;
 
   /** Ours: render a React component into a named slot. */
-  contribute(slot: SlotName, component: Contribution): void;
+  contribute(slot: SlotName, component: Contribution): Dispose;
 
   /**
    * Ours: add a panel to the app's right-hand rail.
@@ -406,7 +418,7 @@ export interface PluginAPI {
    * `notes`; registering the same id twice within one plugin is a mistake and
    * the second is dropped with an error.
    */
-  registerPanel(id: string, options: PanelOptions): void;
+  registerPanel(id: string, options: PanelOptions): Dispose;
 
   /**
    * Ours: add a page at `path`, which must start with `/`.
@@ -415,7 +427,7 @@ export interface PluginAPI {
    * router resolves — so the first registration wins and a later claim on the
    * same path is reported rather than silently shadowing it.
    */
-  registerRoute(path: string, options: RouteOptions): void;
+  registerRoute(path: string, options: RouteOptions): Dispose;
 }
 
 /**
@@ -432,9 +444,9 @@ export type PiPluginAPI = Omit<PluginAPI, "on"> & {
   on<K extends keyof EventMap>(
     event: K,
     handler: PluginEventHandler<EventMap[K][0], EventMap[K][1]>,
-  ): void;
+  ): Dispose;
   /** Accepted so a pi extension loads; these never fire here. */
-  on(event: UnfiredEvent, handler: (...args: never[]) => unknown): void;
+  on(event: UnfiredEvent, handler: (...args: never[]) => unknown): Dispose;
 };
 
 /**
@@ -453,12 +465,18 @@ export type PiPluginAPI = Omit<PluginAPI, "on"> & {
  * ```
  */
 export const piExtension =
-  (setup: (tiny: PiPluginAPI) => void | Promise<void>): Plugin =>
+  (setup: (tiny: PiPluginAPI) => void | Promise<void> | Dispose): Plugin =>
   (tiny) =>
     setup(tiny as PiPluginAPI);
 
 export type Plugin = {
-  (tiny: PluginAPI): void | Promise<void>;
+  /**
+   * Nothing is done with what a factory returns; a promise is awaited before the
+   * next plugin loads. `Dispose` is in the union only so the common one-liner
+   * — `(tiny) => tiny.registerCommand(…)` — still typechecks now that
+   * registering hands a disposer back. Returning it means nothing.
+   */
+  (tiny: PluginAPI): void | Promise<void> | Dispose;
   /**
    * Stable identity, used to namespace `ctx.storage` and to label this plugin's
    * errors. Declare it with `definePlugin` — see there for why it cannot be
@@ -490,7 +508,7 @@ export type Plugin = {
  */
 export const definePlugin = (
   id: string,
-  setup: (tiny: PluginAPI) => void | Promise<void>,
+  setup: (tiny: PluginAPI) => void | Promise<void> | Dispose,
 ): IdentifiedPlugin => Object.assign(setup, { id });
 
 /**

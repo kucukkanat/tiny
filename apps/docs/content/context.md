@@ -218,7 +218,7 @@ It resolves when the attempt is *over*, not when it succeeded — a factory that
 throws still ends the wait, with the failure logged.
 
 This is the mechanism the [plugin manager](runtime.md) applies every change with,
-and it is [how a plugin gets unloaded](runtime.md#reloading-is-how-unloading-works).
+and it is [how a plugin gets unloaded](runtime.md#disabling-and-reloading).
 
 ## The theme object
 

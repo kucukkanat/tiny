@@ -305,10 +305,29 @@ rather than throwing — `loadPlugins` is usable on its own, in a test or a scri
 
 ## Unregistering
 
-There is no `off`, no `unregisterCommand`, and no return value to call. **The way
-to unload a plugin is to rebuild the registry without it** — `ctx.reload()`
-re-runs every factory from scratch, and whatever no longer registers is simply
-gone.
+**Every `register*` returns a function that undoes it.** Ignore it and the
+registration lasts as long as the page, which is what almost every plugin wants;
+keep it and you can take the registration back:
 
-That is not a gap; it is what makes disabling a runtime plugin actually work.
-[Reloading](runtime.md#reloading-is-how-unloading-works).
+```ts
+definePlugin("draft", (tiny) => {
+  let off: (() => void) | undefined;
+
+  tiny.on("turn_start", (_event, ctx) => {
+    // A command that only makes sense mid-reply, withdrawn when it is not.
+    off ??= tiny.registerCommand("interrupt", { handler: (_a, c) => c.abort() });
+  });
+  tiny.on("turn_end", () => {
+    off?.();
+    off = undefined;
+  });
+});
+```
+
+Calling it twice is harmless — the second call finds nothing to withdraw.
+
+To take out a whole plugin rather than one registration, the host has
+`registry.dispose(pluginId)`, which withdraws everything that plugin registered
+and leaves every other plugin running. `ctx.reload()` is still there and still
+rebuilds the registry from scratch; it is the bigger hammer, for when the plugin
+*list* itself changed. [Reloading](runtime.md#disabling-and-reloading).

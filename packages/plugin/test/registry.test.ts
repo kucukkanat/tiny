@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Extension, ExtensionAPI } from "@tiny/ai";
+import { type Extension, type ExtensionAPI, toolOutput } from "@tiny/ai";
 import { matchesKey } from "../src/keys.ts";
-import { loadPlugins } from "../src/registry.ts";
+import { createProviderStore } from "../src/providers.ts";
+import { loadPlugins, type PluginRuntime, type Registry } from "../src/registry.ts";
 import { identityTheme } from "../src/theme.ts";
 import type { Plugin } from "../src/tiny.ts";
 import { definePlugin, piExtension } from "../src/tiny.ts";
@@ -387,5 +388,223 @@ describe("the context event handlers receive", () => {
     for (const extension of extensions) await extension(api);
     await handler?.({ type: "tool_call" }, { model: undefined, signal });
     expect(saw).toBe(signal);
+  });
+});
+
+describe("withdrawing a registration", () => {
+  test("every register* hands back a function", async () => {
+    const Component = () => null;
+    const returned: unknown[] = [];
+    await loadPlugins([
+      definePlugin("a", (tiny) => {
+        returned.push(
+          tiny.on("context", () => {}),
+          tiny.registerCommand("c", { handler: () => {} }),
+          tiny.registerShortcut("ctrl+j", { handler: () => {} }),
+          tiny.registerTool({
+            name: "t",
+            description: "d",
+            parameters: { type: "object" },
+            execute: () => toolOutput("ok"),
+          }),
+          tiny.registerMarkdownTransformer((markdown) => markdown),
+          tiny.contribute("composer.actions", Component),
+          tiny.registerPanel("p", { title: "P", component: Component }),
+          tiny.registerRoute("/r", { component: Component }),
+        );
+      }),
+    ]);
+
+    // Eight registration methods, eight disposers. Before this, one of the
+    // nineteen was reversible, and it was `unregisterProvider`.
+    expect(returned).toHaveLength(8);
+    for (const value of returned) expect(typeof value).toBe("function");
+  });
+
+  test("a rejected registration still hands back a disposer that does nothing", async () => {
+    const Component = () => null;
+    const original = console.error;
+    console.error = () => {};
+    let offClash: (() => void) | undefined;
+    let registry: PluginRuntime;
+    try {
+      registry = await loadPlugins([
+        definePlugin("a", (tiny) => {
+          tiny.registerPanel("p", { title: "First", component: Component });
+          // Rejected — same plugin, same id — so there is nothing to withdraw.
+          offClash = tiny.registerPanel("p", { title: "Second", component: Component });
+        }),
+      ]);
+    } finally {
+      console.error = original;
+    }
+
+    const seen: number[] = [];
+    registry.subscribe((next) => seen.push(next.panels.length));
+    offClash?.();
+
+    // Calling it must not take the registration that *did* succeed.
+    expect(seen).toEqual([]);
+    expect(registry.panels.map((p) => p.options.title)).toEqual(["First"]);
+  });
+
+  test("subscribers hear the snapshot that follows a withdrawal", async () => {
+    let offCommand: (() => void) | undefined;
+    const registry = await loadPlugins([
+      definePlugin("a", (tiny) => {
+        offCommand = tiny.registerCommand("gone", { handler: () => {} });
+        tiny.registerCommand("stay", { handler: () => {} });
+      }),
+    ]);
+
+    const seen: string[][] = [];
+    registry.subscribe((next) => seen.push(next.commands.map((c) => c.name)));
+
+    offCommand?.();
+
+    expect(seen).toEqual([["stay"]]);
+  });
+
+  test("withdrawing twice is harmless", async () => {
+    let off: (() => void) | undefined;
+    const registry = await loadPlugins([
+      definePlugin("a", (tiny) => {
+        off = tiny.registerCommand("once", { handler: () => {} });
+      }),
+    ]);
+    const seen: number[] = [];
+    registry.subscribe((next) => seen.push(next.commands.length));
+
+    off?.();
+    off?.();
+
+    // One notification, not two: the second call found nothing to remove.
+    expect(seen).toEqual([0]);
+  });
+
+  test("dispose takes one plugin out and leaves its neighbours whole", async () => {
+    const Panel = () => null;
+    const Contributed = () => null;
+    const registry = await loadPlugins([
+      definePlugin("going", (tiny) => {
+        tiny.registerCommand("go", { handler: () => {} });
+        tiny.registerShortcut("ctrl+g", { handler: () => {} });
+        tiny.contribute("composer.actions", Contributed);
+        tiny.registerPanel("p", { title: "P", component: Panel });
+        tiny.registerRoute("/going", { component: Panel });
+        tiny.registerTool({
+          name: "going_tool",
+          description: "d",
+          parameters: { type: "object" },
+          execute: () => toolOutput("ok"),
+        });
+        tiny.registerMarkdownTransformer((markdown) => markdown);
+        tiny.on("context", () => {});
+      }),
+      definePlugin("staying", (tiny) => {
+        tiny.registerCommand("stay", { handler: () => {} });
+        tiny.registerShortcut("ctrl+s", { handler: () => {} });
+        tiny.contribute("composer.actions", Contributed);
+        tiny.registerPanel("p", { title: "P", component: Panel });
+        tiny.registerRoute("/staying", { component: Panel });
+        tiny.registerTool({
+          name: "staying_tool",
+          description: "d",
+          parameters: { type: "object" },
+          execute: () => toolOutput("ok"),
+        });
+        tiny.registerMarkdownTransformer((markdown) => markdown);
+        tiny.on("context", () => {});
+      }),
+    ]);
+
+    let latest = registry as Registry;
+    registry.subscribe((next) => {
+      latest = next;
+    });
+
+    expect(registry.dispose("going")).toBe(true);
+
+    expect(latest.commands.map((c) => c.pluginId)).toEqual(["staying"]);
+    expect(latest.shortcuts.map((s) => s.pluginId)).toEqual(["staying"]);
+    expect(latest.contributions.map((c) => c.pluginId)).toEqual(["staying"]);
+    expect(latest.panels.map((p) => p.pluginId)).toEqual(["staying"]);
+    expect(latest.routes.map((r) => r.pluginId)).toEqual(["staying"]);
+    expect(latest.tools.map((t) => t.name)).toEqual(["staying_tool"]);
+    expect(latest.markdown.map((m) => m.pluginId)).toEqual(["staying"]);
+    expect(replayed(latest.extensions)).toEqual(["context"]);
+  });
+
+  test("dispose reports whether there was anything to take out", async () => {
+    const registry = await loadPlugins([
+      definePlugin("a", (tiny) => tiny.registerCommand("x", { handler: () => {} })),
+    ]);
+    expect(registry.dispose("nobody")).toBe(false);
+    expect(registry.dispose("a")).toBe(true);
+    expect(registry.dispose("a")).toBe(false);
+  });
+
+  test("dispose drops the plugin's providers too", async () => {
+    const providers = createProviderStore();
+    const registry = await loadPlugins(
+      [
+        definePlugin("p", (tiny) =>
+          tiny.registerProvider("groq", { name: "Groq", baseUrl: "https://a.example/v1" }),
+        ),
+      ],
+      { providers },
+    );
+
+    expect(providers.list()).toHaveLength(1);
+    expect(registry.dispose("p")).toBe(true);
+    expect(providers.list()).toEqual([]);
+  });
+
+  test("a command name freed by a disposal loses its suffix", async () => {
+    const claim = (id: string) =>
+      definePlugin(id, (tiny) => tiny.registerCommand("review", { handler: () => {} }));
+    const registry = await loadPlugins([claim("first"), claim("second")]);
+    expect(registry.commands.map((c) => c.invocationName)).toEqual(["review:1", "review:2"]);
+
+    let latest = registry as Registry;
+    registry.subscribe((next) => {
+      latest = next;
+    });
+    registry.dispose("first");
+
+    // Only one claimant left, so it is invoked unsuffixed — the same rule the
+    // load applies, recomputed rather than frozen at load time.
+    expect(latest.commands.map((c) => c.invocationName)).toEqual(["review"]);
+  });
+
+  test("a tool name freed by a disposal goes to the plugin that lost it", async () => {
+    const tool = (label: string) => ({
+      name: "shared",
+      description: label,
+      parameters: { type: "object" },
+      execute: () => toolOutput("ok"),
+    });
+    const errors: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => void errors.push(args.join(" "));
+    let registry: PluginRuntime;
+    try {
+      registry = await loadPlugins([
+        definePlugin("winner", (tiny) => tiny.registerTool(tool("first"))),
+        definePlugin("loser", (tiny) => tiny.registerTool(tool("second"))),
+      ]);
+    } finally {
+      console.error = original;
+    }
+    expect(errors.join(" ")).toContain('tool "shared" is already registered');
+    expect(registry.tools.map((t) => t.description)).toEqual(["first"]);
+
+    let latest = registry as Registry;
+    registry.subscribe((next) => {
+      latest = next;
+    });
+    registry.dispose("winner");
+
+    expect(latest.tools.map((t) => t.description)).toEqual(["second"]);
   });
 });

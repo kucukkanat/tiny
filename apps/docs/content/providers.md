@@ -232,7 +232,7 @@ tiny.registerCommand("connect", {
 ```
 
 That is why providers live in a store the host subscribes to rather than in the
-frozen registry. A [reload](runtime.md#reloading-is-how-unloading-works) clears
+frozen registry. A [reload](runtime.md#disabling-and-reloading) clears
 them and re-runs the factories, so registrations do not accumulate.
 
 ## How a conversation picks one

@@ -62,6 +62,8 @@ export type ProviderStore = {
   list(): readonly ProviderEntry[];
   register(pluginId: string, id: string, config: ProviderConfig): void;
   unregister(id: string): boolean;
+  /** Drops every provider one plugin registered, for when that plugin is retired. */
+  removeOwner(pluginId: string): boolean;
   /** Called before each load, so a factory's registrations do not accumulate. */
   reset(): void;
   subscribe(listener: () => void): () => void;
@@ -81,6 +83,13 @@ export const createProviderStore = (): ProviderStore => {
 
     unregister: (id) => {
       const next = entries.get().filter((entry) => entry.id !== id);
+      if (next.length === entries.get().length) return false;
+      entries.set(next);
+      return true;
+    },
+
+    removeOwner: (pluginId) => {
+      const next = entries.get().filter((entry) => entry.pluginId !== pluginId);
       if (next.length === entries.get().length) return false;
       entries.set(next);
       return true;

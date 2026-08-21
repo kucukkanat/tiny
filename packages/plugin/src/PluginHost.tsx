@@ -11,7 +11,7 @@ import {
   type HostActions,
   isPositionalId,
   loadPlugins,
-  type Registry,
+  type PluginRuntime,
   terminalFallbacks,
 } from "./registry.ts";
 import type {
@@ -51,7 +51,7 @@ export function PluginHost({
   plugins: readonly Plugin[];
   children: ReactNode;
 }) {
-  const [registry, setRegistry] = useState<Registry>(emptyRegistry);
+  const [registry, setRegistry] = useState<PluginRuntime>(emptyRegistry);
   // Whether the factories have run at all. A reload leaves this true: the
   // previous registry stays live until the new one lands, so there is no moment
   // where the app has to pretend it knows nothing.
@@ -72,9 +72,10 @@ export function PluginHost({
   const [bridge, setBridge] = useState<AppBridge>(emptyBridge);
   const resolvers = useRef(new Map<string, (value: unknown) => void>());
 
-  // Bumped by `reload()`. The registry is rebuilt from scratch on every load,
-  // so a plugin dropped from the list also loses its commands, tools, slots and
-  // event handlers — there is no separate unregister path to keep in step.
+  // Bumped by `reload()`, which rebuilds the registry from scratch — so a plugin
+  // dropped from the list loses everything it registered. Taking one plugin out
+  // no longer needs that: `registry.dispose(pluginId)` withdraws its
+  // registrations in place and the subscription below re-renders.
   const [nonce, setNonce] = useState(0);
   const reloading = useRef<(() => void)[]>([]);
 
@@ -116,9 +117,16 @@ export function PluginHost({
   // biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the reload trigger — the effect re-runs on it rather than reading it
   useEffect(() => {
     let live = true;
+    let unsubscribe: (() => void) | undefined;
     const settleReloads = () => {
       for (const done of reloading.current.splice(0)) done();
     };
+    // Appended rather than registered as a plugin: it is the host's own
+    // bookkeeping, and must not show up in anything plugins can enumerate.
+    const withRecorder = (loaded: PluginRuntime): PluginRuntime => ({
+      ...loaded,
+      extensions: [...loaded.extensions, usageRecorder],
+    });
     loadPlugins(plugins, {
       providers: providerStore.current,
       events,
@@ -127,9 +135,12 @@ export function PluginHost({
     }).then(
       (loaded) => {
         if (!live) return;
-        // Appended rather than registered as a plugin: it is the host's own
-        // bookkeeping, and must not show up in anything plugins can enumerate.
-        setRegistry({ ...loaded, extensions: [...loaded.extensions, usageRecorder] });
+        setRegistry(withRecorder(loaded));
+        // A registration withdrawn later — a plugin retiring a command, or the
+        // host disabling a plugin — arrives here rather than through a reload.
+        unsubscribe = loaded.subscribe((next) => {
+          if (live) setRegistry(withRecorder(next));
+        });
         setReady(true);
         settleReloads();
       },
@@ -145,6 +156,7 @@ export function PluginHost({
     );
     return () => {
       live = false;
+      unsubscribe?.();
     };
   }, [plugins, nonce, events, usageRecorder]);
 

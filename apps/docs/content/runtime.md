@@ -33,7 +33,8 @@ return async (tiny) => {
   tiny.contribute("app.overlays", ManagerOverlay);
   tiny.contribute("sidebar.footer", ManagerButton);
 
-  await activate(store, tiny);
+  activator = createActivator(store, tiny);
+  await activator.apply();
 };
 ```
 
@@ -62,7 +63,7 @@ loadPlugins([settings(), fileSystem(), pluginManager()])
 └─ pluginManager(tiny)   async
    │  registers: /plugins, ⌘⇧P, app.overlays, sidebar.footer
    │
-   └─ activate(store, tiny)
+   └─ activator.apply()
       ├─ read manifest from localStorage
       ├─ for each enabled entry:
       │    read source from OPFS  →  hash it  →  compare to the pinned hash
@@ -146,25 +147,29 @@ A plugin that throws during activation is **reported and skipped**, never fatal:
 One bad plugin must not cost you the others, and must never cost you the manager
 dialog you need in order to remove it.
 
-## Reloading is how unloading works
+## Disabling and reloading
 
-Registrations have no undo. There is no `unregisterCommand`, no handle to
-dispose, no `off`. So adding, enabling, disabling and removing all end the same
-way:
+Adding, enabling, disabling and removing used to end the same way — `ctx.reload()`,
+re-running **every** factory in the app to change one checkbox, because a
+registration could not be taken back.
 
-```ts
-await ctx.reload();
-```
+It can now. Each `register*` hands back a disposer, and the manager keeps the
+ones each installed plugin produced, so it reconciles what is running against
+the manifest instead:
 
-That re-runs **every** factory and rebuilds the registry from scratch. A plugin
-that no longer registers is simply gone — its commands, tools, shortcuts and
-contributions with it, because they only ever existed as entries in the registry
-that was just thrown away.
+- **disabled or removed** → its disposers run, and its commands, tools,
+  shortcuts and contributions go with them;
+- **enabled** → its source is compiled and run against the same `tiny`;
+- **updated** → the old revision is stopped before the new one starts, so it
+  releases its command names first;
+- **unchanged** → left alone entirely.
 
-Rebuilding rather than unwinding is why disabling works completely and why it
-cannot leave a stale handler behind. It is also why `reload()` had to exist at
-all: pi discovers extensions from disk at startup and never needs it, and this
-host has no startup to defer to.
+Nothing else in the app is disturbed. The settings dialog, the filesystem tools
+and the approval gate do not re-run because you toggled a checkbox.
+
+`ctx.reload()` is still there and still rebuilds from scratch. It is the right
+tool when the plugin *list* changed rather than one plugin's state, and it is
+what a plugin calls when it wants the whole registry rebuilt.
 
 ## Adding a plugin
 
@@ -199,7 +204,7 @@ So the guarantees are precise, and worth stating as precisely:
 | What runs is byte-for-byte what you approved | that what you approved is safe |
 | An upstream URL cannot change it afterwards | that it was safe when you fetched it |
 | A file written into OPFS by the model cannot run | that an approved plugin will not misbehave |
-| Disabling stops it completely, on the next reload | that it did nothing while enabled |
+| Disabling stops it completely, at once | that it did nothing while enabled |
 
 The dialog shows you the full source and its SHA-256 before anything is written,
 because **that review is the whole trust boundary**. Only add code you would run
@@ -318,7 +323,7 @@ console.log(`installed ${installed.name} — sha256 ${installed.sha256.slice(0, 
 const registry = await loadPlugins([pluginManager(options)]);
 console.log(`commands: ${registry.commands.map((command) => command.invocationName).join(", ")}`);
 
-// Disabling is immediate — the app calls `ctx.reload()` and the command is gone.
+// Disabling is immediate — the plugin's disposers run and the command is gone.
 store.setEnabled(installed.id, false);
 const withoutIt = await loadPlugins([pluginManager(options)]);
 console.log(`disabled: ${withoutIt.commands.map((command) => command.invocationName).join(", ")}`);

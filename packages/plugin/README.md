@@ -35,7 +35,7 @@ export const greet = (): IdentifiedPlugin =>
   });
 ```
 
-List it in `apps/chat/src/plugins/index.ts` and it is live. That is the whole wiring —
+List it in `apps/chat/src/plugins.ts` and it is live. That is the whole wiring —
 nothing in `@tiny/ai`, `@tiny/plugin`, `useChat` or any component changes.
 
 Eight more runnable plugins are in [`examples/`](examples), each executed by the test

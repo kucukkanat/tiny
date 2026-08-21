@@ -2,7 +2,8 @@
 
 `@tiny/plugin` is shaped after **pi's extension SDK**
 ([`@earendil-works/pi-coding-agent`](https://github.com/earendil-works/pi), see its
-`packages/coding-agent/docs/extensions.md`). This page is the honest accounting
+[extension docs](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md)).
+This page is the honest accounting
 of what that means, so nothing here is mistaken for full SDK conformance.
 
 **A pi extension that touches only RPC-portable methods runs here unmodified.**

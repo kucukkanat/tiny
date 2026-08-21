@@ -24,7 +24,7 @@ const { tools } = await loadPlugins([fileSystem()]);
 for (const tool of tools) console.log(`${tool.name} — ${tool.description.split(".")[0]}`);
 ```
 
-In the chat app that is one entry in `apps/chat/src/plugins/index.ts`:
+In the chat app that is one entry in `apps/chat/src/plugins.ts`:
 
 ```ts
 export const plugins: readonly IdentifiedPlugin[] = [fileSystem()];

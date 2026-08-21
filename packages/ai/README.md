@@ -327,9 +327,9 @@ app deliberately does not have.
 
 ### Adding one to the chat app
 
-The app owns its extensions; this package only runs them. Write the extension in
-`apps/chat/src/plugins/`, then list it in that folder's registry,
-[`apps/chat/src/plugins/index.ts`](../../apps/chat/src/plugins/index.ts):
+The app owns its extensions; this package only runs them. Write the extension
+alongside the app's own source in `apps/chat/src/`, then list it in the registry,
+[`apps/chat/src/plugins.ts`](../../apps/chat/src/plugins.ts):
 
 ```ts
 import { beTerse } from "./beTerse.ts";

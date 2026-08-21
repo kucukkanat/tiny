@@ -25,7 +25,7 @@ for some of them.
 
 ## Write a bundled plugin
 
-Create `apps/chat/src/plugins/greet.ts` — this is the runnable copy that lives
+Create `apps/chat/src/greet.ts` — this is the runnable copy that lives
 in the repo, and a test asserts this page still matches it:
 
 ```ts path=packages/plugin/examples/greet.ts
@@ -50,7 +50,7 @@ export const greet = (): IdentifiedPlugin =>
   });
 ```
 
-Add it to the registry in `apps/chat/src/plugins/index.ts` — an import and one
+Add it to the registry in `apps/chat/src/plugins.ts` — an import and one
 line in the list:
 
 ```ts

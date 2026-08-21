@@ -43,7 +43,7 @@ A plugin reaches the app one of two ways, and **the app cannot tell them apart**
 | | Bundled | Runtime |
 | --- | --- | --- |
 | Written as | a module in the repo | a single file with a `export default` |
-| Arrives by | being listed in `apps/chat/src/plugins/index.ts` | being installed from a URL or pasted into the Plugins dialog |
+| Arrives by | being listed in `apps/chat/src/plugins.ts` | being installed from a URL or pasted into the Plugins dialog |
 | Needs a rebuild | yes | no |
 | Gets | the same `tiny` | the same `tiny` |
 

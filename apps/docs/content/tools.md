@@ -6,50 +6,104 @@ repeats until the model answers — so a plugin only has to say what the tool do
 and how to run it.
 
 ```ts
-import { toolOutput } from "@tiny/ai";
+import { defineTool, toolOutput } from "@tiny/ai";
 
-tiny.registerTool({
-  name: "fs_read",
-  label: "Read File",
-  description: "Read a text file and return its full contents.",
-  parameters: {
-    type: "object",
-    properties: { path: { type: "string" } },
-    required: ["path"],
-  },
-  execute: async (_id, params, signal) => toolOutput(await readFile(String(params.path), signal)),
-});
+tiny.registerTool(
+  defineTool({
+    name: "fs_read",
+    label: "Read File",
+    description: "Read a text file and return its full contents.",
+    parameters: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+    // `args.path` is a string, because the schema above says so.
+    execute: async ({ args, signal }) => toolOutput(await readFile(args.path, signal)),
+  }),
+);
 ```
+
+## One declaration
+
+`parameters` is read three times: by the model, by the compiler, and by the
+validator that runs before `execute`.
+
+That is the point of `defineTool`. The schema is the only place a tool's
+arguments are described — `args` is typed from it, and a call that does not
+match it never reaches `execute`. Before, the schema went to the model and
+TypeScript saw `Record<string, unknown>`, so every tool re-derived the same
+facts by hand:
+
+```ts
+// What each tool in this repo used to open with.
+const text = (args: Record<string, unknown>, key: string): string => {
+  const value = args[key];
+  if (typeof value !== "string") throw new FsError(`"${key}" must be a string`);
+  return value;
+};
+```
+
+Two copies of one decision, compiling fine and free to drift.
+
+A failed check comes back to the model as an error naming the field, what was
+wanted and what arrived — `"path" must be a string, not number` — and lists
+every problem at once, because a model correcting one argument per round trip is
+slow. `Infer<typeof schema>` names the argument type if you want it separately.
+
+The subset understood is what tool parameters use: objects, arrays, `string`,
+`number`, `integer`, `boolean`, `null`, `enum` and `required`. Anything else —
+`$ref`, `oneOf` — infers as `unknown` and is left alone at runtime, which is
+honest rather than half-checked.
 
 ## The definition
 
 ```ts
-type ToolDefinition = {
+type ToolSpec<S> = {
   readonly name: string;
   readonly label?: string;
   readonly description: string;
   readonly promptSnippet?: string;
   readonly promptGuidelines?: readonly string[];
-  readonly parameters: Record<string, unknown>;
+  readonly parameters: S;
   prepareArguments?(args: Record<string, unknown>): Record<string, unknown>;
-  execute(
-    toolCallId: string,
-    params: Record<string, unknown>,
-    signal: AbortSignal | undefined,
-    onUpdate: ((update: ToolUpdate) => void) | undefined,
-    ctx: ToolExecuteContext,
-  ): Promise<ToolResult> | ToolResult;
+  execute(call: {
+    readonly args: Infer<S>;
+    readonly toolCallId: string;
+    readonly signal: AbortSignal | undefined;
+    readonly onUpdate: ((update: ToolUpdate) => void) | undefined;
+    readonly ctx: ToolExecuteContext;
+  }): Promise<ToolResult> | ToolResult;
 };
 ```
 
-**`execute` is pi's signature exactly**, positional arguments and all, so a tool
-written for pi runs here without being rewritten. Note the order: the call id
-comes first and the model's arguments second.
+One options object rather than five positional parameters, which is this repo's
+own rule once there are more than about three.
 
-One deliberate difference remains: **`parameters` is a plain JSON Schema object
-rather than a typebox `TSchema`.** A typebox schema *is* a JSON Schema object at
-runtime, so definitions port across unchanged — and typebox stays out of the
-browser bundle, which `@tiny/ai`'s "Browser notes" explains is not optional here.
+### The pi shape, unchanged
+
+`defineTool` returns a plain `ToolDefinition`, and `ToolDefinition` is still
+public and still pi's:
+
+```ts
+execute(
+  toolCallId: string,
+  params: Record<string, unknown>,
+  signal: AbortSignal | undefined,
+  onUpdate: ((update: ToolUpdate) => void) | undefined,
+  ctx: ToolExecuteContext,
+): Promise<ToolResult> | ToolResult;
+```
+
+**A tool written for pi still runs here unmodified** — pass it to
+`registerTool` as it is. `defineTool` is for tools written for this app, and
+nothing downstream can tell the two apart.
+
+One deliberate difference remains either way: **`parameters` is a plain JSON
+Schema object rather than a typebox `TSchema`.** A typebox schema *is* a JSON
+Schema object at runtime, so definitions port across unchanged — and typebox
+stays out of the browser bundle, which `@tiny/ai`'s "Browser notes" explains is
+not optional here.
 
 `description` is the prompt. It is the only thing the model reads before deciding
 to call your tool, so write it for a reader who cannot see your code: say what it
@@ -107,10 +161,9 @@ tool name.
 tool's row, so a long call is not a frozen `…`:
 
 ```ts
-execute: async (_id, params, signal, onUpdate) => {
+execute: async ({ args, signal, onUpdate }) => {
   onUpdate?.({ content: [{ type: "text", text: "Fetching page 1…" }] });
-  const all = await crawl(String(params.url), signal);
-  return toolOutput(all);
+  return toolOutput(await crawl(args.url, signal));
 },
 ```
 

@@ -31,12 +31,16 @@ export type {
 export { BLOCKED_MESSAGE, firesEvent } from "./extension.ts";
 export type { ModelSpec } from "./models.ts";
 export { endpointModel, fetchModelIds, PROVIDER_ID } from "./models.ts";
+export type { Infer, JsonSchema } from "./schema.ts";
+export { schemaProblems } from "./schema.ts";
 export { listModels, streamChat } from "./streamChat.ts";
 export type {
+  ToolCall,
   ToolContent,
   ToolDefinition,
   ToolExecuteContext,
   ToolResult,
+  ToolSpec,
   ToolUpdate,
 } from "./tools.ts";
-export { toolOutput, toolText } from "./tools.ts";
+export { defineTool, toolOutput, toolText } from "./tools.ts";

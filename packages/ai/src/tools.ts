@@ -1,4 +1,5 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
+import { type Infer, type JsonSchema, schemaProblems } from "./schema.ts";
 
 /**
  * The tool contract: what a tool is, what it returns, and what it is handed.
@@ -91,4 +92,86 @@ export const toolText = (result: ToolResult | ToolUpdate): string =>
 export const toolOutput = (text: string, rest: Omit<ToolResult, "content"> = {}): ToolResult => ({
   content: [{ type: "text", text }],
   ...rest,
+});
+
+/* ------------------------------------------------------------------ *
+ * defineTool — the same tool, declared once
+ * ------------------------------------------------------------------ */
+
+/** What `defineTool`'s `execute` is handed: one object, every field named. */
+export type ToolCall<Args> = {
+  /** Checked against `parameters` before this runs, and typed from it. */
+  readonly args: Args;
+  readonly toolCallId: string;
+  readonly signal: AbortSignal | undefined;
+  /** Push progress from a long-running tool; absent when nobody is listening. */
+  readonly onUpdate: ((update: ToolUpdate) => void) | undefined;
+  readonly ctx: ToolExecuteContext;
+};
+
+export type ToolSpec<S extends JsonSchema> = {
+  readonly name: string;
+  /** Display name. Falls back to `name`. */
+  readonly label?: string;
+  /** Read by the model before it decides to call: say what it returns, and when. */
+  readonly description: string;
+  /** Appended to the system prompt when this tool is active. */
+  readonly promptSnippet?: string;
+  /** Extra system-prompt lines about when to prefer this tool. */
+  readonly promptGuidelines?: readonly string[];
+  /** The one declaration: sent to the model, inferred from, and validated against. */
+  readonly parameters: S;
+  /** Last chance to repair arguments a model got subtly wrong, before validation. */
+  readonly prepareArguments?: (args: Record<string, unknown>) => Record<string, unknown>;
+  execute(call: ToolCall<Infer<S>>): Promise<ToolResult> | ToolResult;
+};
+
+/**
+ * A tool whose arguments are typed by the schema that describes them.
+ *
+ * `ToolDefinition` is pi's shape, and it costs a tool author two things pi pays
+ * for elsewhere: `execute` takes five positional parameters, and `params` is
+ * `Record<string, unknown>`, so every tool starts by re-deriving the schema it
+ * just wrote — `plugin-fs` had a `text(args, key)` helper for exactly this. Two
+ * copies of one decision, which is the failure LEAN_CODE §5 is about.
+ *
+ * So: one options object instead of five positions, `args` inferred from
+ * `parameters`, and the same schema checked at runtime before `execute` is
+ * called. A bad argument becomes an error result the model reads and can correct
+ * — the same outcome as throwing, reached without the tool writing the check.
+ *
+ * ```ts
+ * defineTool({
+ *   name: "fs_read",
+ *   description: "Read a text file.",
+ *   parameters: {
+ *     type: "object",
+ *     properties: { path: { type: "string" } },
+ *     required: ["path"],
+ *   },
+ *   // `args.path` is a string, and cannot not be.
+ *   execute: async ({ args }) => toolOutput(await read(args.path)),
+ * });
+ * ```
+ *
+ * Returns a plain `ToolDefinition`, so the registry, `streamChat` and any pi
+ * extension reading the tool list see no difference. `ToolDefinition` remains
+ * public and unchanged for a tool ported from pi verbatim.
+ */
+export const defineTool = <const S extends JsonSchema>(spec: ToolSpec<S>): ToolDefinition => ({
+  name: spec.name,
+  ...(spec.label === undefined ? {} : { label: spec.label }),
+  description: spec.description,
+  ...(spec.promptSnippet === undefined ? {} : { promptSnippet: spec.promptSnippet }),
+  ...(spec.promptGuidelines === undefined ? {} : { promptGuidelines: spec.promptGuidelines }),
+  parameters: spec.parameters,
+  ...(spec.prepareArguments === undefined ? {} : { prepareArguments: spec.prepareArguments }),
+  execute: (toolCallId, params, signal, onUpdate, ctx) => {
+    const problems = schemaProblems(spec.parameters, params);
+    // Thrown, not returned: `streamChat` turns a throw into an error result and
+    // hands the message back to the model, which is the path a hand-written
+    // check already took. The difference is that nobody had to write it.
+    if (problems.length > 0) throw new Error(problems.join("; "));
+    return spec.execute({ args: params as Infer<S>, toolCallId, signal, onUpdate, ctx });
+  },
 });

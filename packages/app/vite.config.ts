@@ -11,6 +11,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // main.tsx registers instead, so a new build reloads rather than sitting
+      // behind the old one until the next visit.
+      injectRegister: null,
       manifest: {
         name: 'tiny',
         short_name: 'tiny',

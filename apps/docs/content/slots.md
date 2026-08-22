@@ -23,11 +23,11 @@ interface SlotProps {
 
 | Slot | Renders | Rendered by |
 | --- | --- | --- |
-| `app.overlays` | modals and palettes, above everything | `apps/chat/src/App.tsx` |
-| `composer.actions` | inline beside the model picker | `apps/chat/src/App.tsx` |
-| `sidebar.footer` | below the sidebar's settings row | `apps/chat/src/App.tsx` |
-| `message.actions` | under each finished assistant reply | `apps/chat/src/Thread.tsx` |
-| `message.pending` | inside the reply still being written | `apps/chat/src/Thread.tsx` |
+| `app.overlays` | modals and palettes, above everything | `packages/shell/src/ChatShell.tsx` |
+| `composer.actions` | inline beside the model picker | `packages/shell/src/ChatShell.tsx` |
+| `sidebar.footer` | below the sidebar's settings row | `packages/shell/src/ChatShell.tsx` |
+| `message.actions` | under each finished assistant reply | `packages/shell/src/Thread.tsx` |
+| `message.pending` | inside the reply still being written | `packages/shell/src/Thread.tsx` |
 
 `message.pending` is the slot for something the run is *waiting on*, which is why it
 renders only while the reply is live and disappears with it. An approval belongs

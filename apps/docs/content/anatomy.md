@@ -182,10 +182,11 @@ tiny.registerShortcut("ctrl+shift+backspace", {
 });
 ```
 
-Keys use pi's `KeyId` format. The modifier set is pi's exactly — `ctrl`, `shift`,
-`alt`, `super` — and note there is **no `mod`**: register both `super+…` and
-`ctrl+…` if you want the binding on macOS and elsewhere, which is what the
-Plugins dialog itself does.
+Keys use pi's `KeyId` format. The modifier set is pi's — `ctrl`, `shift`,
+`alt`, `super` (Cmd on macOS) — plus one of ours: **`mod`**, which matches Cmd
+on Apple hardware and Ctrl everywhere else. One `mod+shift+p` covers what used
+to take two registrations, and it is what the Plugins dialog itself binds. A
+plugin porting back to pi should spell the pair out, since pi has no `mod`.
 
 The base key is a letter, a digit, a symbol, or one of `escape` `enter` `tab`
 `space` `backspace` `delete` `insert` `home` `end` `pageUp` `pageDown` `up`

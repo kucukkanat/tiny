@@ -17,7 +17,7 @@ from a URL or pasted source, with no rebuild and no page reload.
 
 | Package | What it is |
 | --- | --- |
-| [`apps/chat`](apps/chat) (`@tiny/chat`) | The PWA: hash-routed React app, IndexedDB chat history, streaming replies with a thinking trace, model picker. |
+| [`apps/chat`](apps/chat) (`@tiny/chat`) | The PWA — a plugin list and one `<TinyApp>` render call; everything else it ships arrives from the packages below. |
 | [`packages/ai`](packages/ai) (`@tiny/ai`) | Typed streaming client for OpenAI-compatible endpoints (reasoning deltas, model listing), on the [pi](https://pi.dev) LLM harness. |
 | [`packages/plugin`](packages/plugin) (`@tiny/plugin`) | Plugin host — tools, commands, shortcuts, dialogs and render slots — shaped after pi's extension SDK, so a pi extension using only RPC-portable methods runs unmodified. |
 | [`packages/plugin-fs`](packages/plugin-fs) (`@tiny/plugin-fs`) | Filesystem tools for the model (`fs_read`, `fs_write`, `fs_edit`, `fs_delete`, `fs_list`), backed by the browser's Origin Private File System. |
@@ -27,6 +27,7 @@ from a URL or pasted source, with no rebuild and no page reload.
 | [`packages/plugin-prompt`](packages/plugin-prompt) (`@tiny/plugin-prompt`) | Two plugins that change what the model is sent — a system prompt, and a history window. Opt-in. |
 | [`packages/plugin-settings`](packages/plugin-settings) (`@tiny/plugin-settings`) | The endpoint dialog, as a plugin. Imports nothing from the app — the dogfood that keeps the API honest. |
 | [`packages/plugin-trace`](packages/plugin-trace) (`@tiny/plugin-trace`) | Three plugins that watch and change nothing — token usage, a stream trace, and an audit of what the approval gate decided. |
+| [`packages/shell`](packages/shell) (`@tiny/shell`) | The assembled chat app — sidebar, thread, composer, `useChat`, conversation store — mounted in one line as `<TinyApp plugins={…}/>`, or piecewise under your own host and router. |
 | [`packages/ui`](packages/ui) (`@tiny/ui`) | Beautiful UI primitives adapted for this app, plus their design tokens. |
 | [`apps/docs`](apps/docs) (`@tiny/docs`) | The plugin documentation site — markdown in, static site out, on the same Bun toolchain. |
 

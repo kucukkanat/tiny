@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { PluginIdContext } from "./hooks.ts";
+import { reportPluginProblem } from "./problems.ts";
 
 /**
  * `@tiny/ai` catches nothing by design — right for a request, wrong for a
@@ -14,7 +15,9 @@ class Catch extends Component<{ pluginId: string; children: ReactNode }, { faile
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[plugin:${this.props.pluginId}] render failed`, error, info.componentStack);
+    // The component stack goes to the console only — a problem is one sentence.
+    if (info.componentStack != null) console.error(info.componentStack);
+    reportPluginProblem({ pluginId: this.props.pluginId, message: "render failed", error });
   }
 
   override render() {

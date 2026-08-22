@@ -29,8 +29,7 @@ What makes it different is one word:
 ```ts
 return async (tiny) => {
   tiny.registerCommand("plugins", { description: "Add and manage plugins", handler: () => open.set(true) });
-  tiny.registerShortcut("super+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
-  tiny.registerShortcut("ctrl+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
+  tiny.registerShortcut("mod+shift+p", { description: "Manage plugins", handler: () => open.set(true) });
   tiny.contribute("app.overlays", ManagerOverlay);
   tiny.contribute("sidebar.footer", ManagerButton);
 

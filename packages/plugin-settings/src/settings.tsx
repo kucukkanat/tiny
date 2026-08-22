@@ -48,12 +48,8 @@ export const settings = (): IdentifiedPlugin => {
       description: "Configure the endpoint",
       handler: () => open.set(true),
     });
-    // pi's modifier set has no `mod`; `super` is Cmd on macOS.
-    tiny.registerShortcut("super+,", {
-      description: "Open settings",
-      handler: () => open.set(true),
-    });
-    tiny.registerShortcut("ctrl+,", {
+    // `mod` is Cmd on macOS and Ctrl everywhere else — one registration.
+    tiny.registerShortcut("mod+,", {
       description: "Open settings",
       handler: () => open.set(true),
     });

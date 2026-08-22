@@ -1,6 +1,7 @@
 import { type Extension, type ExtensionContext, firesEvent, type ToolDefinition } from "@tiny/ai";
 import { createEvents, type PluginEvents } from "./events.ts";
 import type { KeyId } from "./keys.ts";
+import { reportPluginProblem } from "./problems.ts";
 import type { ProviderEntry } from "./providers.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
 import type { Contribution, SlotName } from "./Slot.tsx";
@@ -157,7 +158,7 @@ export const transformMarkdown = (
     try {
       current = transformer(current, context);
     } catch (error) {
-      console.error(`[plugin:${pluginId}] markdown transformer failed`, error);
+      reportPluginProblem({ pluginId, message: "markdown transformer failed", error });
     }
   }
   return current;
@@ -276,9 +277,10 @@ const inLoadOrder = (entries: readonly Loading[]): readonly Loading[] => {
     const next = plugins.findIndex((_, index) => !placed[index] && waitingOn[index] === 0);
     if (next === -1) {
       const stuck = entries.filter((_, index) => !placed[index]).map((entry) => entry.id);
-      console.error(
-        `[plugin] circular load order between ${stuck.join(", ")} — loading them as listed`,
-      );
+      reportPluginProblem({
+        pluginId: undefined,
+        message: `circular load order between ${stuck.join(", ")} — loading them as listed`,
+      });
       for (const [index, entry] of entries.entries()) if (!placed[index]) order.push(entry);
       break;
     }
@@ -333,7 +335,10 @@ export type HostActions = {
 /** What a host that has not published anything yet can honestly do: nothing. */
 const detachedHost = (): HostActions => {
   const unavailable = (method: string) => () => {
-    console.error(`[plugin] tiny.${method}() needs a mounted PluginHost`);
+    reportPluginProblem({
+      pluginId: undefined,
+      message: `tiny.${method}() needs a mounted PluginHost`,
+    });
   };
   return {
     getCommands: () => [],
@@ -512,10 +517,12 @@ export const loadPlugins = async (
       },
       registerTool: (tool) => {
         if (!granted("tools")) {
-          console.error(
-            `[plugin:${id}] registerTool("${tool.name}") needs the "tools" capability, ` +
+          reportPluginProblem({
+            pluginId: id,
+            message:
+              `registerTool("${tool.name}") needs the "tools" capability, ` +
               `which this plugin did not declare`,
-          );
+          });
           return () => {};
         }
         return record(toolEntries, { pluginId: id, tool });
@@ -549,7 +556,10 @@ export const loadPlugins = async (
         // plugin colliding with itself is a mistake worth reporting.
         const key = `${id}:${panelId}`;
         if (panels.some((panel) => panel.id === key)) {
-          console.error(`[plugin:${id}] panel "${panelId}" is already registered`);
+          reportPluginProblem({
+            pluginId: id,
+            message: `panel "${panelId}" is already registered`,
+          });
           return () => {};
         }
         return record(panels, { id: key, panelId, pluginId: id, options });
@@ -557,17 +567,22 @@ export const loadPlugins = async (
       registerRoute: (declared, options) => {
         const path = canonicalPath(declared);
         if (path === undefined) {
-          console.error(
-            `[plugin:${id}] route "${declared}" is not a usable path — it must start ` +
+          reportPluginProblem({
+            pluginId: id,
+            message:
+              `route "${declared}" is not a usable path — it must start ` +
               `with "/" and contain no "?", "#" or whitespace`,
-          );
+          });
           return () => {};
         }
         // A path is an address, not a name: it cannot be suffixed the way a
         // duplicate command is, so a clash has to be reported instead. Compared
         // as a router matches, not as a string — see `addressOf`.
         if (routes.some((route) => addressOf(route.path) === addressOf(path))) {
-          console.error(`[plugin:${id}] route "${declared}" is already registered`);
+          reportPluginProblem({
+            pluginId: id,
+            message: `route "${declared}" is already registered`,
+          });
           return () => {};
         }
         return record(routes, { path, pluginId: id, options });
@@ -612,7 +627,11 @@ export const loadPlugins = async (
     const tools: ToolDefinition[] = [];
     for (const { pluginId: owner, tool } of toolEntries) {
       if (!tools.some((existing) => existing.name === tool.name)) tools.push(tool);
-      else if (report) console.error(`[plugin:${owner}] tool "${tool.name}" is already registered`);
+      else if (report)
+        reportPluginProblem({
+          pluginId: owner,
+          message: `tool "${tool.name}" is already registered`,
+        });
     }
     return tools;
   };

@@ -3,11 +3,11 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin, PluginHost } from "@tiny/plugin";
 import { MemoryRouter } from "react-router";
-import { App } from "../src/App.tsx";
+import { ChatShell } from "../src/ChatShell.tsx";
 import { deleteConversation, putConversation } from "../src/conversations.ts";
 
 // Panels and pages are promises the *app* makes, so they are asserted against
-// the real `App` rather than a stand-in: that a rail nobody asked for does not
+// the real `ChatShell` rather than a stand-in: that a rail nobody asked for does not
 // exist, that a page keeps the chrome around it, and that a plugin cannot take
 // a path the app already owns.
 
@@ -22,7 +22,7 @@ const mount = async (plugins: readonly IdentifiedPlugin[], at = "/") => {
     render(
       <PluginHost plugins={plugins}>
         <MemoryRouter initialEntries={[at]}>
-          <App />
+          <ChatShell />
         </MemoryRouter>
       </PluginHost>,
     );
@@ -54,7 +54,7 @@ describe("the conversation in the URL", () => {
   afterEach(() => void deleteConversation(seeded.id));
 
   test("still reaches the thread and the sidebar after the move off useParams", async () => {
-    // `App` used to be mounted *by* a route and read `useParams`; it is now the
+    // `ChatShell` used to be mounted *by* a route and read `useParams`; it is now the
     // shell above the routes and reads `useMatch("/c/:id")`. Everything keyed on
     // that id — the loaded conversation and the highlighted row — has to survive
     // the swap, and a test that only asserts a composer would not notice: the
@@ -166,7 +166,7 @@ describe("a plugin page", () => {
     render(
       <PluginHost plugins={[notesPage]}>
         <MemoryRouter initialEntries={["/notes"]}>
-          <App />
+          <ChatShell />
         </MemoryRouter>
       </PluginHost>,
     );

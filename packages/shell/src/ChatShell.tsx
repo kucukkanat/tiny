@@ -44,9 +44,23 @@ const parseOption = (value: string): { providerId: string; model: string } => {
     : { providerId: value.slice(0, at), model: value.slice(at + 1) };
 };
 
-export function App() {
-  // `useMatch` rather than `useParams`: `App` is the shell now, mounted above
-  // the routes rather than by one of them, so the conversation id has to be read
+/**
+ * The assembled chat application: sidebar, thread, composer, model picker,
+ * panels and the route table, already wired to the plugin host.
+ *
+ * Everything in here is glue an app used to write for itself — publishing the
+ * bridge, resolving providers into endpoints, handing the registry to
+ * `useChat`, holding the router's fallback until the factories finish. None of
+ * it is privileged: it reaches plugins through the same hooks any host would
+ * use, so it doubles as the reference implementation for hosting
+ * `@tiny/plugin` in an app of your own.
+ *
+ * It expects a `PluginHost` and a router above it — `TinyApp` mounts both, and
+ * is the component to reach for unless you own either.
+ */
+export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefined } = {}) {
+  // `useMatch` rather than `useParams`: this is the shell, mounted above the
+  // routes rather than by one of them, so the conversation id has to be read
   // off the location instead of arriving as a param.
   const id = useMatch("/c/:id")?.params.id;
   const { pathname } = useLocation();
@@ -309,7 +323,7 @@ export function App() {
   return (
     <div className="flex h-full bg-canvas">
       <Sidebar
-        title="Tiny"
+        title={title}
         chats={chats.map(({ id: chatId, title }) => ({ id: chatId, title }))}
         activeId={id}
         onSelect={(chatId) => navigate(`/c/${chatId}`)}

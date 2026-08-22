@@ -7,6 +7,8 @@
  * `message_end` should not be able to fool another plugin's handler.
  */
 
+import { reportPluginProblem } from "./problems.ts";
+
 /** Carries a channel's payload type without existing at runtime. */
 declare const payload: unique symbol;
 
@@ -103,7 +105,11 @@ export const createEvents = (): PluginEvents => {
         listener(data as never);
       } catch (error) {
         // One plugin's bad listener must not break the emitter's turn.
-        console.error(`[plugin] listener for "${nameOf(event)}" failed`, error);
+        reportPluginProblem({
+          pluginId: undefined,
+          message: `listener for "${nameOf(event)}" failed`,
+          error,
+        });
       }
     }
   };

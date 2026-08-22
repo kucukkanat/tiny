@@ -19,7 +19,7 @@ export type Settings = Endpoint & {
  * The built-in provider's id.
  *
  * Re-exported rather than restated: `@tiny/ai` stamps this same id onto every
- * model descriptor it builds, and `App` routes on the two being equal. Two
+ * model descriptor it builds, and `ChatShell` routes on the two being equal. Two
  * copies of the literal would let them drift, and the symptom — every
  * conversation silently losing its endpoint — points nowhere near the cause.
  */

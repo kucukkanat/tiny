@@ -18,7 +18,7 @@ const watcher = definePlugin("watcher", (tiny) =>
   }),
 );
 
-/** `App`, reduced to the one wire this is about. */
+/** `ChatShell`, reduced to the one wire this is about. */
 function Composer() {
   const { editorText, setEditorText } = usePluginHost();
   return (

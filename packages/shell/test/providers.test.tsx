@@ -58,7 +58,7 @@ function Harness({ initial }: { initial: Settings }) {
 }
 
 /**
- * Mounts the real host over a stand-in for `App`.
+ * Mounts the real host over a stand-in for `ChatShell`.
  *
  * Resetting the captured refs happens in here rather than in a test body on
  * purpose: assigning `undefined` at the top level of a test narrows the module

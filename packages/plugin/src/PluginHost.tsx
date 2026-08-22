@@ -4,6 +4,7 @@ import { createEvents } from "./events.ts";
 import { type AppBridge, HostContext, type HostValue, type Widget } from "./hooks.ts";
 import { matchesKey } from "./keys.ts";
 import { Dialog, type DialogRequest, type Toast, Toasts } from "./Overlays.tsx";
+import { onPluginProblem, reportPluginProblem } from "./problems.ts";
 import type { ProviderEntry } from "./providers.ts";
 import { createProviderStore, type ProviderStore } from "./providers.ts";
 import {
@@ -18,6 +19,7 @@ import type {
   CommandInfo,
   ContextUsage,
   DialogOptions,
+  NotifyLevel,
   Plugin,
   PluginContext,
   PluginMessage,
@@ -34,9 +36,10 @@ const EMPTY_MESSAGES: readonly PluginMessage[] = [];
 const withheld =
   (pluginId: string, capability: Capability) =>
   (..._ignored: never[]): void => {
-    console.error(
-      `[plugin:${pluginId}] this needs the "${capability}" capability, which it did not declare`,
-    );
+    reportPluginProblem({
+      pluginId,
+      message: `this needs the "${capability}" capability, which it did not declare`,
+    });
   };
 
 const emptyBridge: AppBridge = {
@@ -170,7 +173,7 @@ export function PluginHost({
         settleReloads();
       },
       (error: unknown) => {
-        console.error("[plugin] failed to load", error);
+        reportPluginProblem({ pluginId: undefined, message: "failed to load", error });
         // A failed load still ends the wait — `reload()` promises that the
         // attempt is over, not that it succeeded — and still counts as ready,
         // or the app would wait forever on plugins that are never coming.
@@ -232,6 +235,24 @@ export function PluginHost({
     [settle],
   );
 
+  const toast = useCallback((message: string, type: NotifyLevel) => {
+    const id = newId();
+    setToasts((current) => [...current, { id, message, type }]);
+    setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 4000);
+  }, []);
+
+  // Problems reach the developer, not only the console: in development each
+  // report — a clash, a withheld capability, a throwing handler — becomes an
+  // error toast, so a tool that silently failed to register is seen the day it
+  // is written rather than the day a user misses it. Production keeps the
+  // console line only, because a user cannot fix a clash.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    return onPluginProblem(({ pluginId, message }) =>
+      toast(pluginId === undefined ? message : `${pluginId}: ${message}`, "error"),
+    );
+  }, [toast]);
+
   const ui = useMemo<PluginUIContext>(
     () => ({
       // First, so nothing an adapter adds can shadow a method this host really
@@ -258,11 +279,7 @@ export function PluginHost({
         ),
 
       /* — portable: fire-and-forget — */
-      notify: (message, type = "info") => {
-        const id = newId();
-        setToasts((current) => [...current, { id, message, type }]);
-        setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 4000);
-      },
+      notify: (message, type = "info") => toast(message, type),
       setStatus: (key, text) =>
         setStatuses((current) => {
           const next = new Map(current);
@@ -300,7 +317,7 @@ export function PluginHost({
       // draft gets the draft, including what the user typed by hand.
       getEditorText: () => editorTextRef.current,
     }),
-    [ask, uiFallbacks],
+    [ask, toast, uiFallbacks],
   );
 
   const commands = useMemo<readonly CommandInfo[]>(
@@ -369,14 +386,18 @@ export function PluginHost({
         (command) => command.invocationName === name || command.name === name,
       );
       if (entry === undefined) {
-        console.error(`[plugin] no such command: ${name}`);
+        reportPluginProblem({ pluginId: undefined, message: `no such command: ${name}` });
         return;
       }
       // A throwing handler must not take the app down with it.
       try {
         await entry.options.handler(args, contextFor(entry.pluginId));
       } catch (error) {
-        console.error(`[plugin:${entry.pluginId}] command "${name}" failed`, error);
+        reportPluginProblem({
+          pluginId: entry.pluginId,
+          message: `command "${name}" failed`,
+          error,
+        });
         ui.notify(`Command "${name}" failed`, "error");
       }
     },
@@ -400,7 +421,7 @@ export function PluginHost({
           try {
             await entry.options.handler(contextFor(entry.pluginId));
           } catch (error) {
-            console.error(`[plugin:${entry.pluginId}] shortcut failed`, error);
+            reportPluginProblem({ pluginId: entry.pluginId, message: "shortcut failed", error });
           }
         })();
         return;
@@ -438,7 +459,10 @@ export function PluginHost({
     getSessionName: () => bridge.sessionName,
     setSessionName: (name) => {
       if (bridge.setSessionName === undefined) {
-        console.error("[plugin] tiny.setSessionName() is not supported by this app");
+        reportPluginProblem({
+          pluginId: undefined,
+          message: "tiny.setSessionName() is not supported by this app",
+        });
         return;
       }
       bridge.setSessionName(name);

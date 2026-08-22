@@ -38,12 +38,12 @@ Neither needs a change here; see
 
 ## Structure
 
-- `src/App.tsx` — the shell: sidebar, thread, composer, plugin slots, the
-  right-hand rail, and the route table plugin pages are added to
-- `src/Thread.tsx` — the transcript: messages, the reply in flight, tool lines
-- `src/useChat.ts` — one conversation: streaming state machine and persistence
-- `src/conversations.ts` — chat history, in IndexedDB
-- `src/settings.ts` — the saved endpoint, key and model, in localStorage
+The application itself lives in [`@tiny/shell`](../../packages/shell/README.md)
+— sidebar, thread, composer, `useChat`, the conversation store — mounted here as
+one `<TinyApp plugins={plugins} />`. What remains in this package is what makes
+it *this* app:
+
+- `src/main.tsx` — the render call, and the service worker registration
 - `src/plugins.ts` — the plugins the app runs; add one here.
   A plugin that only subscribes to events is an `@tiny/ai` extension (see
   "Extensions" in [`packages/ai`](../../packages/ai/README.md)); one that adds UI

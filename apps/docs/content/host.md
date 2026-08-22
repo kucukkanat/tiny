@@ -4,6 +4,31 @@
 plugins in it, this is the wiring. There are three parts: mount the host, publish
 your state into it, and render slots where contributions belong.
 
+## Or take the assembled shell
+
+Before wiring anything: if what you want is *the chat app with your plugins in
+it*, `@tiny/shell` ships the whole assembly — host, router, sidebar, thread,
+composer, model picker, panels, routes, bridge — as one component:
+
+```tsx
+import { TinyApp } from "@tiny/shell";
+import { createRoot } from "react-dom/client";
+import { plugins } from "./plugins.ts";
+
+createRoot(root).render(<TinyApp plugins={plugins} />);
+```
+
+That is `apps/chat`'s entire mounting; the app's `src/` is a plugin list, that
+render call and a stylesheet. `TinyApp` takes `uiFallbacks` (pass `piTerminalUI`
+from `@tiny/plugin-pi` to run pi extensions unmodified) and a `title`. When you
+own the router or the host already, mount its inner `ChatShell` under them
+yourself — the tests do exactly that with a `MemoryRouter`.
+
+Everything the shell does, it does through the public hooks on this page —
+`packages/shell/src/ChatShell.tsx` is the reference implementation of all of it,
+with nothing privileged. The rest of this page is for hosting plugins in an app
+of your own.
+
 ## Mount the host
 
 ```tsx
@@ -289,3 +314,30 @@ render is not a request:
 | A runtime plugin's factory | logged by the manager; every other plugin still loads |
 
 `reload()` resolves when the attempt is over, not when it succeeded.
+
+## Hearing about problems
+
+Every one of those reports — and every misregistration: a clashing route, a
+duplicated tool name, a capability a plugin used without declaring — goes
+through one channel on its way to the console:
+
+```ts
+import { onPluginProblem } from "@tiny/plugin";
+
+const off = onPluginProblem(({ pluginId, message, error }) => {
+  telemetry.record(pluginId ?? "host", message);
+});
+```
+
+**In development, `PluginHost` also surfaces each problem as an error toast**,
+so a tool that silently failed to register is seen the day it is written rather
+than the day a user misses it. Production keeps the console line only — a user
+cannot fix a clash — and the line keeps the `[plugin:<id>] …` format it always
+had, so nothing that greps logs notices the indirection.
+
+A host with its own error reporting subscribes here; a plugin can report through
+the same channel with `reportPluginProblem({ pluginId, message })` rather than
+inventing a console format of its own. The one thing this channel cannot catch
+is a typo in a slot *name*: slots are an open namespace, so `contribute` to a
+name nothing renders is legal by design — the declared `SlotName`s in your
+autocomplete are the protection there.

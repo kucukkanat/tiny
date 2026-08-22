@@ -26,7 +26,7 @@ export type ChatOptions = {
   readonly conversationId: string | undefined;
   /**
    * Where this conversation streams from — the user's own endpoint, or one a
-   * plugin registered with `tiny.registerProvider`. Resolved by `App`, because
+   * plugin registered with `tiny.registerProvider`. Resolved by `ChatShell`, because
    * only it can see both the settings and the provider registry.
    */
   readonly endpoint: Endpoint | undefined;

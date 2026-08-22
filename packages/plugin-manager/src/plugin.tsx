@@ -80,11 +80,7 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
       description: "Add and manage plugins",
       handler: () => open.set(true),
     });
-    tiny.registerShortcut("super+shift+p", {
-      description: "Manage plugins",
-      handler: () => open.set(true),
-    });
-    tiny.registerShortcut("ctrl+shift+p", {
+    tiny.registerShortcut("mod+shift+p", {
       description: "Manage plugins",
       handler: () => open.set(true),
     });

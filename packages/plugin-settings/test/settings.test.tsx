@@ -71,9 +71,10 @@ describe("settings as a plugin", () => {
     expect(screen.queryByLabelText("Close")).toBeNull();
   });
 
-  test("registers the command and both shortcuts", async () => {
+  test("registers the command and the shortcut", async () => {
     const { commands, shortcuts } = await loadPlugins([settingsPlugin()]);
     expect(commands.map((command) => command.invocationName)).toEqual(["settings"]);
-    expect(shortcuts.map((shortcut) => shortcut.shortcut)).toEqual(["super+,", "ctrl+,"]);
+    // One `mod+,` covers Cmd on macOS and Ctrl everywhere else.
+    expect(shortcuts.map((shortcut) => shortcut.shortcut)).toEqual(["mod+,"]);
   });
 });

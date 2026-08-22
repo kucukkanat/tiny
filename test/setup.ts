@@ -20,7 +20,9 @@ const native = {
 };
 
 if (typeof document === "undefined") {
-  GlobalRegistrator.register();
+  // A real URL, because no browser app runs at `about:blank` — and a
+  // `HashRouter` (which `TinyApp` mounts) cannot parse a location without one.
+  GlobalRegistrator.register({ url: "https://tiny.test/" });
   Object.assign(globalThis, native);
 }
 

@@ -151,10 +151,11 @@ command, sitting in the same registry as everything above.
 | | |
 | --- | --- |
 | Host, types, slots, `PluginHost` | `packages/plugin` |
+| The assembled app — `TinyApp`, `ChatShell`, `useChat` | `packages/shell` |
 | pi compatibility, opt-in | `packages/plugin-pi` |
 | Runtime install, the Plugins dialog | `packages/plugin-manager` |
 | Filesystem tools for the model | `packages/plugin-fs` |
-| The app and its plugin registry | `apps/chat/src/plugins.ts` |
+| The app's plugin registry — all that is left of the app | `apps/chat/src/plugins.ts` |
 
 ## Run the tests
 

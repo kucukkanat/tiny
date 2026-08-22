@@ -4,6 +4,7 @@ import {
   definePlugin,
   settingsComplete,
   usePluginContext,
+  usePluginProviders,
   useStore,
 } from "@tiny/plugin";
 import { SettingsDialog } from "./SettingsDialog.tsx";
@@ -15,8 +16,10 @@ export const settings = (): IdentifiedPlugin => {
   function SettingsOverlay() {
     const ctx = usePluginContext();
     const shown = useStore(open);
-    // An unconfigured app forces the dialog open until an endpoint answers.
-    const required = !settingsComplete(ctx.settings);
+    const providers = usePluginProviders();
+    // An unconfigured app forces the dialog open until an endpoint answers —
+    // unless a plugin already registered a provider, which needs no typing in.
+    const required = !settingsComplete(ctx.settings) && providers.length === 0;
     if (!shown && !required) return null;
 
     return (

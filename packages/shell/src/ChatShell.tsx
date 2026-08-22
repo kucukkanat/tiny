@@ -260,10 +260,12 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
           models={models}
           model={selectedModel}
           onModelChange={(value) => {
-            if (settings === undefined) return;
             const { providerId, model } = parseOption(value);
             updateSettings({
-              ...settings,
+              // A first pick, with no settings saved yet, still needs a full
+              // `Settings` object — a registered provider supplies its own
+              // baseUrl/apiKey, so these default to empty rather than blocking.
+              ...(settings ?? { baseUrl: "", apiKey: "" }),
               model,
               // The user's own endpoint is the absence of a provider.
               ...(providerId === OWN_ENDPOINT ? { providerId: undefined } : { providerId }),

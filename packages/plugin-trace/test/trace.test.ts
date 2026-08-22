@@ -1,37 +1,16 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { ChatMessage } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 import type { IdentifiedPlugin } from "@tiny/plugin";
 import { loadPlugins } from "@tiny/plugin";
+import { chatEndpoint } from "../../../test/helpers.ts";
 import { streamTrace, usageLogger } from "../src/index.ts";
 
 // Driven through streamChat against a real OpenAI-compatible server, so these
 // run through pi-shaped registration and the actual request path rather than
 // through a stand-in host.
 
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
-
-const server = Bun.serve({
-  port: 0,
-  fetch() {
-    return new Response(
-      sse([
-        { choices: [{ delta: { reasoning_content: "hmm" } }] },
-        { choices: [{ delta: { content: "Hi" } }] },
-        {
-          choices: [{ delta: {}, finish_reason: "stop" }],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
-        },
-        "[DONE]",
-      ]),
-      { headers: { "Content-Type": "text/event-stream" } },
-    );
-  },
-});
-afterAll(() => server.stop(true));
-
-const endpoint = { baseUrl: `http://localhost:${server.port}/v1`, apiKey: "sk-test" };
+const { endpoint } = chatEndpoint();
 
 /** Loads the plugins the way the app does, then streams a real request through them. */
 const run = async (

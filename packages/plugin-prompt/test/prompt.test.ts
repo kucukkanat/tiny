@@ -1,40 +1,16 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { ChatMessage } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 import type { IdentifiedPlugin } from "@tiny/plugin";
 import { loadPlugins } from "@tiny/plugin";
+import { chatEndpoint } from "../../../test/helpers.ts";
 import { historyWindow, systemPrompt } from "../src/index.ts";
 
 // Driven through streamChat against a real OpenAI-compatible server, so these
 // run through pi-shaped registration and the actual request path rather than
 // through a stand-in host.
 
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
-
-let lastBody: { messages?: { role: string; content: string }[] } | undefined;
-
-const server = Bun.serve({
-  port: 0,
-  async fetch(request) {
-    lastBody = await request.json();
-    return new Response(
-      sse([
-        { choices: [{ delta: { reasoning_content: "hmm" } }] },
-        { choices: [{ delta: { content: "Hi" } }] },
-        {
-          choices: [{ delta: {}, finish_reason: "stop" }],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
-        },
-        "[DONE]",
-      ]),
-      { headers: { "Content-Type": "text/event-stream" } },
-    );
-  },
-});
-afterAll(() => server.stop(true));
-
-const endpoint = { baseUrl: `http://localhost:${server.port}/v1`, apiKey: "sk-test" };
+const { endpoint, sentMessages } = chatEndpoint();
 
 /** Loads the plugins the way the app does, then streams a real request through them. */
 const run = async (
@@ -44,8 +20,6 @@ const run = async (
   const { extensions } = await loadPlugins(used);
   for await (const _delta of streamChat(endpoint, "test-model", messages, { extensions }));
 };
-
-const sentMessages = () => lastBody?.messages ?? [];
 
 const turns = (count: number): ChatMessage[] =>
   Array.from({ length: count }, (_, index) => ({

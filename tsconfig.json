@@ -16,5 +16,5 @@
     "allowImportingTsExtensions": true,
     "types": ["bun"]
   },
-  "include": ["apps", "packages"]
+  "include": ["apps", "packages", "test"]
 }

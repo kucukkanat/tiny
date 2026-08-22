@@ -1,13 +1,11 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { sseResponse } from "../../../test/helpers.ts";
 import { getConversation } from "../src/conversations.ts";
 import { useChat } from "../src/useChat.ts";
 
 // bun:test hooks aren't globals, so testing-library can't auto-register this.
 afterEach(cleanup);
-
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
 
 let lastBody: { messages?: { role: string; content: string }[] } | undefined;
 
@@ -17,16 +15,13 @@ const server = Bun.serve({
     const { pathname } = new URL(request.url);
     if (pathname === "/v1/chat/completions") {
       lastBody = await request.json();
-      return new Response(
-        sse([
-          { choices: [{ delta: { reasoning_content: "pondering" } }] },
-          { choices: [{ delta: { content: "Hi " } }] },
-          { choices: [{ delta: { content: "there" } }] },
-          { choices: [{ delta: {}, finish_reason: "stop" }] },
-          "[DONE]",
-        ]),
-        { headers: { "Content-Type": "text/event-stream" } },
-      );
+      return sseResponse([
+        { choices: [{ delta: { reasoning_content: "pondering" } }] },
+        { choices: [{ delta: { content: "Hi " } }] },
+        { choices: [{ delta: { content: "there" } }] },
+        { choices: [{ delta: {}, finish_reason: "stop" }] },
+        "[DONE]",
+      ]);
     }
     if (pathname === "/broken/chat/completions")
       return Response.json({ error: { message: "nope" } }, { status: 401 });

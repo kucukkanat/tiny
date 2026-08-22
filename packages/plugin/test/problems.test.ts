@@ -1,5 +1,6 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { toolOutput } from "@tiny/ai";
+import { reported } from "../../../test/helpers.ts";
 import { onPluginProblem, type PluginProblem, reportPluginProblem } from "../src/problems.ts";
 import { loadPlugins } from "../src/registry.ts";
 import { definePlugin } from "../src/tiny.ts";
@@ -7,16 +8,9 @@ import { definePlugin } from "../src/tiny.ts";
 /** Runs `body` with the console quiet and problems collected. */
 const collected = async (body: () => Promise<void> | void) => {
   const problems: PluginProblem[] = [];
-  const lines: string[] = [];
-  const original = console.error;
-  console.error = mock((...args: unknown[]) => void lines.push(args.join(" ")));
   const off = onPluginProblem((problem) => void problems.push(problem));
-  try {
-    await body();
-  } finally {
-    off();
-    console.error = original;
-  }
+  const lines = await reported(body);
+  off();
   return { problems, lines };
 };
 
@@ -60,36 +54,26 @@ describe("onPluginProblem", () => {
     expect(problems[0]?.message).toContain("already registered");
   });
 
-  test("unsubscribing stops delivery", () => {
+  test("unsubscribing stops delivery", async () => {
     const heard: PluginProblem[] = [];
     const off = onPluginProblem((problem) => void heard.push(problem));
-    const original = console.error;
-    console.error = () => {};
-    try {
+    await reported(() => {
       reportPluginProblem({ pluginId: "a", message: "one" });
       off();
       reportPluginProblem({ pluginId: "a", message: "two" });
-    } finally {
-      console.error = original;
-    }
+    });
     expect(heard.map((problem) => problem.message)).toEqual(["one"]);
   });
 
-  test("a throwing listener does not stop the report reaching the others", () => {
+  test("a throwing listener does not stop the report reaching the others", async () => {
     const heard: string[] = [];
     const offBroken = onPluginProblem(() => {
       throw new Error("boom");
     });
     const offListening = onPluginProblem((problem) => void heard.push(problem.message));
-    const original = console.error;
-    console.error = () => {};
-    try {
-      reportPluginProblem({ pluginId: undefined, message: "still delivered" });
-    } finally {
-      offBroken();
-      offListening();
-      console.error = original;
-    }
+    await reported(() => reportPluginProblem({ pluginId: undefined, message: "still delivered" }));
+    offBroken();
+    offListening();
     expect(heard).toEqual(["still delivered"]);
   });
 });

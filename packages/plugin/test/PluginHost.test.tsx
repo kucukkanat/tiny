@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { reported } from "../../../test/helpers.ts";
 import type { AppBridge } from "../src/hooks.ts";
 import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
 import { definePlugin } from "../src/tiny.ts";
@@ -92,20 +93,18 @@ describe("Slot", () => {
   });
 
   test("contains a throwing contribution instead of blanking the app", async () => {
-    const consoleError = console.error;
-    console.error = mock(() => {});
     function boom(tiny: Parameters<Plugin>[0]) {
       tiny.contribute("composer.actions", () => {
         throw new Error("render exploded");
       });
       tiny.contribute("composer.actions", () => <span>survivor</span>);
     }
-    await mount([boom], <Slot name="composer.actions" />);
-
-    await waitFor(() => expect(screen.getByTestId("plugin-error")).toBeDefined());
+    await reported(async () => {
+      await mount([boom], <Slot name="composer.actions" />);
+      await waitFor(() => expect(screen.getByTestId("plugin-error")).toBeDefined());
+    });
     // The sibling contribution and the rest of the tree still render.
     expect(screen.getByText("survivor")).toBeDefined();
-    console.error = consoleError;
   });
 });
 
@@ -268,19 +267,19 @@ describe("context and commands", () => {
   });
 
   test("a throwing command handler notifies instead of propagating", async () => {
-    const consoleError = console.error;
-    console.error = mock(() => {});
     const plugin: Plugin = (tiny) =>
       tiny.registerCommand("bad", {
         handler: () => {
           throw new Error("handler exploded");
         },
       });
-    await mount([plugin]);
-
-    await runCommand("bad");
-    await waitFor(() => expect(screen.getByTestId("plugin-toast").textContent).toContain("failed"));
-    console.error = consoleError;
+    await reported(async () => {
+      await mount([plugin]);
+      await runCommand("bad");
+      await waitFor(() =>
+        expect(screen.getByTestId("plugin-toast").textContent).toContain("failed"),
+      );
+    });
   });
 
   test("a plugin without an id gets storage that works but does not persist", async () => {
@@ -598,25 +597,16 @@ describe("declared capabilities", () => {
   });
 
   test("updateSettings is refused, and says which capability was missing", async () => {
-    const warned: string[] = [];
-    const consoleError = console.error;
-    console.error = (...args: unknown[]) => void warned.push(args.join(" "));
-    try {
+    const warned = await reported(async () => {
       const ctx = await contextOf([]);
       ctx?.updateSettings({ baseUrl: "x", apiKey: "y", model: "z" });
-    } finally {
-      console.error = consoleError;
-    }
-
+    });
     expect(warned.join(" ")).toContain('"settings" capability');
   });
 
   test("registerTool is refused for a plugin that did not ask for tools", async () => {
-    const warned: string[] = [];
-    const consoleError = console.error;
-    console.error = (...args: unknown[]) => void warned.push(args.join(" "));
-    try {
-      await mount([
+    const warned = await reported(() =>
+      mount([
         definePlugin("sneaky", { needs: ["chat"] }, (tiny) =>
           tiny.registerTool({
             name: "exfiltrate",
@@ -625,11 +615,8 @@ describe("declared capabilities", () => {
             execute: () => ({ content: [{ type: "text", text: "" }] }),
           }),
         ),
-      ]);
-    } finally {
-      console.error = consoleError;
-    }
-
+      ]),
+    );
     expect(warned.join(" ")).toContain('"tools" capability');
     expect(host?.registry.tools).toEqual([]);
   });

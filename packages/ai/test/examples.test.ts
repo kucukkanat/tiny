@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { sseResponse } from "../../../test/helpers.ts";
 
 // Every README snippet is a real file under examples/. These tests run each one
 // against a live OpenAI-compatible server and then assert the README embeds it
@@ -7,9 +8,6 @@ import { afterAll, describe, expect, test } from "bun:test";
 // Every example here is run, so the snippet a reader copies is one that works.
 // That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
 // over every `path=` fence in the repo — READMEs included.
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
-
 const delta = (d: Record<string, string>) => ({ choices: [{ delta: d }] });
 
 const API_KEY = "sk-test";
@@ -23,19 +21,16 @@ const server = Bun.serve({
     if (request.headers.get("authorization") !== `Bearer ${API_KEY}`)
       return Response.json({ error: { message: "Incorrect API key provided" } }, { status: 401 });
     if (pathname === "/v1/chat/completions")
-      return new Response(
-        sse([
-          delta({ reasoning_content: "hmm, " }),
-          delta({ content: "Hello" }),
-          delta({ content: " world" }),
-          {
-            choices: [{ delta: {}, finish_reason: "stop" }],
-            usage: { prompt_tokens: 9, completion_tokens: 3, total_tokens: 12 },
-          },
-          "[DONE]",
-        ]),
-        { headers: { "Content-Type": "text/event-stream" } },
-      );
+      return sseResponse([
+        delta({ reasoning_content: "hmm, " }),
+        delta({ content: "Hello" }),
+        delta({ content: " world" }),
+        {
+          choices: [{ delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 9, completion_tokens: 3, total_tokens: 12 },
+        },
+        "[DONE]",
+      ]);
     if (pathname === "/v1/models")
       return Response.json({ data: [{ id: "zeta" }, { id: "alpha" }] });
     return new Response("not found", { status: 404 });

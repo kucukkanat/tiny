@@ -1,12 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { sseResponse } from "../../../test/helpers.ts";
 import type { Extension, StreamDelta, ToolCallEvent, ToolDefinition } from "../src/index.ts";
 import { BLOCKED_MESSAGE, streamChat, toolOutput } from "../src/index.ts";
 
 // The agent loop is driven against a real in-process OpenAI-compatible server
 // that answers with tool calls — no mocks, and no stand-in for the loop itself.
-
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
 
 const toolCall = (id: string, name: string, args: unknown) => ({
   choices: [
@@ -26,10 +24,7 @@ const text = (content: string) => ({ choices: [{ delta: { content } }] });
 /** Every request body the server saw, so the fed-back results can be inspected. */
 let requests: { messages: { role: string; content: unknown }[]; tools?: unknown[] }[] = [];
 
-const eventStream = (payloads: unknown[]) =>
-  new Response(sse([...payloads, "[DONE]"]), {
-    headers: { "Content-Type": "text/event-stream" },
-  });
+const eventStream = (payloads: unknown[]) => sseResponse([...payloads, "[DONE]"]);
 
 const server = Bun.serve({
   port: 0,

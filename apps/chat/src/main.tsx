@@ -6,13 +6,9 @@ import { plugins } from "./plugins.ts";
 const root = document.getElementById("root");
 if (root === null) throw new Error("Missing #root element");
 
-// The whole app: `@tiny/shell` assembles the host, the router and the chrome,
-// so what remains of this app is the plugin list — which is the point.
-//
-// `uiFallbacks` is this app opting in to pi compatibility: it adds the
-// terminal-only half of pi's `ctx.ui` as the no-ops pi's own RPC mode returns,
-// so an extension written for pi and installed here degrades rather than
-// throwing. Drop the prop and `ctx.ui` is only methods that do something.
+// `@tiny/shell` assembles host, router and chrome; what remains here is the
+// plugin list. `uiFallbacks` opts in to pi compatibility — drop it and
+// `ctx.ui` is only methods that do something.
 createRoot(root).render(<TinyApp plugins={plugins} uiFallbacks={piTerminalUI} />);
 
 if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {

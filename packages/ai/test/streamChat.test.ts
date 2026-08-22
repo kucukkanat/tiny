@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { sseResponse } from "../../../test/helpers.ts";
 import type { Extension, StreamDelta } from "../src/index.ts";
 import {
   ChatApiError,
@@ -9,9 +10,6 @@ import {
 } from "../src/index.ts";
 
 // A real in-process OpenAI-compatible server — integration, not mocks.
-const sse = (payloads: unknown[]): string =>
-  payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
-
 const delta = (d: Record<string, string>) => ({ choices: [{ delta: d }] });
 const stop = { choices: [{ delta: {}, finish_reason: "stop" }] };
 
@@ -23,23 +21,18 @@ const server = Bun.serve({
     const { pathname } = new URL(request.url);
     if (pathname === "/v1/chat/completions") {
       lastChatRequest = { auth: request.headers.get("authorization"), body: await request.json() };
-      return new Response(
-        sse([
-          delta({ reasoning_content: "hmm, " }),
-          delta({ reasoning: "let me think" }),
-          delta({ content: "Hello" }),
-          delta({ content: " world" }),
-          stop,
-          "[DONE]",
-        ]),
-        { headers: { "Content-Type": "text/event-stream" } },
-      );
+      return sseResponse([
+        delta({ reasoning_content: "hmm, " }),
+        delta({ reasoning: "let me think" }),
+        delta({ content: "Hello" }),
+        delta({ content: " world" }),
+        stop,
+        "[DONE]",
+      ]);
     }
     // A stream cut short: deltas arrive but the server never reports why it ended.
     if (pathname === "/truncated/chat/completions")
-      return new Response(sse([delta({ content: "half a" }), "[DONE]"]), {
-        headers: { "Content-Type": "text/event-stream" },
-      });
+      return sseResponse([delta({ content: "half a" }), "[DONE]"]);
     if (pathname === "/v1/models")
       return Response.json({ data: [{ id: "zeta" }, { id: "alpha" }, { notAnId: 1 }] });
     if (pathname === "/broken/chat/completions" || pathname === "/broken/models")

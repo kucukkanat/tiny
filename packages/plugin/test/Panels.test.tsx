@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { reported } from "../../../test/helpers.ts";
 import { usePluginContext, usePluginHost } from "../src/hooks.ts";
 import { Panels } from "../src/Panels.tsx";
 import { PluginHost } from "../src/PluginHost.tsx";
@@ -256,17 +257,12 @@ describe("the rail", () => {
         },
       }),
     );
-    const errors = mock(() => {});
-    const original = console.error;
-    console.error = errors;
-    try {
+    await reported(async () => {
       await mount([failing], <Panels />);
       await waitFor(() =>
         expect(screen.getByTestId("plugin-error").textContent).toBe("boom failed"),
       );
-    } finally {
-      console.error = original;
-    }
+    });
     // The rail itself survived; only the panel's own output was replaced.
     expect(screen.getByTestId("plugin-panels")).toBeDefined();
   });
@@ -307,16 +303,11 @@ describe("a page", () => {
     expect(entry).toBeDefined();
     if (entry === undefined) return;
 
-    const errors = mock(() => {});
-    const original = console.error;
-    console.error = errors;
-    try {
+    await reported(async () => {
       await mount([failing], <PluginPage entry={entry} />);
       await waitFor(() =>
         expect(screen.getByTestId("plugin-error").textContent).toBe("boom failed"),
       );
-    } finally {
-      console.error = original;
-    }
+    });
   });
 });

@@ -1,29 +1,11 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { type Extension, type ExtensionAPI, toolOutput } from "@tiny/ai";
+import { reported } from "../../../test/helpers.ts";
 import { matchesKey } from "../src/keys.ts";
 import { createProviderStore } from "../src/providers.ts";
 import { loadPlugins, type PluginRuntime, type Registry } from "../src/registry.ts";
 import type { Plugin } from "../src/tiny.ts";
 import { definePlugin } from "../src/tiny.ts";
-
-/**
- * Runs `body` with `console.error` captured, returning what it reported.
- *
- * The registry drops a clashing or malformed registration rather than throwing,
- * so this line is the whole of the feedback a plugin author gets — which makes
- * it part of the contract rather than noise, and worth asserting.
- */
-const reported = async (body: () => Promise<void>): Promise<string[]> => {
-  const lines: string[] = [];
-  const original = console.error;
-  console.error = mock((...args: unknown[]) => void lines.push(args.join(" ")));
-  try {
-    await body();
-  } finally {
-    console.error = original;
-  }
-  return lines;
-};
 
 /** Collect what a synthesised extension registers, the way streamChat would. */
 const replayed = (extensions: readonly Extension[]): string[] => {
@@ -401,11 +383,9 @@ describe("withdrawing a registration", () => {
 
   test("a rejected registration still hands back a disposer that does nothing", async () => {
     const Component = () => null;
-    const original = console.error;
-    console.error = () => {};
     let offClash: (() => void) | undefined;
-    let registry: PluginRuntime;
-    try {
+    let registry!: PluginRuntime;
+    await reported(async () => {
       registry = await loadPlugins([
         definePlugin("a", (tiny) => {
           tiny.registerPanel("p", { title: "First", component: Component });
@@ -413,9 +393,7 @@ describe("withdrawing a registration", () => {
           offClash = tiny.registerPanel("p", { title: "Second", component: Component });
         }),
       ]);
-    } finally {
-      console.error = original;
-    }
+    });
 
     const seen: number[] = [];
     registry.subscribe((next) => seen.push(next.panels.length));
@@ -562,18 +540,13 @@ describe("withdrawing a registration", () => {
       parameters: { type: "object" },
       execute: () => toolOutput("ok"),
     });
-    const errors: string[] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => void errors.push(args.join(" "));
-    let registry: PluginRuntime;
-    try {
+    let registry!: PluginRuntime;
+    const errors = await reported(async () => {
       registry = await loadPlugins([
         definePlugin("winner", (tiny) => tiny.registerTool(tool("first"))),
         definePlugin("loser", (tiny) => tiny.registerTool(tool("second"))),
       ]);
-    } finally {
-      console.error = original;
-    }
+    });
     expect(errors.join(" ")).toContain('tool "shared" is already registered');
     expect(registry.tools.map((t) => t.description)).toEqual(["first"]);
 

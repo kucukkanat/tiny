@@ -4,6 +4,7 @@ import type { StreamDelta } from "@tiny/ai";
 import { streamChat } from "@tiny/ai";
 import type { Plugin } from "@tiny/plugin";
 import { emptyRegistry, PluginHost, Slot, usePluginHost } from "@tiny/plugin";
+import { sseResponse } from "../../../test/helpers.ts";
 
 /**
  * A real OpenAI-compatible server that asks for one tool call and then answers,
@@ -11,9 +12,6 @@ import { emptyRegistry, PluginHost, Slot, usePluginHost } from "@tiny/plugin";
  * tests drive `streamChat` against this and click the host's own dialogs.
  */
 export const createServer = (name: string, args: Record<string, unknown>) => {
-  const sse = (payloads: unknown[]): string =>
-    payloads.map((p) => `data: ${typeof p === "string" ? p : JSON.stringify(p)}\n\n`).join("");
-
   const state = { requests: [] as { messages: { role: string; content: unknown }[] }[] };
 
   const server = Bun.serve({
@@ -45,9 +43,7 @@ export const createServer = (name: string, args: Record<string, unknown>) => {
               { choices: [{ delta: { content: "done" } }] },
               { choices: [{ delta: {}, finish_reason: "stop" }] },
             ];
-      return new Response(sse([...payloads, "[DONE]"]), {
-        headers: { "Content-Type": "text/event-stream" },
-      });
+      return sseResponse([...payloads, "[DONE]"]);
     },
   });
 

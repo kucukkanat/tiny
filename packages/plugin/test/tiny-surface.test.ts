@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { endpointModel, toolOutput, toolText } from "@tiny/ai";
+import { reported } from "../../../test/helpers.ts";
 import { createEvents, defineChannel } from "../src/events.ts";
 import { createProviderStore, endpointOf, modelsOf } from "../src/providers.ts";
 import { type HostActions, loadPlugins, transformMarkdown } from "../src/registry.ts";
@@ -307,20 +308,15 @@ describe("host-backed tiny methods", () => {
   });
 
   test("report rather than throw when no host is mounted", async () => {
-    const errors: unknown[] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args[0]);
-    try {
-      await loadPlugins([
+    const errors = await reported(() =>
+      loadPlugins([
         (tiny) => {
           expect(tiny.getCommands()).toEqual([]);
           expect(tiny.getSessionName()).toBeUndefined();
           tiny.setModel("x");
         },
-      ]);
-    } finally {
-      console.error = original;
-    }
+      ]),
+    );
     expect(errors).toContain("[plugin] tiny.setModel() needs a mounted PluginHost");
   });
 });

@@ -23,6 +23,37 @@ const btn = "h-8 rounded-control px-3 text-smd font-medium";
 const primary = `${btn} bg-accent text-accent-ink`;
 const ghost = `${btn} text-ink-2 hover:bg-hover`;
 
+/** The shared dialog chrome: backdrop, centered card, `role="dialog"`. `wide`
+ * is the list-shaped variant — a wider card that scrolls inside itself. */
+export function ModalShell({
+  label,
+  wide = false,
+  testid,
+  children,
+}: {
+  readonly label: string;
+  readonly wide?: boolean | undefined;
+  readonly testid?: string | undefined;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div
+        role="dialog"
+        aria-modal
+        aria-label={label}
+        {...(testid === undefined ? {} : { "data-testid": testid })}
+        className={`w-full rounded-[14px] bg-surface p-4 shadow-overlay ${
+          wide ? "flex max-h-[80vh] max-w-lg flex-col" : "max-w-sm"
+        }`}
+        style={{ animation: "pop-in 180ms var(--ease-out-strong) both" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Escape always cancels, matching pi's dialogs. */
 function useEscape(onCancel: () => void) {
   useEffect(() => {

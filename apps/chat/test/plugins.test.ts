@@ -1,7 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { ChatMessage } from "@tiny/ai";
-import { streamChat } from "@tiny/ai";
-import type { IdentifiedPlugin } from "@tiny/plugin";
 import { loadPlugins } from "@tiny/plugin";
 import { chatEndpoint } from "../../../test/helpers.ts";
 import { plugins } from "../src/plugins.ts";
@@ -10,16 +7,7 @@ import { plugins } from "../src/plugins.ts";
 // run through pi-shaped registration and the actual request path rather than
 // through a stand-in host.
 
-const { endpoint, sentMessages } = chatEndpoint();
-
-/** Loads the plugins the way the app does, then streams a real request through them. */
-const run = async (
-  used: readonly IdentifiedPlugin[],
-  messages: readonly ChatMessage[] = [{ role: "user", content: "hi" }],
-): Promise<void> => {
-  const { extensions } = await loadPlugins(used);
-  for await (const _delta of streamChat(endpoint, "test-model", messages, { extensions }));
-};
+const { sentMessages, stream: run } = chatEndpoint();
 
 // The app's plugin file is a list of packages. What each does is tested in the
 // package that owns it; what is tested here is the list this app ships.

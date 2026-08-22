@@ -7,7 +7,6 @@ import { createProviderStore, type ProviderStore } from "./providers.ts";
 import type { Contribution, SlotName } from "./Slot.tsx";
 import type {
   Capability,
-  CommandInfo,
   CommandOptions,
   Dispose,
   MarkdownContext,
@@ -233,17 +232,19 @@ const withInvocationNames = (
   });
 };
 
-/** The host actions `tiny.*` methods reach through — resolved at call time, not captured at load. */
-export type HostActions = {
-  getCommands(): readonly CommandInfo[];
-  getAllTools(): readonly string[];
-  getActiveTools(): readonly string[];
-  setActiveTools(names: readonly string[]): void;
-  setModel(model: string): void;
-  sendUserMessage(content: string): void;
-  getSessionName(): string | undefined;
-  setSessionName(name: string): void;
-};
+/** The host actions `tiny.*` methods reach through — resolved at call time, not
+ * captured at load. Derived from `PluginAPI` so the two can never drift. */
+export type HostActions = Pick<
+  PluginAPI,
+  | "getCommands"
+  | "getAllTools"
+  | "getActiveTools"
+  | "setActiveTools"
+  | "setModel"
+  | "sendUserMessage"
+  | "getSessionName"
+  | "setSessionName"
+>;
 
 /** What a host that has not published anything yet can honestly do: nothing. */
 const detachedHost = (): HostActions => {

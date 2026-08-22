@@ -1,45 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { reported } from "../../../test/helpers.ts";
-import { usePluginContext, usePluginHost } from "../src/hooks.ts";
+import { usePluginContext } from "../src/hooks.ts";
 import { Panels } from "../src/Panels.tsx";
 import { PluginHost } from "../src/PluginHost.tsx";
 import { PluginPage } from "../src/PluginPage.tsx";
 import { emptyRegistry, loadPlugins } from "../src/registry.ts";
-import type { Plugin } from "../src/tiny.ts";
 import { definePlugin } from "../src/tiny.ts";
+import { host, mountHost as mount, Probe } from "./mount.tsx";
 
 // The rail is the one surface that has to be able to *not exist*: an app whose
 // plugins register no panel must look exactly as it did before panels existed.
 
-afterEach(() => {
-  cleanup();
-  host = undefined;
-});
-
+afterEach(cleanup);
 beforeEach(() => localStorage.clear());
-
-let host: ReturnType<typeof usePluginHost> | undefined;
-function Probe() {
-  host = usePluginHost();
-  return null;
-}
-
-const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => {
-  host = undefined;
-  await act(async () => {
-    render(
-      <PluginHost plugins={plugins}>
-        <Probe />
-        {children}
-      </PluginHost>,
-    );
-  });
-  await waitFor(() => {
-    expect(host).toBeDefined();
-    expect(host?.registry).not.toBe(emptyRegistry);
-  });
-};
 
 const panel = (id: string, title: string, body: string) =>
   definePlugin(id, (tiny) =>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useMemo } from "react";
 import { clearChat } from "../examples/clearChat.ts";
 import { copyButton } from "../examples/copyButton.tsx";
@@ -8,28 +8,19 @@ import { outlinePanel } from "../examples/outlinePanel.tsx";
 import { savedPrompts } from "../examples/savedPrompts.tsx";
 import { scratchpadPage } from "../examples/scratchpadPage.tsx";
 import { tokenMeter } from "../examples/tokenMeter.ts";
-import { usePluginHost, useProvideApp } from "../src/hooks.ts";
+import { useProvideApp } from "../src/hooks.ts";
 import { Panels } from "../src/Panels.tsx";
-import { PluginHost } from "../src/PluginHost.tsx";
 import { PluginPage } from "../src/PluginPage.tsx";
-import { emptyRegistry, loadPlugins } from "../src/registry.ts";
+import { loadPlugins } from "../src/registry.ts";
 import { Slot, Widgets } from "../src/Slot.tsx";
-import type { Plugin, PluginMessage } from "../src/tiny.ts";
+import type { PluginMessage } from "../src/tiny.ts";
+import { host, mountHost } from "./mount.tsx";
 
 // Every example under examples/ is a real plugin, run here so the snippet a
 // reader copies is one that works. That it *is* the snippet is asserted by
 // apps/docs/test/examples.test.ts, over every `path=` fence in the repo.
 
-afterEach(() => {
-  cleanup();
-  host = undefined;
-});
-
-let host: ReturnType<typeof usePluginHost> | undefined;
-function Probe() {
-  host = usePluginHost();
-  return null;
-}
+afterEach(cleanup);
 
 // Hoisted: an inline default would be a new identity on every render, and the
 // bridge is memoised on it — which is the re-render loop `useProvideApp` warns
@@ -62,23 +53,7 @@ function Thread({
   return null;
 }
 
-const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => {
-  host = undefined;
-  // Factories resolve a microtask after the first paint; rendering inside `act`
-  // keeps that second update in the act scope rather than landing loose.
-  await act(async () => {
-    render(
-      <PluginHost plugins={plugins}>
-        <Probe />
-        {children}
-      </PluginHost>,
-    );
-  });
-  await waitFor(() => {
-    expect(host).toBeDefined();
-    expect(host?.registry).not.toBe(emptyRegistry);
-  });
-};
+const mount = mountHost;
 
 describe("examples run", () => {
   test("greet registers the command the quickstart promises", async () => {

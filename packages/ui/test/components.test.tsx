@@ -190,12 +190,22 @@ describe("Sidebar", () => {
     { id: "b", title: "Second chat" },
   ];
 
+  /** The full required prop set, inert — tests override what they assert on. */
+  const inert = {
+    title: "Tiny",
+    chats,
+    activeId: undefined,
+    onSelect: () => {},
+    onNew: () => {},
+    onDelete: () => {},
+    onSettings: () => {},
+  };
+
   test("lists chats and reports selection, creation, deletion, settings", () => {
     const events: string[] = [];
     render(
       <Sidebar
-        title="Tiny"
-        chats={chats}
+        {...inert}
         activeId="a"
         onSelect={(id) => events.push(`select:${id}`)}
         onNew={() => events.push("new")}
@@ -214,13 +224,7 @@ describe("Sidebar", () => {
     const clicked: string[] = [];
     render(
       <Sidebar
-        title="Tiny"
-        chats={chats}
-        activeId={undefined}
-        onSelect={() => {}}
-        onNew={() => {}}
-        onDelete={() => {}}
-        onSettings={() => {}}
+        {...inert}
         links={[
           { id: "/scratchpad", label: "Scratchpad" },
           { id: "/report", label: "Report" },
@@ -245,17 +249,7 @@ describe("Sidebar", () => {
   });
 
   test("has no extra destinations when none are given", () => {
-    render(
-      <Sidebar
-        title="Tiny"
-        chats={chats}
-        activeId={undefined}
-        onSelect={() => {}}
-        onNew={() => {}}
-        onDelete={() => {}}
-        onSettings={() => {}}
-      />,
-    );
+    render(<Sidebar {...inert} />);
 
     // Only the rows the app itself owns.
     expect(screen.getByText("Settings")).toBeDefined();
@@ -263,17 +257,7 @@ describe("Sidebar", () => {
   });
 
   test("collapsing hides the chat list", () => {
-    render(
-      <Sidebar
-        title="Tiny"
-        chats={chats}
-        activeId={undefined}
-        onSelect={() => {}}
-        onNew={() => {}}
-        onDelete={() => {}}
-        onSettings={() => {}}
-      />,
-    );
+    render(<Sidebar {...inert} />);
     fireEvent.click(screen.getByLabelText("Collapse sidebar"));
     expect(screen.queryByText("First chat")).toBeNull();
     fireEvent.click(screen.getByLabelText("Expand sidebar"));

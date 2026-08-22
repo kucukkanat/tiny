@@ -1,3 +1,4 @@
+import { ModalShell } from "@tiny/plugin";
 import { useCallback, useEffect, useState } from "react";
 import { PluginManagerError } from "./errors.ts";
 import { fetchSource, type InspectedPlugin, type Installed, sha256 } from "./installed.ts";
@@ -105,169 +106,158 @@ export function ManagerDialog({
     });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div
-        role="dialog"
-        aria-modal
-        aria-label="Plugins"
-        data-testid="plugin-manager"
-        className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-[14px] bg-surface p-4 shadow-overlay"
-        style={{ animation: "pop-in 180ms var(--ease-out-strong) both" }}
-      >
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-ink">Plugins</h2>
-          <button type="button" className={button} onClick={onClose} data-testid="close-manager">
-            Close
-          </button>
-        </div>
+    <ModalShell label="Plugins" testid="plugin-manager" wide>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold text-ink">Plugins</h2>
+        <button type="button" className={button} onClick={onClose} data-testid="close-manager">
+          Close
+        </button>
+      </div>
 
-        {view.kind === "list" ? (
-          <>
-            <p className="mt-1 text-sm leading-relaxed text-ink-3">
-              Plugins you add run with the same access as the app itself: your conversations, your
-              API key, and any request they care to make. Unlike the plugins that ship with the app,
-              one added here cannot narrow what it is given — it runs through this plugin, so it
-              gets what this plugin gets. Only add code you trust.
-            </p>
+      {view.kind === "list" ? (
+        <>
+          <p className="mt-1 text-sm leading-relaxed text-ink-3">
+            Plugins you add run with the same access as the app itself: your conversations, your API
+            key, and any request they care to make. Unlike the plugins that ship with the app, one
+            added here cannot narrow what it is given — it runs through this plugin, so it gets what
+            this plugin gets. Only add code you trust.
+          </p>
 
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto" data-testid="installed-list">
-              {installed.length === 0 ? (
-                <p className="py-3 text-smd text-ink-3">Nothing installed yet.</p>
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {installed.map((plugin) => (
-                    <li
-                      key={plugin.id}
-                      data-testid="installed-plugin"
-                      className="flex items-center gap-2 rounded-control px-2 py-1.5 hover:bg-hover"
-                    >
-                      <label className="flex min-w-0 flex-1 items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={plugin.enabled}
-                          disabled={busy}
-                          data-testid={`toggle-${plugin.name}`}
-                          onChange={(event) =>
-                            void run(async () => {
-                              store.setEnabled(plugin.id, event.target.checked);
-                              await applied();
-                            })
-                          }
-                        />
-                        <span className="min-w-0">
-                          <span className="block truncate text-base text-ink">{plugin.name}</span>
-                          <span className={`block truncate text-xs ${statusTone[plugin.status]}`}>
-                            {statusNote[plugin.status] ?? plugin.url ?? "pasted source"}
-                          </span>
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto" data-testid="installed-list">
+            {installed.length === 0 ? (
+              <p className="py-3 text-smd text-ink-3">Nothing installed yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {installed.map((plugin) => (
+                  <li
+                    key={plugin.id}
+                    data-testid="installed-plugin"
+                    className="flex items-center gap-2 rounded-control px-2 py-1.5 hover:bg-hover"
+                  >
+                    <label className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={plugin.enabled}
+                        disabled={busy}
+                        data-testid={`toggle-${plugin.name}`}
+                        onChange={(event) =>
+                          void run(async () => {
+                            store.setEnabled(plugin.id, event.target.checked);
+                            await applied();
+                          })
+                        }
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-base text-ink">{plugin.name}</span>
+                        <span className={`block truncate text-xs ${statusTone[plugin.status]}`}>
+                          {statusNote[plugin.status] ?? plugin.url ?? "pasted source"}
                         </span>
-                      </label>
+                      </span>
+                    </label>
 
-                      {plugin.url !== undefined && (
-                        <button
-                          type="button"
-                          className={button}
-                          disabled={busy}
-                          data-testid={`update-${plugin.name}`}
-                          onClick={() => void reviewUpdate(plugin)}
-                        >
-                          Update
-                        </button>
-                      )}
+                    {plugin.url !== undefined && (
                       <button
                         type="button"
                         className={button}
                         disabled={busy}
-                        data-testid={`remove-${plugin.name}`}
-                        onClick={() =>
-                          void run(async () => {
-                            await store.remove(plugin.id);
-                            await applied();
-                          })
-                        }
+                        data-testid={`update-${plugin.name}`}
+                        onClick={() => void reviewUpdate(plugin)}
                       >
-                        Remove
+                        Update
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="mt-3 border-t border-line pt-3">
-              <div className="flex gap-1">
-                {(["url", "paste"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    data-testid={`mode-${option}`}
-                    aria-pressed={mode === option}
-                    className={`rounded-control px-2 py-1 text-sm ${
-                      mode === option
-                        ? "bg-accent-tint text-accent-ink"
-                        : "text-ink-2 hover:bg-hover"
-                    }`}
-                    onClick={() => {
-                      setMode(option);
-                      setDraft("");
-                      setError(undefined);
-                    }}
-                  >
-                    {option === "url" ? "From URL" : "Paste code"}
-                  </button>
+                    )}
+                    <button
+                      type="button"
+                      className={button}
+                      disabled={busy}
+                      data-testid={`remove-${plugin.name}`}
+                      onClick={() =>
+                        void run(async () => {
+                          await store.remove(plugin.id);
+                          await applied();
+                        })
+                      }
+                    >
+                      Remove
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            )}
+          </div>
 
-              {mode === "url" ? (
-                <input
-                  className={`${field} mt-2`}
-                  data-testid="add-url"
-                  placeholder="https://example.com/my-plugin.tsx"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-              ) : (
-                <textarea
-                  className={`${field} mt-2 h-28 resize-none font-mono text-sm`}
-                  data-testid="add-source"
-                  placeholder={"export default (tiny) => {\n  tiny.registerCommand(…)\n}"}
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-              )}
-
-              <div className="mt-2 flex justify-end">
+          <div className="mt-3 border-t border-line pt-3">
+            <div className="flex gap-1">
+              {(["url", "paste"] as const).map((option) => (
                 <button
+                  key={option}
                   type="button"
-                  className={primary}
-                  data-testid="review-plugin"
-                  disabled={busy || draft.trim() === ""}
-                  onClick={() => void review()}
+                  data-testid={`mode-${option}`}
+                  aria-pressed={mode === option}
+                  className={`rounded-control px-2 py-1 text-sm ${
+                    mode === option ? "bg-accent-tint text-accent-ink" : "text-ink-2 hover:bg-hover"
+                  }`}
+                  onClick={() => {
+                    setMode(option);
+                    setDraft("");
+                    setError(undefined);
+                  }}
                 >
-                  {mode === "url" ? "Fetch" : "Continue"}
+                  {option === "url" ? "From URL" : "Paste code"}
                 </button>
-              </div>
+              ))}
             </div>
-          </>
-        ) : (
-          <Review
-            source={view.source}
-            url={view.url}
-            name={name}
-            busy={busy}
-            onName={setName}
-            onCancel={() => setView({ kind: "list" })}
-            updating={view.updating !== undefined}
-            onInstall={() => void apply(view)}
-          />
-        )}
 
-        {error !== undefined && (
-          <p role="alert" className="mt-2 text-sm text-red" data-testid="manager-error">
-            {error}
-          </p>
-        )}
-      </div>
-    </div>
+            {mode === "url" ? (
+              <input
+                className={`${field} mt-2`}
+                data-testid="add-url"
+                placeholder="https://example.com/my-plugin.tsx"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            ) : (
+              <textarea
+                className={`${field} mt-2 h-28 resize-none font-mono text-sm`}
+                data-testid="add-source"
+                placeholder={"export default (tiny) => {\n  tiny.registerCommand(…)\n}"}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                className={primary}
+                data-testid="review-plugin"
+                disabled={busy || draft.trim() === ""}
+                onClick={() => void review()}
+              >
+                {mode === "url" ? "Fetch" : "Continue"}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <Review
+          source={view.source}
+          url={view.url}
+          name={name}
+          busy={busy}
+          onName={setName}
+          onCancel={() => setView({ kind: "list" })}
+          updating={view.updating !== undefined}
+          onInstall={() => void apply(view)}
+        />
+      )}
+
+      {error !== undefined && (
+        <p role="alert" className="mt-2 text-sm text-red" data-testid="manager-error">
+          {error}
+        </p>
+      )}
+    </ModalShell>
   );
 }
 

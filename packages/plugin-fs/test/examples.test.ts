@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { runExample } from "../../../test/helpers.ts";
 
 // Every README snippet is a real file under examples/. Each is executed as a
 // subprocess and its output checked, and the README is then asserted to embed
@@ -7,16 +8,7 @@ import { describe, expect, test } from "bun:test";
 // Every example here is run, so the snippet a reader copies is one that works.
 // That it *is* the snippet is asserted centrally by apps/docs/test/examples.test.ts,
 // over every `path=` fence in the repo — READMEs included.
-const run = async (name: string) => {
-  const path = new URL(`../examples/${name}`, import.meta.url).pathname;
-  const proc = Bun.spawn(["bun", "run", path], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  return { stdout, stderr, exitCode };
-};
+const run = (name: string) => runExample(new URL(`../examples/${name}`, import.meta.url));
 
 describe("examples run", () => {
   test("register.ts lists every registered tool", async () => {

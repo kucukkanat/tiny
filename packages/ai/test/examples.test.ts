@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { sseResponse } from "../../../test/helpers.ts";
+import { runExample, sseResponse } from "../../../test/helpers.ts";
 
 // Every README snippet is a real file under examples/. These tests run each one
 // against a live OpenAI-compatible server and then assert the README embeds it
@@ -38,25 +38,20 @@ const server = Bun.serve({
 });
 afterAll(() => server.stop(true));
 
-const examples = new URL("../examples/", import.meta.url).pathname;
 /** Run one example exactly as a reader would, pointed at the local server. */
 const run = async (name: string): Promise<string> => {
-  const process_ = Bun.spawn(["bun", "run", `${examples}${name}`], {
-    cwd: new URL("..", import.meta.url).pathname,
-    env: {
-      ...process.env,
-      AI_BASE_URL: `http://localhost:${server.port}/v1`,
-      AI_API_KEY: API_KEY,
-      AI_MODEL: "test-model",
+  const { stdout, stderr, exitCode } = await runExample(
+    new URL(`../examples/${name}`, import.meta.url),
+    {
+      cwd: new URL("..", import.meta.url).pathname,
+      env: {
+        ...process.env,
+        AI_BASE_URL: `http://localhost:${server.port}/v1`,
+        AI_API_KEY: API_KEY,
+        AI_MODEL: "test-model",
+      },
     },
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(process_.stdout).text(),
-    new Response(process_.stderr).text(),
-    process_.exited,
-  ]);
+  );
   expect({ name, exitCode, stderr }).toEqual({ name, exitCode: 0, stderr: "" });
   return stdout;
 };

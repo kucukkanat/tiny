@@ -2,48 +2,27 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { reported } from "../../../test/helpers.ts";
 import type { AppBridge } from "../src/hooks.ts";
-import { usePluginContext, usePluginHost, useProvideApp } from "../src/hooks.ts";
+import { usePluginContext, useProvideApp } from "../src/hooks.ts";
 import { definePlugin } from "../src/tiny.ts";
+import { host, mountHost, Probe, resetHost } from "./mount.tsx";
 
 const noop = () => {};
 const STABLE_MESSAGES: readonly [] = [];
 
 import { PluginHost } from "../src/PluginHost.tsx";
-import { emptyRegistry } from "../src/registry.ts";
 import { Slot, StatusBar, Widgets } from "../src/Slot.tsx";
 import type { Capability, Plugin, PluginContext } from "../src/tiny.ts";
 
-afterEach(() => {
-  cleanup();
-  host = undefined;
-});
+afterEach(cleanup);
 
-/** Reaches the host from outside, the way `App` drives commands. */
-let host: ReturnType<typeof usePluginHost> | undefined;
-function Probe() {
-  host = usePluginHost();
-  return null;
-}
-
-const mount = async (plugins: readonly Plugin[], children?: React.ReactNode) => {
-  host = undefined;
-  // Factories run in an effect and resolve a microtask later, so the registry
-  // replaces the empty one after the first paint. Rendering inside `act` keeps
-  // that second update inside the act scope too, rather than landing loose.
-  await act(async () => {
-    render(
-      <PluginHost plugins={plugins}>
-        <Probe />
-        {children}
-        <Slot name="app.overlays" />
-      </PluginHost>,
-    );
-  });
-  await waitFor(() => {
-    expect(host).toBeDefined();
-    expect(host?.registry).not.toBe(emptyRegistry);
-  });
-};
+const mount = (plugins: readonly Plugin[], children?: React.ReactNode) =>
+  mountHost(
+    plugins,
+    <>
+      {children}
+      <Slot name="app.overlays" />
+    </>,
+  );
 
 /** Run a command whose handler completes on its own. */
 const runCommand = async (name: string, args?: string) => {
@@ -471,7 +450,7 @@ describe("reload", () => {
     const failing: Plugin = () => {
       throw new Error("nope");
     };
-    host = undefined;
+    resetHost();
     await act(async () => {
       render(
         <PluginHost plugins={[failing]}>

@@ -114,7 +114,10 @@ const picked = await ctx.ui.open<string>((done) => (
 ```
 
 Use it for a one-shot interaction. For UI that is always present, use
-[`contribute`](slots.md) instead.
+[`contribute`](slots.md) instead. `ModalShell` (also exported from
+`@tiny/plugin`) is the standard dialog chrome — backdrop, centered card,
+`role="dialog"` — that the settings and plugins dialogs themselves use; wrap
+your overlay in it rather than rebuilding the shell.
 
 ## The conversation
 

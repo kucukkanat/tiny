@@ -18,6 +18,7 @@ export {
 } from "./hooks.ts";
 export type { KeyId } from "./keys.ts";
 export { matchesKey } from "./keys.ts";
+export { ModalShell } from "./Overlays.tsx";
 export { Panels } from "./Panels.tsx";
 export { PluginHost } from "./PluginHost.tsx";
 export { PluginPage } from "./PluginPage.tsx";

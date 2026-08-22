@@ -40,6 +40,10 @@ Monorepo with packages. Each package:
 
 Examples must actually run. A broken example is worse than none.
 
+Plugins are packages too, named `plugin-<name>` (`packages/plugin-fs`,
+`packages/plugin-settings`). One plugin per package, no exceptions — a plugin that
+needs a second plugin is two packages.
+
 ## The app
 
 It runs in the browser. All of it — no server-side step, no build-time backend.
@@ -53,6 +57,29 @@ Mobile first. Touch is the primary input, not an afterthought:
 - no hover-only interactions, no tiny click targets, no fixed pixel widths
 
 Every interactive element gets a `data-testid`.
+
+### Shell and plugins
+
+The app layer is razor thin. The shell does routing, layout, and the plugin
+host — nothing else. Every actual feature is a plugin.
+
+If you're about to add a feature to the shell, stop: it's a plugin. The shell only
+grows when plugins need a new extension point, and then it grows by the smallest
+hook that works.
+
+### Routing
+
+React Router, `HashRouter`. Hash routing because the app is static files with no
+server to rewrite paths.
+
+Refresh must not lose state. What the user was doing lives in the URL or in
+storage, never only in memory:
+- what to show — route and params in the URL, so a reload and a shared link land
+  in the same place
+- what the user typed or picked — persisted, restored on mount
+- transient UI (open menu, hover) — memory is fine, nobody misses it
+
+Test it by hitting reload. If anything the user would care about is gone, it's a bug.
 
 ## Tests
 

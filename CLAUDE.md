@@ -52,8 +52,21 @@ Mobile first. Touch is the primary input, not an afterthought:
 - layouts that work on a phone and scale up, not the reverse
 - no hover-only interactions, no tiny click targets, no fixed pixel widths
 
-Every interactive element gets a `data-testid`. Tests select by test id, never by
-class name or DOM position.
+Every interactive element gets a `data-testid`.
+
+## Tests
+
+Unit tests only. No end-to-end tests, no browser automation, no test servers.
+
+Same law as the code: least output, most benefit. A test earns its place by
+catching a real break.
+
+- Test behaviour, not implementation. If a refactor that changes nothing about
+  what the code does breaks the test, the test was wrong.
+- Cover the logic and the edge cases. Skip the getters and the glue.
+- No test written for a coverage number.
+
+Component tests select by `data-testid`.
 
 ## Git
 

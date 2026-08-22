@@ -12,10 +12,8 @@ const primary =
 const message = (error: unknown): string =>
   error instanceof PluginManagerError || error instanceof Error ? error.message : String(error);
 
-/** What the source is being read from before it is reviewed. */
 type AddMode = "url" | "paste";
 
-/** The list, or the review step for one candidate plugin. */
 type View =
   | { readonly kind: "list" }
   | {
@@ -38,13 +36,7 @@ const statusTone: Record<InspectedPlugin["status"], string> = {
   missing: "text-red",
 };
 
-/**
- * The whole manager UI: what is installed, and the two ways to add more.
- *
- * Deliberately context-free — it takes a `Installed` and reports changes through
- * `onChanged`, so it can be rendered and driven in a test without a host. The
- * plugin wires `onChanged` to `ctx.reload()`.
- */
+/** The whole manager UI: what is installed, and the two ways to add more. */
 export function ManagerDialog({
   store,
   onChanged,
@@ -85,8 +77,7 @@ export function ManagerDialog({
     await onChanged();
   };
 
-  /* Reading the source is separate from installing it: nothing is written or
-   * executed until the user has seen what they are about to run. */
+  // Nothing is written or executed until the user has seen what they are about to run.
   const review = () =>
     run(async () => {
       const source = mode === "url" ? await fetchSource(draft.trim()) : draft;
@@ -295,7 +286,6 @@ function Review({
   url: string | undefined;
   name: string;
   busy: boolean;
-  /** True when this is a new version of a plugin already installed. */
   updating: boolean;
   onName: (name: string) => void;
   onCancel: () => void;
@@ -343,7 +333,6 @@ function Review({
   );
 }
 
-/** A URL's filename makes a better default name than "Untitled". */
 const suggestName = (url: string | undefined): string => {
   if (url === undefined) return "Pasted plugin";
   const last = url.split("?")[0]?.split("/").filter(Boolean).at(-1);

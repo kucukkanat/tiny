@@ -16,13 +16,7 @@ const OPTIONS: readonly ApprovalOption[] = [
   { id: "deny", label: "Don't run it", tone: "danger" },
 ];
 
-/**
- * The approval, rendered into the reply it belongs to.
- *
- * Contributed to `message.pending`, so it appears under the tool line that is
- * waiting and disappears the moment it is answered — the tool row it sits above
- * then says what happened, which is the record worth keeping.
- */
+/** The approval card, contributed to `message.pending` in the reply it belongs to. */
 export const inlineApproval = (store: PendingStore) =>
   function InlineApproval() {
     const pending = useStore(store);
@@ -46,8 +40,7 @@ export const inlineApproval = (store: PendingStore) =>
             ...(note === "" ? {} : { reason: note }),
           })
         }
-        // Dismissing is a refusal, not a pass: the only safe reading of "the
-        // user closed the question" is that they did not agree to it.
+        // Dismissing is a refusal, not a pass — an unanswered gate counts as blocked.
         onDismiss={() => pending.settle(undefined)}
       />
     );

@@ -2,12 +2,8 @@ import type { IdentifiedPlugin } from "@tiny/plugin";
 import { definePlugin } from "@tiny/plugin";
 
 /**
- * Report token usage once a reply completes — pi carries it on the finalized
- * message handed to `message_end`.
- *
- * The same message carries `usage.cost`, but a bring-your-own endpoint
- * publishes no price table (`endpointModel` sets every rate to zero), so cost
- * is reported only when the endpoint actually priced the call.
+ * Report token usage once a reply completes. Cost is reported only when the
+ * endpoint actually priced the call (`endpointModel` sets every rate to zero).
  */
 export const usageLogger = (log: (message: string) => void = console.info): IdentifiedPlugin =>
   definePlugin("usageLogger", { needs: [] }, (tiny) => {

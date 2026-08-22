@@ -17,28 +17,13 @@ export type Policy = {
   readonly deny?: readonly string[] | undefined;
   /** Everything not named above. Defaults to `"ask"`. */
   readonly fallback?: Decision | undefined;
-  /**
-   * Decide one call with its arguments in hand — the shape pi's own
-   * `permission-gate` and `protected-paths` examples use. Return `undefined` to
-   * fall through to the lists.
-   */
+  /** Decide one call with its arguments in hand; return `undefined` to fall through to the lists. */
   readonly decide?: ((call: PendingCall) => Decision | undefined) | undefined;
 };
 
 /**
- * Decide one call against the policy.
- *
- * Order, most binding first:
- *
- * 1. `decide()` — it is the only rule that sees the arguments, so it gets the
- *    first and last word.
- * 2. `deny` — a hard rule from whoever configured the plugin.
- * 3. what the user chose to remember.
- * 4. `allow`.
- * 5. `fallback`, which is `"ask"`.
- *
- * `deny` outranks a remembered `"allow"` on purpose: "always allow this" is a
- * shortcut through the questions, not a way past a rule someone else set.
+ * Decide one call, most binding first: `decide()`, `deny`, remembered, `allow`,
+ * `fallback`. `deny` outranks a remembered `"allow"` on purpose.
  */
 export const decideCall = (policy: Policy, remembered: Remembered, call: PendingCall): Decision =>
   policy.decide?.(call) ??

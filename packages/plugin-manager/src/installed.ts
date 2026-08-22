@@ -2,16 +2,7 @@ import { compile } from "./compile.ts";
 import { PluginManagerError } from "./errors.ts";
 import { type HostModules, hostModules } from "./runtime.ts";
 
-/**
- * Where an installed plugin lives, and why it lives in two places.
- *
- * The *source* goes to OPFS, which is where `@tiny/plugin-fs` also points the
- * model's filesystem tools — so a file appearing under `/plugins` proves
- * nothing about who put it there. The *manifest* goes to localStorage, which no
- * tool in this repo can reach, and records the SHA-256 the user approved.
- * Nothing runs unless its hash still matches its manifest entry, so writing a
- * file is not enough to get code executed.
- */
+// Source lives in OPFS (reachable by the model's fs tools); the manifest in localStorage pins the SHA-256 the user approved — nothing runs unless its hash still matches.
 
 /** The slice of `Storage` the manifest uses, so a test or script can supply its own. */
 export type ManifestStorage = {
@@ -48,10 +39,7 @@ export type InstalledOptions = {
   readonly manifest?: ManifestStorage | undefined;
   /** Stamped onto new entries; injectable so examples and tests stay stable. */
   readonly now?: (() => string) | undefined;
-  /**
-   * Modules an installed plugin may `import` by name, *in addition* to the
-   * defaults every host offers. See `runtime.ts`.
-   */
+  /** Extra modules an installed plugin may `import` by name; see `runtime.ts`. */
   readonly modules?: HostModules | undefined;
 };
 
@@ -108,10 +96,7 @@ export type Installed = {
   inspect(): Promise<readonly InspectedPlugin[]>;
   /** Validates the source, writes it, and pins its hash. */
   install(input: InstallInput): Promise<InstalledPlugin>;
-  /**
-   * Re-pins an entry from its URL. Pass the source the user reviewed to apply
-   * exactly that; omit it and this fetches, which means applying code nobody saw.
-   */
+  /** Re-pins an entry from its URL; omitting `reviewed` fetches and applies code nobody saw. */
   update(id: string, reviewed?: string): Promise<InstalledPlugin>;
   setEnabled(id: string, enabled: boolean): void;
   remove(id: string): Promise<void>;
@@ -168,8 +153,7 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
   };
 
   const pin = async (input: InstallInput, id: string, enabled: boolean, addedAt: string) => {
-    // Compiling first means a syntax error, an unresolvable import or a module
-    // without a plugin export is rejected before anything is written.
+    // Compile first, so invalid source is rejected before anything is written.
     await compile(input.source, modules);
     await writeSource(id, input.source);
     return {
@@ -212,8 +196,7 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
       const current = entry(id);
       if (current.url === undefined)
         throw new PluginManagerError(`"${current.name}" was pasted, so there is nothing to update`);
-      // The reviewed source wins: re-fetching here would apply whatever the URL
-      // serves *now*, which is not what the user was shown and approved.
+      // The reviewed source wins: re-fetching would apply code the user never approved.
       const source = reviewed ?? (await fetchSource(current.url));
       const refreshed = await pin(
         { name: current.name, source, url: current.url },
@@ -238,7 +221,6 @@ export const openInstalled = (options: InstalledOptions = {}): Installed => {
       try {
         await (await directory()).removeEntry(`${id}.js`);
       } catch (error) {
-        // Already gone is the outcome we wanted; anything else is real.
         if (!notFound(error)) throw error;
       }
     },

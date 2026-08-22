@@ -8,34 +8,17 @@ import { hostModules } from "./runtime.ts";
 export type PluginManagerOptions = InstalledOptions;
 
 /**
- * A plugin that installs other plugins.
- *
- * Its factory is `async`, and `loadPlugins` awaits each factory — so by the
- * time the host has a registry, everything installed at runtime has already
- * registered into it through the same `tiny`. A plugin the user pasted in can do
- * everything one that shipped with the build can — including, for now, sharing
- * this plugin's storage namespace. See `activate.ts`.
- *
- * Adding, enabling or removing reconciles the running set against the manifest —
- * see `createActivator`. It used to call `ctx.reload()`, re-running every
- * factory in the app to change one checkbox, because a registration could not be
- * taken back; now each installed plugin has a disposer of its own and only the
- * plugins that actually changed are stopped or started.
+ * A plugin that installs other plugins. Installed plugins run through this
+ * plugin's own `tiny`, with the same full page access as bundled code.
  */
 export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlugin => {
   const store = openInstalled(options);
-  // Resolved once, so the set a plugin is validated against at install time is
-  // exactly the set it is compiled against on every later load.
+  // Resolved once, so install-time validation and every later load use the same module set.
   const modules = hostModules(options.modules);
 
-  // Open/closed lives in the factory's closure, the same arrangement the
-  // settings plugin uses: the command handler, the sidebar button and the
-  // overlay are three call sites that need one switch. It survives `reload()`,
-  // so the dialog stays open while plugins are being added.
   const open = createExternalStore(false);
 
-  // Set when the factory runs, which is before any UI can render — the dialog is
-  // contributed by that same factory, so there is no window where it is missing.
+  // Set when the factory runs, which is before any UI can render.
   let activator: Activator | undefined;
 
   function ManagerOverlay() {
@@ -68,14 +51,9 @@ export const pluginManager = (options: PluginManagerOptions = {}): IdentifiedPlu
     );
   }
 
-  // `after: ["*"]` rather than a note asking to be listed last. The requirement
-  // is real — a plugin installed at runtime that loads first claims `plugins`
-  // and pushes this one to `plugins:2`, leaving the user no obvious way in to
-  // remove it — and a comment cannot stop the next person reordering the array.
+  // `after: ["*"]` is load-bearing: an installed plugin that loads first could
+  // claim the `plugins` command, leaving the user no way in to remove it.
   return definePlugin("pluginManager", { after: ["*"] }, async (tiny) => {
-    // Registered before the stored plugins run, so an installed plugin cannot
-    // claim the `plugins` command name and push this one to `plugins:2` —
-    // leaving the user no way in to remove it.
     tiny.registerCommand("plugins", {
       description: "Add and manage plugins",
       handler: () => open.set(true),

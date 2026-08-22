@@ -11,18 +11,8 @@ export type Pending = {
 };
 
 /**
- * The one call awaiting an answer.
- *
- * A store rather than a dialog: the `tool_call` handler runs inside the request,
- * the card renders inside the reply, and neither can hand the other a promise.
- * The same shape `settings` uses for its overlay — an external store the
- * contributed component subscribes to with `useStore`.
- *
- * Readable rather than writable on purpose: a question is settled by answering
- * it, so `ask` owns every write and nothing outside can assign one away.
- *
- * One at a time is not a limitation to design around: `streamChat` executes tool
- * calls in sequence, so a second question cannot exist while the first is open.
+ * The one call awaiting an answer. One at a time is safe: `streamChat` executes
+ * tool calls in sequence, so a second question cannot exist while the first is open.
  */
 export type PendingStore = ReadableStore<Pending | undefined> & {
   /** Resolves when the user answers, or with `undefined` if the wait is cut short. */
@@ -40,8 +30,7 @@ export const createPendingStore = (): PendingStore => {
     get: pending.get,
     ask: (request, signal) =>
       new Promise<Verdict | undefined>((resolve) => {
-        // Stopping the reply has to take the card down with it, or the question
-        // outlives the run it belonged to.
+        // Stopping the reply must take the card down, or the question outlives its run.
         const abort = () => {
           pending.set(undefined);
           resolve(undefined);

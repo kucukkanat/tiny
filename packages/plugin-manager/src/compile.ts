@@ -2,15 +2,7 @@ import type { Plugin } from "@tiny/plugin";
 import { PluginManagerError } from "./errors.ts";
 import { defaultModules, type HostModules, hostModuleUrl } from "./runtime.ts";
 
-/**
- * The compiler, fetched on first use.
- *
- * 47 KB gzipped between them, which is a lot to spend on every visit for
- * something most sessions never do. Imported dynamically so the bundler splits
- * it into its own chunk: a user with nothing installed never downloads it, and
- * one who has pays for it once, at the first `compile` — which is either app
- * startup or the moment the Plugins dialog is opened.
- */
+// Imported dynamically so the ~47 KB compiler chunk is only downloaded at first compile.
 const loadCompiler = async () => {
   const [sucrase, lexer] = await Promise.all([import("sucrase"), import("es-module-lexer")]);
   await lexer.init;
@@ -29,17 +21,8 @@ const resolvable = (specifier: string): boolean =>
 const relative = (specifier: string): boolean => specifier.startsWith(".");
 
 /**
- * TypeScript and JSX into a module a browser will import.
- *
- * Two separate problems, and only the first is about syntax. Sucrase strips the
- * types and expands the JSX — a transform, not a typecheck, so a plugin's types
- * are worth exactly what its author's editor made of them and nothing is
- * verified here. Then every bare specifier is rewritten to a generated module
- * that hands back the host's own instance, because a blob URL has no package
- * resolution and the page has no import map; see `runtime.ts`.
- *
- * Plain JavaScript passes through both steps unchanged, so nothing that
- * installed before this existed compiles differently now.
+ * Strips types and JSX (a transform, not a typecheck) and rewrites bare
+ * specifiers to host module shims — a blob URL has no package resolution.
  */
 export const transpile = async (
   source: string,
@@ -54,8 +37,7 @@ export const transpile = async (
       transforms: ["typescript", "jsx"],
       jsxRuntime: "automatic",
       jsxImportSource: "react",
-      // The plugin runs in the browser that just compiled it, so there is
-      // nothing older to downlevel for; `?.` and class fields stay as written.
+      // The plugin runs in the browser that just compiled it; nothing to downlevel.
       disableESTransforms: true,
       production: true,
     }).code;
@@ -68,9 +50,7 @@ export const transpile = async (
   let out = "";
   let cursor = 0;
   for (const imported of imports) {
-    // `import(someVariable)` — a specifier only known at runtime, so there is
-    // nothing to rewrite. It resolves against the blob URL and will fail there
-    // if it is bare, which is the same answer arrived at later.
+    // A specifier only known at runtime; nothing to rewrite.
     if (imported.n === undefined) continue;
     if (resolvable(imported.n)) {
       if (!relative(imported.n)) continue;
@@ -96,14 +76,8 @@ export const transpile = async (
 };
 
 /**
- * Turns plugin source into a callable plugin.
- *
- * The compiled source is imported as a real ES module through a blob URL, so it
- * gets module scope, top-level await and `import` of anything the page can
- * reach — the same thing a bundled plugin gets. There is no sandbox here and
- * there cannot be one: a plugin renders React into the app and calls the same
- * APIs the app does. The trust decision happens before this is ever called, in
- * the manifest; see `installed.ts`.
+ * Turns plugin source into a callable plugin via a blob-URL ES module. There is
+ * no sandbox: the code runs with full page access — trust is decided in the manifest.
  */
 export const compile = async (
   source: string,
@@ -121,7 +95,6 @@ export const compile = async (
       throw new PluginManagerError("A plugin module must `export default` a function");
     return factory as Plugin;
   } finally {
-    // The module is fully loaded by now, so the URL has done its job.
     URL.revokeObjectURL(url);
   }
 };

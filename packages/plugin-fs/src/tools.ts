@@ -19,17 +19,8 @@ const pathParam = {
 } as const;
 
 /**
- * The five filesystem tools, bound to a root.
- *
- * Text only: OPFS stores bytes, but a tool result is a string, so binary files
- * are out of scope rather than silently mangled.
- *
- * `defineTool` rather than a bare `ToolDefinition`, so `parameters` is the only
- * place these arguments are described. It used to be one of two: the schema
- * below for the model, and a `text(args, "path")` helper to get the same fact
- * past TypeScript, which received `Record<string, unknown>`. `args.path` is a
- * string here because the schema says so, and a call that disagrees never
- * reaches `execute` — it comes back to the model as an error naming the field.
+ * The five filesystem tools, bound to a root. Text only — binary files are out
+ * of scope rather than silently mangled.
  */
 export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] => [
   defineTool({
@@ -51,8 +42,6 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
         lines.push(handle.kind === "directory" ? `${name}/` : name);
       lines.sort();
       return toolOutput(lines.length === 0 ? `${display(parts)} is empty` : lines.join("\n"), {
-        // Structured alongside the text: the model reads `content`, a renderer
-        // or a caller can use this without parsing lines back apart.
         details: { path: display(parts), entries: lines },
       });
     },
@@ -114,8 +103,6 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       additionalProperties: false,
     },
     execute: async ({ args }) => {
-      // Emptiness is not a type, so it stays a check here — and it is the only
-      // one left, which is the point.
       if (args.old_text === "") throw new FsError('"old_text" must not be empty');
 
       const handle = await root();
@@ -123,8 +110,7 @@ export const fileSystemTools = (root: RootResolver): readonly ToolDefinition[] =
       const first = before.indexOf(args.old_text);
       if (first === -1)
         throw new FsError(`old_text was not found in ${display(segments(args.path))}`);
-      // Uniqueness is what makes a blind edit safe; a second match means the
-      // model has to narrow the snippet rather than guess which one it meant.
+      // A second match means the model must narrow the snippet, not guess which one it meant.
       if (before.indexOf(args.old_text, first + 1) !== -1)
         throw new FsError(
           `old_text appears more than once in ${display(segments(args.path))}; include more context`,

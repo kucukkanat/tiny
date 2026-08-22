@@ -15,13 +15,7 @@ const API_LABELS: Record<ApiType, string> = {
   "google-generative-ai": "Google Generative AI",
 };
 
-/**
- * What each family expects in the base URL, so the field is not a guess.
- *
- * Note which ones carry the version and which do not: the Anthropic and Mistral
- * implementations append their own `/v1`, so including it here would produce
- * `/v1/v1/messages`.
- */
+// Anthropic and Mistral append their own `/v1`; including it here would produce `/v1/v1/messages`.
 const BASE_URL_HINTS: Record<ApiType, string> = {
   "openai-completions": "https://api.openai.com/v1",
   "openai-responses": "https://api.openai.com/v1",
@@ -31,8 +25,7 @@ const BASE_URL_HINTS: Record<ApiType, string> = {
   "google-generative-ai": "https://generativelanguage.googleapis.com/v1beta",
 };
 
-/* Endpoint configuration. Saving verifies the endpoint by listing its models
- * and picks the first one when none is chosen yet. */
+/** Endpoint configuration; saving verifies the endpoint by listing its models. */
 export function SettingsDialog({
   initial,
   onSave,

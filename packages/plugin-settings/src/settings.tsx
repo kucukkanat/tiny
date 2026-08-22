@@ -8,26 +8,14 @@ import {
 } from "@tiny/plugin";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 
-/**
- * Endpoint configuration, as a plugin.
- *
- * This is the dogfood, and it lives outside the app on purpose: the dialog
- * reaches the screen through `app.overlays`, opens through a registered command
- * and a shortcut, and reads and writes the endpoint through `ctx.settings` and
- * `ctx.updateSettings`. Nothing here imports the app. If a feature this central
- * can be built from outside, the plugin API is sufficient — and if it ever stops
- * being sufficient, this package stops compiling.
- */
+/** Endpoint configuration, as a plugin — built entirely on the plugin API, importing nothing from the app. */
 export const settings = (): IdentifiedPlugin => {
-  // Open/closed lives in the plugin's own closure: the command handler and the
-  // contributed component are separate call sites that need the same switch.
   const open = createExternalStore(false);
 
   function SettingsOverlay() {
     const ctx = usePluginContext();
     const shown = useStore(open);
-    // An unconfigured app has nothing to chat with, so the dialog is forced
-    // open and cannot be dismissed until an endpoint answers.
+    // An unconfigured app forces the dialog open until an endpoint answers.
     const required = !settingsComplete(ctx.settings);
     if (!shown && !required) return null;
 
@@ -48,7 +36,6 @@ export const settings = (): IdentifiedPlugin => {
       description: "Configure the endpoint",
       handler: () => open.set(true),
     });
-    // `mod` is Cmd on macOS and Ctrl everywhere else — one registration.
     tiny.registerShortcut("mod+,", {
       description: "Open settings",
       handler: () => open.set(true),

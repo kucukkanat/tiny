@@ -1,11 +1,4 @@
-/**
- * Path handling and handle lookup for the Origin Private File System.
- *
- * OPFS is reached through handles rather than paths, so every operation walks
- * the tree one segment at a time. Paths here are POSIX-shaped and always
- * relative to the given root: a leading `/` is decoration, and `..` may not
- * climb past the root.
- */
+// Path handling for OPFS. Paths are always relative to the given root; `..` may not climb past it.
 
 /** A failure worth reporting to the model verbatim. */
 export class FsError extends Error {

@@ -36,21 +36,11 @@ const NO_UI = "Blocked: there is no UI to ask the user for approval.";
 const stored = (storage: PluginStorage): Remembered => storage.get<Remembered>(STORED) ?? {};
 
 /**
- * Ask the user before the model runs a tool.
- *
- * Built on pi's `tool_call` event, which fires after the arguments are final and
- * before anything runs, and whose `{ block, reason }` result turns a refusal into
- * an error result the model reads — so a denied call steers the model rather
- * than ending the turn.
- *
- * ```ts
- * export const plugins = [humanInTheLoop({ allow: ["fs_read"] })];
- * ```
+ * Ask the user before the model runs a tool. Built on pi's `tool_call` event;
+ * a denied call becomes an error result the model reads, not the end of the turn.
  */
 export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
   definePlugin("humanInTheLoop", { needs: [] }, (tiny) => {
-    // The question lives here rather than in a dialog: the card is contributed
-    // into the reply, and this is what the two halves talk through.
     const store = createPendingStore();
     tiny.contribute("message.pending", inlineApproval(store));
 
@@ -61,18 +51,11 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
           label: options.labels?.[call.toolName],
           rememberLabel: options.remember === false ? undefined : `Always for ${call.toolName}`,
         },
-        // Without the signal, stopping a reply would leave the card up with
-        // nothing left to approve.
+        // Without the signal, stopping a reply would leave the card up.
         ctx.signal,
       );
 
-    /**
-     * Publish what was settled, then answer `tool_call` with it.
-     *
-     * Announcing every outcome rather than only the ones a user answered: an
-     * audit of what the model was allowed to do is wrong if it omits the calls
-     * that were allowed without asking.
-     */
+    // Every outcome is announced, not just the ones a user answered — an audit needs both.
     const settle = (decided: ApprovalDecided) => {
       tiny.events.emit(approvalDecided, decided);
       return decided.approved ? undefined : { block: true, reason: decided.reason ?? "" };
@@ -92,7 +75,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
           reason: options.denyReason ?? DEFAULT_DENIED,
         });
 
-      // pi's gates all make this check: with no one to ask, the safe answer is no.
+      // With no one to ask, the safe answer is no.
       if (!ctx.hasUI)
         return settle({ toolName: call.toolName, approved: false, by: "no-ui", reason: NO_UI });
 
@@ -102,8 +85,7 @@ export const humanInTheLoop = (options: HitlOptions = {}): IdentifiedPlugin =>
           STORED,
           withDecision(stored(ctx.storage), call.toolName, verdict.approved ? "allow" : "deny"),
         );
-      // A dismissed card is a refusal, not a pass: the only safe reading of
-      // "the user closed the dialog" is that they did not agree.
+      // A dismissed card is a refusal, not a pass — an unanswered gate counts as blocked.
       if (verdict?.approved === true)
         return settle({ toolName: call.toolName, approved: true, by: "user" });
       return settle({

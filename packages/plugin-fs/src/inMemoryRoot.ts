@@ -1,14 +1,4 @@
-/**
- * A real, in-memory implementation of the slice of OPFS these tools use.
- *
- * Neither Bun nor happy-dom provides `navigator.storage.getDirectory()`, so a
- * test needs a root of its own — the same arrangement as `fake-indexeddb` in
- * `apps/chat`. This is an implementation, not a stub: the tools are never
- * replaced, only the filesystem they walk.
- *
- * Shipped as `@tiny/plugin-fs/testing` so anyone integrating these tools can
- * test against it too.
- */
+// A real in-memory implementation of the slice of OPFS these tools use, shipped as `@tiny/plugin-fs/testing`.
 
 type FileNode = { kind: "file"; data: string };
 type DirNode = { kind: "directory"; children: Map<string, Node> };
@@ -30,8 +20,7 @@ class MemoryFile {
   }
 
   createWritable(): Promise<{ write(chunk: unknown): Promise<void>; close(): Promise<void> }> {
-    // `createWritable` truncates by default, so the buffer starts empty and is
-    // committed on close — the same visibility rule as the real API.
+    // Truncates by default and commits on close — the real API's visibility rule.
     let buffer = "";
     const node = this.node;
     return Promise.resolve({

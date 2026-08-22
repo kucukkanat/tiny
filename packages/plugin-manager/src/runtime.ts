@@ -3,29 +3,14 @@ import * as react from "react";
 import * as reactJsxRuntime from "react/jsx-runtime";
 
 /**
- * The modules a plugin installed at runtime is allowed to `import` by name.
- *
- * A plugin is loaded as a blob module, and a blob URL has no package resolution
- * behind it: `import { useState } from "react"` is a bare specifier with nothing
- * to resolve against, and the page has no import map. So the specifiers a plugin
- * may write are exactly the keys of this record, and `compile` rewrites each one
- * to a generated module that re-exports the namespace given here.
- *
- * Re-exporting the host's *own* namespace is the point, not a convenience. Two
- * copies of React would each carry their own dispatcher, and a hook called from
- * a plugin's component would read the copy the renderer never wrote to — the
- * "invalid hook call" every dual-instance setup ends in. Handing back the very
- * object the app imported makes a plugin's `useState` the app's `useState`.
+ * The modules an installed plugin may `import` by name; `compile` rewrites each
+ * to a shim re-exporting the host's own namespace (two Reacts would break hooks).
  */
 export type HostModules = Readonly<Record<string, object>>;
 
 /**
- * What every host offers: enough to write a typed, JSX-rendering plugin.
- *
- * `react/jsx-runtime` is here because it is not optional — the JSX transform
- * emits an import of it, so leaving it out would make every `.tsx` plugin fail
- * on a specifier its author never wrote. Anything beyond these three is the
- * host's call; see `pluginManager({ modules })`.
+ * What every host offers. `react/jsx-runtime` is required — the JSX transform
+ * emits an import of it behind the author's back.
  */
 export const defaultModules: HostModules = {
   react,
@@ -52,15 +37,7 @@ const registry = (): Record<string, object> => {
   return created;
 };
 
-/**
- * A module that re-exports a namespace already loaded in the page.
- *
- * It has to be generated rather than written, because the export names are the
- * runtime keys of the namespace — a module's exports are static syntax, so
- * there is no `export * from` a live object. Names that are not identifiers are
- * dropped: they cannot be imported by name anyway, and the default export still
- * carries the whole namespace for anyone who needs them.
- */
+// Generated because export names are runtime keys; non-identifier names ride on the default export.
 const shimSource = (slot: string, namespace: object): string => {
   const names = Object.keys(namespace).filter(
     (name) => name !== "default" && identifier.test(name),
@@ -73,13 +50,8 @@ const shimSource = (slot: string, namespace: object): string => {
 };
 
 /**
- * The URL to rewrite `specifier` to, generated once per namespace.
- *
- * Deliberately never revoked, unlike the plugin's own blob URL in `compile`:
- * that one is imported once and done, while this one has to stay resolvable for
- * every plugin loaded later in the page's life. Caching also keeps module
- * identity stable — a fresh URL each time would give each plugin its own copy
- * of the shim, and `import`ing twice would stop being idempotent.
+ * The URL to rewrite `specifier` to, cached per namespace. Never revoked — it
+ * must stay resolvable for every plugin loaded later, and caching keeps module identity stable.
  */
 export const hostModuleUrl = (specifier: string, namespace: object): string => {
   const cached = shims.get(specifier);
@@ -94,14 +66,7 @@ export const hostModuleUrl = (specifier: string, namespace: object): string => {
   return url;
 };
 
-/**
- * The defaults plus whatever a host adds.
- *
- * Additive rather than replacing, because `react/jsx-runtime` is load-bearing —
- * a host offering its design system should not have to remember to re-list the
- * module the JSX transform emits behind the author's back. Idempotent, so a
- * caller that merges twice gets the same set.
- */
+/** The defaults plus whatever a host adds; additive so `react/jsx-runtime` is never lost. */
 export const hostModules = (extra: HostModules = {}): HostModules => ({
   ...defaultModules,
   ...extra,

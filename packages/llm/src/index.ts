@@ -14,12 +14,29 @@ const modelFor = (p: Provider, id: string) =>
     ? createAnthropic({ baseURL: p.baseUrl, apiKey: p.apiKey, headers: browserHeaders })(id)
     : createOpenAICompatible({ name: p.kind, baseURL: p.baseUrl, apiKey: p.apiKey })(id)
 
+/** The SDK's own message is generic; the provider's response body says what actually went wrong. */
+const describe = (e: any) =>
+  [e?.statusCode, e?.responseBody ?? e?.message ?? String(e)].filter(Boolean).join(' — ').slice(0, 300)
+
 /** Streams the assistant reply as text deltas. */
-export const streamChat = (
+export async function* streamChat(
   p: Provider,
   req: { model: string; messages: ChatMessage[]; signal?: AbortSignal },
-): AsyncIterable<string> =>
-  streamText({ model: modelFor(p, req.model), messages: req.messages, abortSignal: req.signal }).textStream
+): AsyncGenerator<string> {
+  let failure: unknown
+  const { textStream } = streamText({
+    model: modelFor(p, req.model),
+    messages: req.messages,
+    abortSignal: req.signal,
+    // streamText reports a failed request here rather than throwing from the stream,
+    // so without this a bad key ends the reply silently.
+    onError: ({ error }) => {
+      failure = error
+    },
+  })
+  for await (const delta of textStream) yield delta
+  if (failure !== undefined) throw new Error(describe(failure))
+}
 
 /**
  * Model ids the provider offers, for the settings screen's picker.

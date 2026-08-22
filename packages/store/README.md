@@ -19,6 +19,12 @@ function Notes() {
 }
 ```
 
+Writes are coalesced: `get` and subscribers see a new value immediately, and
+storage catches up once the burst settles (a pending write is flushed on
+`pagehide`). A reply streaming in token by token therefore costs a handful of
+writes, not one per token — which matters, because each write re-serialises
+everything under that key.
+
 `persisted` returns `{ get, set, subscribe }`, so anything outside React can read
 and write the same value — `notes.get()` in an event handler, `notes.set(...)`
 from a stream.

@@ -11,7 +11,7 @@ import { chatPlugin } from '@tiny/plugin-chat'
 Chats and unsent drafts live in [`@tiny/store`](../store), so a reload lands
 exactly where you left off — same conversation, same half-typed message.
 
-A reply streams into the trailing assistant message token by token and is written
-to storage as it goes. The `AbortController` for a live stream is held outside the
+A reply streams into the trailing assistant message token by token, persisted by
+[`@tiny/store`](../store), which batches the writes. The `AbortController` for a live stream is held outside the
 component, so switching chats mid-reply doesn't cut it off, and coming back shows
 it still running.

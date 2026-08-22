@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { HashRouter, Route, Routes } from 'react-router'
 import { Icon, IconButton } from '@tiny/ui'
+import { Boundary } from './Boundary'
 import { plugins } from './plugins'
 
 function Nav({ onNavigate }: { onNavigate?(): void }) {
@@ -45,9 +46,11 @@ export function App() {
             <span className="text-[14px] font-semibold tracking-[-0.01em]">tiny</span>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <Routes>
-              {plugins.flatMap((p) => p.routes.map((r) => <Route key={r.path} path={r.path} element={r.element} />))}
-            </Routes>
+            <Boundary>
+              <Routes>
+                {plugins.flatMap((p) => p.routes.map((r) => <Route key={r.path} path={r.path} element={r.element} />))}
+              </Routes>
+            </Boundary>
           </div>
         </section>
       </main>

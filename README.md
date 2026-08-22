@@ -1,5 +1,7 @@
 # tiny
 
+[kucukkanat.github.io/tiny](https://kucukkanat.github.io/tiny/)
+
 A browser-only PWA. A thin shell that routes, lays out, and hosts plugins —
 every feature is a plugin.
 
@@ -26,6 +28,14 @@ bun run build  # static files in packages/app/dist
 
 Dark first, light on request, switched in Settings. Tokens are Tailwind v4
 `@theme` properties in `@tiny/ui` — one file to restyle the lot.
+
+## Deploying
+
+Push to `main`. `.github/workflows/pages.yml` typechecks, lints, tests, builds,
+and publishes `packages/app/dist` to GitHub Pages.
+
+It works under `/tiny/` because every path the build emits is relative and
+routing is hash-based — no server rewrite, no `base` to keep in sync.
 
 ## Adding a feature
 

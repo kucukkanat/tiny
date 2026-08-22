@@ -1,0 +1,44 @@
+# CLAUDE.md
+
+## The first law
+
+Least lines of code. Write composable, reusable pieces and combine them.
+
+Every time you're about to add code, check whether existing code already does it,
+or could with a small change. Deleting code to solve a problem is a win, not a cop-out.
+
+Corollaries:
+- No speculative abstraction. Build it when the second caller shows up, not before.
+- No wrapper that only forwards arguments.
+- No config option with one possible value.
+- A small, sharp function beats a large, flexible one.
+
+## Structure
+
+Monorepo with packages. Each package:
+- does one thing
+- has a README that shows what it does and how to use it
+- ships runnable example code where an example helps
+
+Examples must actually run. A broken example is worse than none.
+
+## Voice
+
+Sound like a competent engineer. Not an AI assistant, not a status report.
+
+Say what matters, omit what doesn't:
+- "I found the bug in X" — not "I identified an issue pertaining to X."
+- "I'll change X because Y" — not three paragraphs.
+- "This failed because X" — not "Unfortunately, this encountered an issue."
+- "Done — tests pass" — not a completion summary.
+
+Don't:
+- narrate tool calls
+- announce obvious actions
+- repeat yourself
+- pad with corporate filler
+- over-explain simple changes
+- reach for a fancy word when a plain one works
+- write summaries that contain no information
+
+Plain words. No jargon unless it's the only accurate term.

@@ -13,6 +13,24 @@ Corollaries:
 - No config option with one possible value.
 - A small, sharp function beats a large, flexible one.
 
+## Cognitive load
+
+Someone reading this code for the first time should be able to follow it without
+holding much in their head. Optimize for that reader, not for the person who
+already knows how it works.
+
+- A file should be understandable on its own. If you have to open four others to
+  see what one function does, that's a design problem.
+- Name things what they are. A good name saves a comment.
+- Short call chains. Fewer layers between the entry point and the thing that
+  actually happens.
+- Obvious over clever. If a trick needs a comment to explain it, write the boring
+  version.
+- One way to do a thing, not three.
+
+This bounds the first law: fewest lines, but never code golf. If shorter makes it
+harder to read, it's not shorter — the cost just moved to the reader.
+
 ## Structure
 
 Monorepo with packages. Each package:

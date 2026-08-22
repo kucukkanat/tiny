@@ -28,6 +28,16 @@ Every feature is a plugin. The shell contributes routes and a sidebar column and
 stops there — see [`packages/app/src/plugins.ts`](packages/app/src/plugins.ts)
 for the whole extension surface.
 
+## Deploying
+
+Pushing to `main` builds and publishes to GitHub Pages
+(`.github/workflows/pages.yml`). It needs one setting flipped once:
+**Settings → Pages → Source → GitHub Actions**.
+
+The build uses a relative base, so it works from a project path
+(`user.github.io/tiny/`) or a domain root without changing anything. Routing is
+hash-based, so deep links survive a hard refresh with no server rewrite rules.
+
 ## First run
 
 Open **Settings → Add provider**, paste a base URL and an API key, press **Load

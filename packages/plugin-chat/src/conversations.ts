@@ -3,7 +3,9 @@ import { useSyncExternalStore } from 'react'
 import * as z from 'zod'
 import type { ChatMessage } from './model'
 
-const STORAGE_KEY = 'tiny.chat.conversations'
+// One key per conversation. Saving one doesn't re-serialise the whole history,
+// and two tabs writing different conversations don't overwrite each other.
+const PREFIX = 'tiny.chat.'
 
 export type Conversation = {
   readonly id: string
@@ -12,10 +14,13 @@ export type Conversation = {
   readonly messages: readonly ChatMessage[]
 }
 
-/** Where a conversation that doesn't exist yet lives. */
-export const newChatPath = () => `/chat/${crypto.randomUUID()}`
-
 export const chatPath = (id: string) => `/chat/${id}`
+
+// Unique enough to name a conversation, and available outside a secure context —
+// `crypto.randomUUID` is not, which bites the moment you open the dev server on
+// a phone over plain http.
+export const newChatPath = () =>
+  chatPath(`${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`)
 
 // The store is a module, not a context: the sidebar and the screen are siblings
 // under the shell and both need the same list, live.
@@ -29,49 +34,46 @@ const publish = (next: readonly Conversation[]) => {
   for (const listener of listeners) listener()
 }
 
-const write = (next: readonly Conversation[]) => {
-  publish(next)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
-}
+const Stored = z.object({
+  id: z.string(),
+  title: z.string(),
+  updatedAt: z.number(),
+  messages: z.array(z.unknown()),
+})
 
-const Stored = z.array(
-  z.object({
-    id: z.string(),
-    title: z.string(),
-    updatedAt: z.number(),
-    messages: z.array(z.unknown()),
-  }),
-)
-
-// Storage written by an older build is worth exactly nothing, so anything the
-// SDK won't vouch for is dropped rather than crashing the screen.
 const parse = (raw: string | null): unknown => {
-  if (raw === null) return []
+  if (raw === null) return null
   try {
     return JSON.parse(raw)
   } catch {
-    return []
+    return null
   }
 }
 
-const hydrate = async () => {
-  const stored = Stored.safeParse(parse(localStorage.getItem(STORAGE_KEY)))
-  const checked = await Promise.all(
-    (stored.success ? stored.data : []).map(async (conversation) => {
-      // The SDK owns the message shape, so let it say whether this is still one.
-      const result = await safeValidateUIMessages<ChatMessage>({
-        messages: conversation.messages,
-      })
-      return result.success ? { ...conversation, messages: result.data } : null
-    }),
-  )
-  const read = checked.filter((conversation) => conversation !== null)
+// Storage written by an older build is worth exactly nothing, so anything the
+// SDK won't vouch for is dropped rather than crashing the screen.
+const read = async (key: string): Promise<Conversation | null> => {
+  const stored = Stored.safeParse(parse(localStorage.getItem(key)))
+  if (!stored.success) return null
 
-  // Reading storage takes a moment, and a write can land inside it. Whatever was
-  // written while we were reading is the newer truth and outranks what we read.
-  const written = conversations
-  if (written === undefined) return publish(read)
-  write([...read.filter(({ id }) => !written.some((one) => one.id === id)), ...written])
+  // The SDK owns the message shape, so let it say whether this is still one.
+  const checked = await safeValidateUIMessages<ChatMessage>({
+    messages: stored.data.messages,
+  })
+  return checked.success ? { ...stored.data, messages: checked.data } : null
+}
+
+const hydrate = async () => {
+  const keys = Object.keys(localStorage).filter((key) => key.startsWith(PREFIX))
+  const stored = (await Promise.all(keys.map(read))).filter((one) => one !== null)
+
+  // Reading takes a moment and a write can land inside it. Whatever was written
+  // while we were reading is the newer truth and outranks what we read.
+  const written = conversations ?? []
+  publish([
+    ...stored.filter(({ id }) => !written.some((one) => one.id === id)),
+    ...written,
+  ])
 }
 
 // The cache lives only as long as something is watching it, so the first
@@ -95,14 +97,16 @@ const titleOf = (messages: readonly ChatMessage[]): string => {
   return said ? said.slice(0, 60) : 'New chat'
 }
 
-export const saveConversation = (id: string, messages: readonly ChatMessage[]) =>
-  write([
-    { id, title: titleOf(messages), updatedAt: Date.now(), messages },
-    ...(conversations ?? []).filter((conversation) => conversation.id !== id),
-  ])
+export const saveConversation = (id: string, messages: readonly ChatMessage[]) => {
+  const conversation = { id, title: titleOf(messages), updatedAt: Date.now(), messages }
+  publish([conversation, ...(conversations ?? []).filter((one) => one.id !== id)])
+  localStorage.setItem(PREFIX + id, JSON.stringify(conversation))
+}
 
-export const removeConversation = (id: string) =>
-  write((conversations ?? []).filter((conversation) => conversation.id !== id))
+export const removeConversation = (id: string) => {
+  publish((conversations ?? []).filter((one) => one.id !== id))
+  localStorage.removeItem(PREFIX + id)
+}
 
 /** Every conversation, newest first, or `undefined` while storage is being read. */
 export const useConversations = (): readonly Conversation[] | undefined =>

@@ -30,14 +30,16 @@ Dark first. `lib/theme.ts` owns the choice and the `.dark` class every token
 hangs off — nothing else touches it.
 
 ```ts
-import { applyTheme, readTheme, useTheme } from '@tiny/ui/lib/theme'
+import { applyTheme, readTheme, useTheme, watchSystemTheme } from '@tiny/ui/lib/theme'
 
 applyTheme(readTheme()) // at boot, before React renders
+watchSystemTheme() // once, so `system` follows the OS from anywhere in the app
 const [theme, setTheme] = useTheme() // 'dark' | 'light' | 'system'
 ```
 
-Nothing stored means dark, not whatever the OS prefers. `system` follows the
-device and keeps following it while the tab is open.
+Nothing stored means dark, not whatever the OS prefers. `applyTheme` also moves
+the `theme-color` meta tag, and `color-scheme` follows the same class, so native
+scrollbars and mobile browser chrome match.
 
 ## Tokens
 

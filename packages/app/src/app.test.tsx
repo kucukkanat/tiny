@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { App } from './app'
 
@@ -22,7 +22,14 @@ test('a plugin without a sidebar section is reachable from the footer', async ()
   expect((await screen.findByTestId('nav-settings')).textContent).toBe('Settings')
 })
 
-test('the sidebar can be shut', async () => {
+const sidebar = () => document.querySelector('[data-slot="sidebar"]')
+
+test('shutting the sidebar sticks across a reload', async () => {
+  const first = render(<App />)
+  fireEvent.click(await screen.findByTestId('sidebar-toggle'))
+  await waitFor(() => expect(sidebar()?.getAttribute('data-state')).toBe('collapsed'))
+  first.unmount()
+
   render(<App />)
-  expect(await screen.findByTestId('sidebar-toggle')).toBeDefined()
+  await waitFor(() => expect(sidebar()?.getAttribute('data-state')).toBe('collapsed'))
 })

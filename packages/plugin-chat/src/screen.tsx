@@ -87,10 +87,15 @@ function Chat({
     [provider],
   )
 
-  const { messages, sendMessage, status, error } = useChat<ChatMessage>({
+  const { messages, sendMessage, status, error, stop } = useChat<ChatMessage>({
     transport,
     messages: [...history],
+    // Without this every streamed token is its own render and its own save.
+    experimental_throttle: 100,
   })
+
+  // Leaving a conversation mid-stream shouldn't leave the request running.
+  useEffect(() => () => void stop(), [stop])
 
   // Storage already holds what we were handed. Writing it back would stamp a
   // conversation as touched for being read, and give an untouched one a row in

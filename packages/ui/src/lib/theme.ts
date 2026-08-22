@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 export const THEMES = ['dark', 'light', 'system'] as const
 
@@ -15,12 +15,32 @@ export const readTheme = (): Theme => {
   return isTheme(stored) ? stored : 'dark'
 }
 
-const prefersDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
+// One retained query: a MediaQueryList nobody holds on to can be collected,
+// and its listener goes with it.
+let systemQuery: MediaQueryList | undefined
+const systemIsDark = () =>
+  (systemQuery ??= window.matchMedia('(prefers-color-scheme: dark)'))
 
 /** Every token hangs off `.dark`, so flipping that one class is the whole job. */
 export const applyTheme = (theme: Theme): void => {
-  const dark = theme === 'system' ? prefersDark() : theme === 'dark'
+  const dark = theme === 'system' ? systemIsDark().matches : theme === 'dark'
   document.documentElement.classList.toggle('dark', dark)
+
+  // Mobile browser chrome is painted from this, so it has to move with the rest.
+  const background = getComputedStyle(document.documentElement)
+    .getPropertyValue('--background')
+    .trim()
+  if (background)
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', background)
+}
+
+/** Keeps `system` following the OS wherever the user is in the app. */
+export const watchSystemTheme = (): void => {
+  systemIsDark().addEventListener('change', () => {
+    if (readTheme() === 'system') applyTheme('system')
+  })
 }
 
 export function useTheme(): readonly [Theme, (theme: Theme) => void] {
@@ -31,15 +51,6 @@ export function useTheme(): readonly [Theme, (theme: Theme) => void] {
     applyTheme(next)
     setTheme(next)
   }, [])
-
-  // On `system` the OS can change out from under an open tab.
-  useEffect(() => {
-    if (theme !== 'system') return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const sync = () => applyTheme('system')
-    media.addEventListener('change', sync)
-    return () => media.removeEventListener('change', sync)
-  }, [theme])
 
   return [theme, choose]
 }

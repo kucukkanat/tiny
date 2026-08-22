@@ -34,10 +34,12 @@ import { saveConversation, removeConversation, useConversations } from './conver
 const conversations = useConversations() // newest first, `undefined` while loading
 ```
 
-The list is written to `localStorage` on every change and validated by the SDK's
-own `safeValidateUIMessages` on the way back in, so a transcript from an older
-build gets dropped rather than crashing the screen. Reading takes a moment, and
-a write can land inside it — whatever was written while reading wins.
+Each conversation is its own `localStorage` key (`tiny.chat.<id>`), so saving one
+doesn't re-serialise the whole history and two open tabs writing different
+conversations don't overwrite each other. Everything read back is validated by
+the SDK's own `safeValidateUIMessages`, so a transcript from an older build gets
+dropped rather than crashing the screen. Reading takes a moment and a write can
+land inside it — whatever was written while reading wins.
 
 A conversation is named after the first thing you said in it, and is stamped
 only when a message is added. Opening one to read it doesn't move it up the list.

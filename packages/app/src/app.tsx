@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from '@tiny/ui/components/sidebar'
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import { home, plugins } from './plugins'
@@ -19,7 +20,11 @@ const openOnLoad = () => !document.cookie.includes('sidebar_state=false')
 export function App() {
   return (
     <HashRouter>
-      <SidebarProvider defaultOpen={openOnLoad()} className="h-dvh min-h-0">
+      <SidebarProvider
+        defaultOpen={openOnLoad()}
+        // Border-box, so the insets eat into the height rather than overflowing it.
+        className="h-dvh min-h-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      >
         <Shell />
       </SidebarProvider>
     </HashRouter>
@@ -28,6 +33,7 @@ export function App() {
 
 function Shell() {
   const { pathname } = useLocation()
+  const { setOpenMobile } = useSidebar()
   const active = plugins.find(({ id }) => pathname.startsWith(`/${id}`))
 
   return (
@@ -41,7 +47,7 @@ function Shell() {
           {plugins.map(({ id, Sidebar: Section }) => Section && <Section key={id} />)}
         </SidebarContent>
 
-        <SidebarFooter className="pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <SidebarFooter>
           <SidebarMenu>
             {plugins
               // A plugin with its own section up there is already reachable from it.
@@ -49,7 +55,11 @@ function Shell() {
               .map(({ id, title }) => (
                 <SidebarMenuItem key={id}>
                   <SidebarMenuButton size="lg" asChild isActive={active?.id === id}>
-                    <NavLink to={`/${id}`} data-testid={`nav-${id}`}>
+                    <NavLink
+                      to={`/${id}`}
+                      data-testid={`nav-${id}`}
+                      onClick={() => setOpenMobile(false)}
+                    >
                       {title}
                     </NavLink>
                   </SidebarMenuButton>

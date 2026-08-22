@@ -38,17 +38,13 @@ test('a configured provider gets a prompt', async () => {
 test('a stored conversation is on screen when you open it', async () => {
   configured()
   localStorage.setItem(
-    'tiny.chat.conversations',
-    JSON.stringify([
-      {
-        id: 'abc',
-        title: 'earlier',
-        updatedAt: 1,
-        messages: [
-          { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'earlier' }] },
-        ],
-      },
-    ]),
+    'tiny.chat.abc',
+    JSON.stringify({
+      id: 'abc',
+      title: 'earlier',
+      updatedAt: 1,
+      messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'earlier' }] }],
+    }),
   )
 
   renderChat()

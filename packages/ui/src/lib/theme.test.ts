@@ -31,7 +31,26 @@ test('choosing light takes the class off, choosing dark puts it back', () => {
   expect(isDark()).toBe(true)
 })
 
-test('system asks the device', () => {
+const osPrefersDark = (dark: boolean) => {
+  ;(
+    window as unknown as {
+      happyDOM: { settings: { device: { prefersColorScheme: string } } }
+    }
+  ).happyDOM.settings.device.prefersColorScheme = dark ? 'dark' : 'light'
+}
+
+test('system follows the device, either way', () => {
+  osPrefersDark(true)
   applyTheme('system')
-  expect(isDark()).toBe(window.matchMedia('(prefers-color-scheme: dark)').matches)
+  expect(isDark()).toBe(true)
+
+  osPrefersDark(false)
+  applyTheme('system')
+  expect(isDark()).toBe(false)
+})
+
+test('a fixed choice ignores the device', () => {
+  osPrefersDark(true)
+  applyTheme('light')
+  expect(isDark()).toBe(false)
 })

@@ -52,10 +52,11 @@ export function SettingsScreen() {
   return (
     <form className="mx-auto flex w-full max-w-md flex-col gap-6">
       <fieldset className="flex flex-col gap-2">
-        <Label>API</Label>
+        <Label id="api-label">API</Label>
         <ToggleGroup
           type="single"
           variant="outline"
+          aria-labelledby="api-label"
           value={provider.kind}
           onValueChange={(kind) => {
             if (!isProviderKind(kind)) return
@@ -164,10 +165,11 @@ export function SettingsScreen() {
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <Label>Appearance</Label>
+        <Label id="appearance-label">Appearance</Label>
         <ToggleGroup
           type="single"
           variant="outline"
+          aria-labelledby="appearance-label"
           value={theme}
           onValueChange={(next) => {
             if (isTheme(next)) setTheme(next)

@@ -12,4 +12,7 @@ afterEach(cleanup)
 beforeEach(() => {
   localStorage.clear()
   window.location.hash = ''
+  // The shell restores the sidebar from a cookie, so that is state too.
+  for (const pair of document.cookie.split(';'))
+    document.cookie = `${pair.split('=')[0]?.trim()}=; max-age=0; path=/`
 })

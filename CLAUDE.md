@@ -67,6 +67,14 @@ If you're about to add a feature to the shell, stop: it's a plugin. The shell on
 grows when plugins need a new extension point, and then it grows by the smallest
 hook that works.
 
+### Talking to models
+
+The Vercel AI SDK (`ai` + the `@ai-sdk/*` providers) is how this app talks to
+models. Don't hand-roll fetch calls, SSE parsing, or per-provider request shapes —
+the SDK already does it, for every provider, and it does it right.
+
+Reach past the SDK only for what it genuinely doesn't cover, and keep that part small.
+
 ### Routing
 
 React Router, `HashRouter`. Hash routing because the app is static files with no

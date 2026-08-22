@@ -1,0 +1,8 @@
+{
+  "name": "@tiny/store",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "peerDependencies": { "react": "^19.0.0" }
+}

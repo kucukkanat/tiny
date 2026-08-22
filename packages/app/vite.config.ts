@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: './',
+  // Shipped so a crash in the wild names real files, not minified letters.
+  build: { sourcemap: true },
   plugins: [
     react(),
     tailwind(),

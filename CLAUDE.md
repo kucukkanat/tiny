@@ -22,6 +22,11 @@ Monorepo with packages. Each package:
 
 Examples must actually run. A broken example is worse than none.
 
+## Git
+
+Work on `main`. Commit and push when the change is done — don't leave work sitting
+in the working tree, and don't branch unless asked.
+
 ## Voice
 
 Sound like a competent engineer. Not an AI assistant, not a status report.

@@ -22,6 +22,21 @@ Monorepo with packages. Each package:
 
 Examples must actually run. A broken example is worse than none.
 
+## The app
+
+It runs in the browser. All of it — no server-side step, no build-time backend.
+If something can't run in a browser tab, it doesn't go in.
+
+It's a PWA: installable, works offline, has a manifest and a service worker.
+
+Mobile first. Touch is the primary input, not an afterthought:
+- tap targets big enough to hit with a thumb
+- layouts that work on a phone and scale up, not the reverse
+- no hover-only interactions, no tiny click targets, no fixed pixel widths
+
+Every interactive element gets a `data-testid`. Tests select by test id, never by
+class name or DOM position.
+
 ## Git
 
 Work on `main`. Commit and push when the change is done — don't leave work sitting

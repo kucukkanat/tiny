@@ -1,8 +1,3 @@
-/**
- * The vocabulary of one conversation: who said what, where it is sent, and
- * the pieces a reply arrives in.
- */
-
 import type { ApiType } from "./apis.ts";
 
 export type ChatRole = "system" | "user" | "assistant";
@@ -17,10 +12,7 @@ export type Endpoint = {
   /** e.g. "https://api.openai.com/v1" — with or without trailing slash. */
   readonly baseUrl: string;
   readonly apiKey: string;
-  /**
-   * Which pi streaming implementation the endpoint speaks. Defaults to
-   * `openai-completions`, so an endpoint that omits it behaves as it always did.
-   */
+  /** Which pi streaming implementation the endpoint speaks; defaults to `openai-completions`. */
   readonly api?: ApiType | undefined;
 };
 

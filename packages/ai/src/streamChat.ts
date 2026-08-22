@@ -63,7 +63,6 @@ const toContext = (messages: readonly ChatMessage[], model: Model<Api>): Context
   };
 };
 
-/** The two pi events this facade surfaces as deltas. */
 const toDelta = (event: AssistantMessageEvent): StreamDelta | undefined =>
   event.type === "thinking_delta"
     ? { kind: "reasoning", text: event.delta }
@@ -71,15 +70,10 @@ const toDelta = (event: AssistantMessageEvent): StreamDelta | undefined =>
       ? { kind: "text", text: event.delta }
       : undefined;
 
-/** The newest user turn, which pi reports to `before_agent_start` as `prompt`. */
 const lastPrompt = (messages: readonly ChatMessage[]): string =>
   messages.findLast((message) => message.role === "user")?.content ?? "";
 
-/**
- * pi-ai types `Tool.parameters` as typebox's `TSchema`, but a typebox schema is a
- * plain JSON Schema object at runtime, so a literal is a valid value. The cast is
- * what keeps typebox out of the bundle — see "Browser notes" in the README.
- */
+// The cast keeps typebox out of the bundle: a typebox schema is plain JSON Schema at runtime.
 const toPiTool = (tool: ToolDefinition): Tool => ({
   name: tool.name,
   description: tool.description,
@@ -111,17 +105,10 @@ const toolResult = (call: ToolCall, output: string, isError: boolean): Message =
   timestamp: Date.now(),
 });
 
-/** Stops a model that keeps calling tools instead of answering. */
 const DEFAULT_MAX_TOOL_TURNS = 10;
 
-/**
- * Stream a chat completion from any OpenAI-compatible endpoint.
- * Yields text deltas and, when the model exposes them (`reasoning_content`,
- * `reasoning` or `reasoning_text`), reasoning deltas.
- *
- * `options.extensions` are pi-shaped extension factories; they are loaded in
- * order and their handlers fire around the request — see `Extension`.
- */
+/** Stream a chat completion, yielding text and (when the model exposes them) reasoning deltas.
+ * `options.extensions` are pi-shaped factories whose handlers fire around the request. */
 export async function* streamChat(
   endpoint: Endpoint,
   model: string,
@@ -138,8 +125,6 @@ export async function* streamChat(
   } = {},
 ): AsyncGenerator<StreamDelta> {
   const descriptor = endpointModel(endpoint, model, options.modelSpec ?? {});
-  // Resolved per request, and only the implementation this endpoint speaks: each
-  // sits behind its own dynamic import, so nothing else is ever downloaded.
   const api = await apiFor(descriptor.api as ApiType);
   const handlers = await loadExtensions(options.extensions ?? []);
   const ctx: ExtensionContext = { model: descriptor, signal: options.signal };
@@ -147,9 +132,7 @@ export async function* streamChat(
   const maxTurns = options.maxToolTurns ?? DEFAULT_MAX_TOOL_TURNS;
 
   const base = toContext(messages, descriptor);
-  // pi folds each active tool's prompt snippet and guidelines into the system
-  // prompt before firing `before_agent_start`, so an extension sees the prompt
-  // the model will actually get.
+  // Tool prompt snippets fold in before `before_agent_start`, so extensions see the real prompt.
   const assembled = [base.systemPrompt ?? "", ...tools.flatMap(toolPrompt)]
     .filter((part) => part !== "")
     .join("\n\n");
@@ -161,14 +144,11 @@ export async function* streamChat(
   for (let round = 0; round < maxTurns; round++) {
     const context: Context = {
       ...(systemPrompt === "" ? {} : { systemPrompt }),
-      // pi emits `context` before every LLM call, so each round sees it.
+      // `context` fires before every LLM call, as in pi — once per round.
       messages: await emitContext(handlers, turns, ctx),
       ...(tools.length > 0 ? { tools: tools.map(toPiTool) } : {}),
     };
 
-    // The API implementation is called directly: an endpoint here carries its own
-    // key, so pi-ai's provider registry and auth resolution would add nothing but
-    // weight.
     const events = api.stream(descriptor, context, {
       apiKey: endpoint.apiKey,
       ...(options.signal ? { signal: options.signal } : {}),
@@ -177,9 +157,7 @@ export async function* streamChat(
     let reply: AssistantMessage | undefined;
 
     for await (const event of events) {
-      // pi-ai ends a failed request with an event rather than a rejection; this
-      // package keeps failures throwable so callers can use try/catch. pi has no
-      // extension event for a failed request, so none is fired here.
+      // pi-ai reports failure as an event; rethrown here so callers can try/catch.
       if (event.type === "error")
         throw new ChatApiError(event.error.errorMessage ?? `Request ${event.reason}`);
       if (event.type === "start")
@@ -203,7 +181,6 @@ export async function* streamChat(
     }
 
     const calls = reply === undefined ? [] : toolCallsOf(reply);
-    // No tool calls means the model answered, which ends the request.
     if (reply === undefined || calls.length === 0) return;
 
     const results: Message[] = [];
@@ -219,13 +196,11 @@ export async function* streamChat(
       };
 
       const tool = tools.find((candidate) => candidate.name === call.name);
-      // Progress arrives synchronously from inside `execute`, which cannot
-      // yield from this generator — so updates are queued and drained after.
+      // `execute` cannot yield from this generator, so updates queue and drain after.
       const updates: string[] = [];
       const onUpdate = (update: ToolUpdate) => updates.push(summarise(toolText(update)));
 
-      // A tool the model invented, or one that threw, comes back as an error
-      // result rather than a thrown request: the model gets to correct itself.
+      // Unknown or throwing tools become error results so the model can correct itself.
       const [output, failed, result] = await run(
         tool,
         call,
@@ -238,8 +213,7 @@ export async function* streamChat(
       for (const summary of updates)
         yield { kind: "tool", id: call.id, name: call.name, status: "running", summary };
 
-      // pi stops only when the whole batch asks to; one tool cannot end the turn
-      // on the others' behalf.
+      // pi stops only when the whole batch asks to terminate.
       if (failed || result?.terminate !== true) terminate = false;
 
       results.push(toolResult(call, output, failed));
@@ -270,33 +244,24 @@ const run = async (
 ): Promise<[output: string, failed: boolean, result: ToolResult | undefined]> => {
   if (tool === undefined) return [`No such tool: ${call.name}`, true, undefined];
   try {
-    // pi lets a tool repair arguments before it sees them; a throw here is a
-    // tool error like any other.
     const params = tool.prepareArguments?.(call.arguments) ?? call.arguments;
 
-    // pi fires `tool_call` between argument preparation and execution, which is
-    // where a permission gate belongs: the arguments are final, and nothing has
-    // run yet. Handlers may patch `params` in place, so `event.input` is the
-    // same object that reaches `execute`.
+    // Fired between argument preparation and execution, as in pi; handlers may
+    // patch `params` in place — `event.input` is the object `execute` receives.
     const blocked = await emitToolCall(
       handlers,
       { type: "tool_call", toolCallId: call.id, toolName: call.name, input: params },
       ctx,
     );
-    // pi re-checks the signal after the hook and *before* honouring a block,
-    // which is the right order: a handler that asks the user is the natural
-    // place for them to give up, and giving up must fail the stream rather than
-    // report a refusal and burn another round trip.
+    // Re-checked before honouring a block, as in pi: giving up mid-hook must fail the stream.
     if (signal?.aborted === true) throw signal.reason;
-    // A block is an error result, not a failed request: the model reads the
-    // reason and can ask for something else instead of the turn dying.
+    // A block is an error result the model reads, not a failed request.
     if (blocked?.block === true) return [blocked.reason ?? BLOCKED_MESSAGE, true, undefined];
 
     const result = await tool.execute(call.id, params, signal, onUpdate, ctx);
     return [toolText(result), false, result];
   } catch (error) {
-    // An aborted request must fail the stream rather than be reported to the
-    // model as a tool that went wrong.
+    // An aborted request fails the stream rather than reading as a tool error.
     if (signal?.aborted === true) throw error;
     return [error instanceof Error ? error.message : String(error), true, undefined];
   }

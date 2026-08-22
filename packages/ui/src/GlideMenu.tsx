@@ -1,7 +1,6 @@
 import { type PointerEvent, type ReactNode, useRef, useState } from "react";
 
-/* A single highlight that glides to the hovered `[data-row]` child instead of
- * each row toggling its own background — the signature Beautiful UI hover. */
+/* A single highlight that glides to the hovered `[data-row]` child. */
 export function GlideMenu({
   children,
   className = "",

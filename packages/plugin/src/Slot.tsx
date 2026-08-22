@@ -4,11 +4,8 @@ import { usePluginHost } from "./hooks.ts";
 import type { PluginMessage, WidgetPlacement } from "./tiny.ts";
 
 /**
- * What each named region passes to the components rendered into it.
- *
- * An interface, not a union, so **a plugin can declare a region of its own** and
- * have contributors to it typed as precisely as contributors to the app's:
- *
+ * What each named region passes to the components rendered into it. An interface,
+ * not a union, so a plugin can declare a region of its own by augmenting it:
  * ```ts
  * declare module "@tiny/plugin" {
  *   interface SlotProps {
@@ -16,24 +13,7 @@ import type { PluginMessage, WidgetPlacement } from "./tiny.ts";
  *   }
  * }
  * ```
- *
- * Then `<Slot name="notes.toolbar" noteId={id} />` renders it — from a panel, a
- * page, or another slot's component — and `tiny.contribute("notes.toolbar", C)`
- * requires `C` to take a `noteId`. Rendering a `Slot` is the whole of declaring
- * one; there is nothing to register, and a slot nobody contributes to renders
- * nothing.
- *
- * The five below are the app's. They are entries here like any other, with no
- * standing the app's own plugins do not share — which is what "the extension
- * points are not owned by the core" has to mean to be worth saying.
- *
- * `message.pending` is the one inside a reply still being written — for anything
- * the run is waiting on, which is where an approval belongs: a question about
- * this tool call, asked where the tool call is, rather than over the whole app.
- *
- * A slot is for a *fragment* placed among someone else's chrome. For a region of
- * one's own there are two other surfaces: `tiny.registerPanel` for the right-hand
- * rail, and `tiny.registerRoute` for a whole page — see Panels.tsx.
+ * Rendering `<Slot name="notes.toolbar" noteId={id} />` is the whole of declaring one.
  */
 export interface SlotProps {
   "app.overlays": EmptyProps;
@@ -46,25 +26,13 @@ export interface SlotProps {
 /** A slot that passes nothing. Spelled once so the entries above read as a table. */
 export type EmptyProps = Record<never, never>;
 
-/**
- * A slot's name.
- *
- * `(string & {})` keeps the union open while leaving the declared names in
- * autocomplete — a plugin may render into a slot whose owner never declared its
- * props, and typing that as an error would make the open half unusable.
- */
+/** A slot's name. `(string & {})` keeps the union open while leaving declared names in autocomplete. */
 export type SlotName = keyof SlotProps | (string & {});
 
 /** What a component contributed to `name` is handed. */
 export type PropsOf<S extends SlotName> = S extends keyof SlotProps ? SlotProps[S] : EmptyProps;
 
-/**
- * A contributed component with its props erased.
- *
- * The registry holds contributions to every slot in one list, so the entry type
- * cannot name any one slot's props. `contribute` is where the typed check
- * happens; this is only how the result is stored.
- */
+/** A contributed component with its props erased; `contribute` is where the typed check happens. */
 // biome-ignore lint/suspicious/noExplicitAny: the one place props are erased, so `contribute` can be exact
 export type Contribution = ComponentType<any>;
 
@@ -85,10 +53,7 @@ export function Slot<S extends SlotName>({ name, ...props }: { name: S } & Props
   );
 }
 
-/**
- * The render target for pi's `setWidget` — plain string lines, which is all the
- * RPC protocol carries, so a pi extension can draw here without knowing React.
- */
+/** The render target for pi's `setWidget` — plain string lines, all the RPC protocol carries. */
 export function Widgets({ placement }: { placement: WidgetPlacement }) {
   const { widgets } = usePluginHost();
   const shown = [...widgets.entries()].filter(([, widget]) => widget.placement === placement);

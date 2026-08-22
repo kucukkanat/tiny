@@ -15,11 +15,7 @@ import type {
 
 export type Widget = { readonly lines: readonly string[]; readonly placement: WidgetPlacement };
 
-/**
- * What the app publishes into the host. Chat state lives in `App`, below the
- * provider, so it is pushed up rather than lifted — keeping `App`'s structure
- * untouched.
- */
+/** What the app publishes into the host; chat state lives in `App` and is pushed up. */
 export type AppBridge = {
   readonly messages: readonly PluginMessage[];
   readonly streaming: PluginStreaming | undefined;
@@ -29,31 +25,15 @@ export type AppBridge = {
   stop(): void;
   updateSettings(next: PluginSettings): void;
   navigate(path: string): void;
-  /**
-   * The current conversation's name, behind `tiny.getSessionName()`. Optional
-   * because not every host that mounts this has named sessions; where it is
-   * absent the `tiny.*` methods report as much rather than pretending.
-   */
+  /** The current conversation's name, behind `tiny.getSessionName()`; optional because not every host names sessions. */
   readonly sessionName?: string | undefined;
   setSessionName?(name: string): void;
 };
 
 export type HostValue = {
-  /**
-   * The live registry. A snapshot to read, and the handle a host disables a
-   * plugin through — `registry.dispose(pluginId)` withdraws what it registered
-   * without re-running every other factory, which is what `reload()` does.
-   */
+  /** The live registry; `registry.dispose(pluginId)` disables one plugin without a reload. */
   readonly registry: PluginRuntime;
-  /**
-   * False until the plugin factories have finished, however they finished.
-   *
-   * The app renders before that — an `async` factory must not block the first
-   * frame — so anything whose *absence* would be rendered as a decision has to
-   * wait for this. A route table is the case that matters: until the registry
-   * arrives no plugin page exists, and a fallback route would confidently paint
-   * the wrong screen at a bookmarked plugin URL.
-   */
+  /** False until the factories have finished, however they finished — gate fallback routes on it. */
   readonly ready: boolean;
   readonly widgets: ReadonlyMap<string, Widget>;
   readonly statuses: ReadonlyMap<string, string>;
@@ -97,32 +77,18 @@ export const PluginIdContext = createContext<string>("unknown");
 
 export const usePluginHost = (): HostValue => useContext(HostContext);
 
-/**
- * The `PluginContext` for the calling contribution — same object commands and
- * shortcuts receive, namespaced to the contributing plugin.
- */
+/** The `PluginContext` for the calling contribution, namespaced to the contributing plugin. */
 export function usePluginContext(): PluginContext {
   const host = usePluginHost();
   return host.contextFor(useContext(PluginIdContext));
 }
 
-/**
- * What to hand `streamChat` as its `extensions`.
- *
- * Not one extension per plugin: every `tiny.on(...)` call made by every plugin is
- * recorded during load and replayed through a *single* bridge extension, which
- * is what lets `@tiny/ai` stay unaware of plugins. The host appends one more of
- * its own for token accounting. So this is 0, 1 or 2 entries regardless of how
- * many plugins are loaded — see `loadPlugins` in registry.ts.
- */
+/** What to hand `streamChat` as its `extensions` — 0-2 entries regardless of plugin count. */
 export function usePluginExtensions() {
   return usePluginHost().registry.extensions;
 }
 
-/**
- * The tools plugins registered, for `useChat` to hand to `streamChat` — minus
- * any that `tiny.setActiveTools` switched off.
- */
+/** The tools plugins registered, minus any that `tiny.setActiveTools` switched off. */
 export function usePluginTools() {
   const { registry, activeTools } = usePluginHost();
   return useMemo(
@@ -136,12 +102,7 @@ export function usePluginPanels(): readonly PanelEntry[] {
   return usePluginHost().registry.panels;
 }
 
-/**
- * The pages plugins registered, for the app to hand to its router.
- *
- * An entry with a `label` is asking for a link in the app's navigation; one
- * without is reached some other way, and the app should not list it.
- */
+/** The pages plugins registered; only entries with a `label` want a navigation link. */
 export function usePluginRoutes(): readonly RouteEntry[] {
   return usePluginHost().registry.routes;
 }
@@ -156,12 +117,7 @@ export function usePluginEvents(): PluginEvents {
   return usePluginHost().events;
 }
 
-/**
- * Runs the registered markdown transformers over one message.
- *
- * A hook rather than a plain call so a component re-renders when a plugin that
- * registers one is added or removed.
- */
+/** Runs the registered markdown transformers over one message, re-rendering when they change. */
 export function useMarkdown(markdown: string, context: MarkdownContext): string {
   const entries: readonly MarkdownEntry[] = usePluginHost().registry.markdown;
   return useMemo(
@@ -170,15 +126,8 @@ export function useMarkdown(markdown: string, context: MarkdownContext): string 
   );
 }
 
-/**
- * Called once by `App` to publish live chat state and actions into the host.
- *
- * **Memoise the bridge**, as you would a context value. The host skips
- * publishing when every field is referentially unchanged, so a rebuilt wrapper
- * around stable values is safe — but a field that gets a new identity on every
- * render (an inline arrow, a freshly-built array) will re-render the host in a
- * loop.
- */
+/** Called once by `App` to publish live chat state into the host.
+ * Memoise the bridge's fields — a per-render identity re-renders the host in a loop. */
 export function useProvideApp(bridge: AppBridge): void {
   const { publish } = usePluginHost();
   useEffect(() => publish(bridge), [publish, bridge]);

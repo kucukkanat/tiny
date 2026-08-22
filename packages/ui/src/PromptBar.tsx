@@ -19,19 +19,15 @@ function Icon({ children, size = 15 }: { children: ReactNode; size?: number }) {
   );
 }
 
-/**
- * One entry in the model picker. `group` heads a section, so models coming from
- * different endpoints stay told apart when several are configured.
- */
+/** One entry in the model picker; `group` heads a section when several endpoints exist. */
 export type ModelOption = {
   readonly value: string;
   readonly label: string;
   readonly group?: string | undefined;
 };
 
-/* The Beautiful UI composer, pared down to its essentials: an autosizing
- * textarea, a model picker that opens upward, and a tactile send button that
- * doubles as stop while a reply streams. Enter sends, Shift+Enter breaks. */
+/* Composer: autosizing textarea, model picker, send button that doubles as stop.
+ * Enter sends, Shift+Enter breaks. */
 export function PromptBar({
   onSend,
   busy,
@@ -60,7 +56,6 @@ export function PromptBar({
   onTextChange: (text: string) => void;
 }) {
   const draft = text;
-  // `model` is an option value, which need not be the name worth showing.
   const selectedLabel = models.find((option) => option.value === model)?.label ?? "Choose model";
 
   const [modelOpen, setModelOpen] = useState(false);
@@ -109,8 +104,6 @@ export function PromptBar({
           >
             {models.map((option, index) => (
               <Fragment key={option.value}>
-                {/* A heading only where the group actually changes, so a single
-                    ungrouped endpoint renders exactly as it always did. */}
                 {option.group !== undefined && option.group !== models[index - 1]?.group && (
                   <div className="px-2 pt-1.5 pb-0.5 text-2xs font-semibold tracking-wide text-ink-3 uppercase">
                     {option.group}

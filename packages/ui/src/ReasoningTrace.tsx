@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { ShimmerLabel } from "./Loader.tsx";
 
-/* Expandable reasoning trace: shimmering "Thinking" while the model reasons,
- * settling into "Thought for Ns" that stays expandable. Auto-expands while
- * working; the reader can toggle it any time. */
+/* Expandable reasoning trace: shimmers while working, settles into "Thought for Ns";
+ * auto-expands while working, toggleable any time. */
 export function ReasoningTrace({
   working,
   seconds,

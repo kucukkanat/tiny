@@ -1,12 +1,5 @@
-/**
- * How this package reports failure.
- */
-
-/**
- * A failed request. `status` is set when the failure came from a response this
- * package reads itself (model listing). Streaming failures come back from pi-ai
- * with the status already folded into the message, so `status` is undefined there.
- */
+/** A failed request. `status` is set only for responses this package reads itself
+ * (model listing); streaming failures fold the status into the message. */
 export class ChatApiError extends Error {
   constructor(
     message: string,

@@ -24,7 +24,7 @@ export { PluginPage } from "./PluginPage.tsx";
 export type { PluginProblem } from "./problems.ts";
 export { onPluginProblem, reportPluginProblem } from "./problems.ts";
 export type { ProviderConfig, ProviderEntry, ProviderModel, ProviderStore } from "./providers.ts";
-export { createProviderStore, endpointOf, modelId, modelSpec, modelsOf } from "./providers.ts";
+export { createProviderStore, endpointOf, modelSpec, modelsOf } from "./providers.ts";
 export type {
   CommandEntry,
   ContributionEntry,

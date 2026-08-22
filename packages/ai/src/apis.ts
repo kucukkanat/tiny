@@ -1,22 +1,7 @@
 import type { ProviderStreams } from "@earendil-works/pi-ai";
 
-/**
- * The pi API types that work in a browser.
- *
- * pi ships nine streaming implementations. Six reach a page; the other three
- * cannot, and are left out rather than failing at runtime:
- *
- * | Left out | Why |
- * | --- | --- |
- * | `openai-codex-responses` | imports `node:zlib` |
- * | `google-vertex` | signs a service-account JWT through `GoogleAuth` |
- * | `bedrock-converse-stream` | transports over `@smithy/node-http-handler` |
- *
- * Of the six below, four go through a vendor SDK that pi-ai already configures
- * for browser use — it passes `dangerouslyAllowBrowser` and, for Anthropic, the
- * `anthropic-dangerous-direct-browser-access` header that makes Anthropic answer
- * a cross-origin request at all. `mistral-conversations` uses plain `fetch`.
- */
+/** The pi API types that work in a browser — the other three (codex, vertex,
+ * bedrock) need Node-only APIs and are left out rather than failing at runtime. */
 export const API_TYPES = [
   "openai-completions",
   "openai-responses",
@@ -34,15 +19,8 @@ export const DEFAULT_API: ApiType = "openai-completions";
 export const isApiType = (value: unknown): value is ApiType =>
   typeof value === "string" && (API_TYPES as readonly string[]).includes(value);
 
-/**
- * Each implementation is behind its own dynamic import, so a bundler with code
- * splitting downloads only the one an endpoint actually uses — the Anthropic SDK
- * never reaches a reader who only ever talks to a local Ollama.
- *
- * pi-ai's `.lazy` wrappers defer the vendor SDK a second time, on the first
- * request. See "Browser notes" in the README for why these paths are always
- * `@earendil-works/pi-ai/api/*` and never the package root.
- */
+// One dynamic import per implementation so code splitting downloads only the api in
+// use; paths must stay `@earendil-works/pi-ai/api/*`, never the package root.
 const loaders: Record<ApiType, () => Promise<ProviderStreams>> = {
   "openai-completions": async () =>
     (await import("@earendil-works/pi-ai/api/openai-completions.lazy")).openAICompletionsApi(),

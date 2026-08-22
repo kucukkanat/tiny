@@ -3,13 +3,8 @@ import { GlideMenu } from "./GlideMenu.tsx";
 
 export type SidebarChat = { readonly id: string; readonly title: string };
 
-/**
- * A destination other than a chat — a page of its own, listed above Settings.
- *
- * The chat app fills these from the pages plugins registered with a `label`;
- * `id` is whatever the caller wants back from `onLink`, and is compared against
- * `activeLinkId` to decide which row is highlighted.
- */
+/** A destination other than a chat, listed above Settings; `id` is echoed to `onLink`
+ * and compared against `activeLinkId` for highlighting. */
 export type SidebarLink = {
   readonly id: string;
   readonly label: string;
@@ -39,8 +34,7 @@ const rowClass = (active: boolean) =>
     active ? "bg-hover-2" : ""
   }`;
 
-/* Collapsible chat rail: new chat, history, settings. The collapsed state
- * keeps a 52px icon rail so the controls never jump. */
+/* Collapsible chat rail; collapsed keeps a 52px icon rail so controls never jump. */
 export function Sidebar({
   title,
   chats,

@@ -1,11 +1,4 @@
-/**
- * `tiny.events` — the shared bus plugins talk to each other over.
- *
- * Deliberately not the lifecycle events of `tiny.on`: those are the host's, with
- * fixed names and payloads, while this is an open namespace plugins own. Kept
- * separate for the same reason pi keeps them separate — a plugin emitting
- * `message_end` should not be able to fool another plugin's handler.
- */
+/** `tiny.events` — the shared bus plugins talk to each other over, kept separate from `tiny.on`'s lifecycle events. */
 
 import { reportPluginProblem } from "./problems.ts";
 
@@ -13,14 +6,8 @@ import { reportPluginProblem } from "./problems.ts";
 declare const payload: unique symbol;
 
 /**
- * A named conversation between plugins, with a payload type attached.
- *
- * The bus is the only place plugins compose with *each other* rather than with
- * the host — and it was the one part of the SDK with no types at all: bare
- * string names and `unknown` data, so the publisher and the subscriber agreed by
- * hope. A channel is that agreement written down once, in a value the publisher
- * exports and the subscriber imports:
- *
+ * A named conversation between plugins, with a payload type attached — a value
+ * the publisher exports and the subscriber imports:
  * ```ts
  * // in the publisher's package, exported
  * export const decided = defineChannel<{ tool: string; approved: boolean }>(
@@ -33,10 +20,6 @@ declare const payload: unique symbol;
  * // in a subscriber, which imports the channel and nothing else
  * tiny.events.on(decided, (event) => log(event.tool));  // `event` is typed
  * ```
- *
- * The import is types-only in effect: a subscriber whose publisher is not
- * installed simply never hears anything, which is what loose coupling at
- * runtime and tight coupling at the type level should both look like.
  */
 export type Channel<T> = {
   readonly name: string;
@@ -44,12 +27,7 @@ export type Channel<T> = {
   readonly [payload]?: T;
 };
 
-/**
- * Declares a channel.
- *
- * Namespace the name with your plugin's id — the bus is one flat namespace, so
- * `notes.changed` is a claim on a name that every other plugin can also make.
- */
+/** Declares a channel. Namespace the name with your plugin's id — the bus is one flat namespace. */
 export const defineChannel = <T>(name: string): Channel<T> => ({ name });
 
 /** What a listener is given, for a channel or for a bare name. */
@@ -98,13 +76,11 @@ export const createEvents = (): PluginEvents => {
   };
 
   const emit = (event: string | Channel<never>, data?: never) => {
-    // Iterate a copy: a listener that unsubscribes itself, or subscribes
-    // another, must not disturb this dispatch.
+    // Iterate a copy: a listener that (un)subscribes must not disturb this dispatch.
     for (const listener of [...(listeners.get(nameOf(event)) ?? [])]) {
       try {
         listener(data as never);
       } catch (error) {
-        // One plugin's bad listener must not break the emitter's turn.
         reportPluginProblem({
           pluginId: undefined,
           message: `listener for "${nameOf(event)}" failed`,
@@ -114,7 +90,6 @@ export const createEvents = (): PluginEvents => {
     }
   };
 
-  // Asserted once, here: the overloads above are what callers see, and no single
-  // implementation signature can satisfy both halves of each pair.
+  // Asserted: no single implementation signature can satisfy both halves of each overload pair.
   return { on, once, off, emit } as PluginEvents;
 };

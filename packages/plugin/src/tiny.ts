@@ -1,14 +1,4 @@
-/**
- * The `tiny` object a plugin is handed, and everything it can be given back.
- *
- * This is the whole contract between a plugin and the host, in one file, so
- * "what can a plugin do?" is one thing to read. `PluginAPI` at the bottom is
- * what `tiny` is; `PluginContext` is what handlers receive as `ctx`.
- *
- * Shaped after pi's extension SDK: a method here either has pi's exact signature
- * or is marked as ours. The parts with their own implementation live beside it —
- * key matching in keys.ts, slots in Slot.tsx, providers in providers.ts.
- */
+/** The plugin/host contract: `PluginAPI` is `tiny`, `PluginContext` is `ctx`. Shaped after pi's extension SDK. */
 import type { ApiType, EventMap, ExtensionContext, ToolDefinition } from "@tiny/ai";
 import type { ComponentType, ReactNode } from "react";
 import type { PluginEvents } from "./events.ts";
@@ -31,16 +21,7 @@ export type WidgetPlacement = "aboveEditor" | "belowEditor";
 export type WidgetOptions = { readonly placement?: WidgetPlacement | undefined };
 export type NotifyLevel = "info" | "warning" | "error";
 
-/**
- * The UI surface handed to plugins: what this host actually does.
- *
- * Every method here is implemented, with pi's exact signature where pi has one.
- * pi's terminal-only half is deliberately absent — it is still there at runtime,
- * returning pi's documented RPC fallbacks, but it is typed separately as
- * `PiTerminalUI` so it does not fill an author's autocomplete with seventeen
- * methods that do nothing. A plugin written against pi's full `ctx.ui` can name
- * `PiUIContext` and get the wide surface back.
- */
+/** The UI surface handed to plugins. pi's terminal-only half exists at runtime but is typed separately as `PiTerminalUI`. */
 export type PluginUIContext = {
   /* — portable: dialogs — */
   select(title: string, options: string[], opts?: DialogOptions): Promise<string | undefined>;
@@ -60,13 +41,7 @@ export type PluginUIContext = {
   getEditorText(): string;
 
   /* — ours: no portable pi equivalent — */
-  /**
-   * Open a React component as a modal overlay, resolving when it closes.
-   *
-   * Takes pi's dialog options for the same reason its dialogs do: an overlay
-   * that outlives the request it belongs to has to be dismissable from the
-   * outside. Dismissal resolves to `undefined`.
-   */
+  /** Open a React component as a modal overlay, resolving when it closes; dismissal resolves `undefined`. */
   open<T>(
     render: (done: (result: T) => void) => ReactNode,
     opts?: DialogOptions,
@@ -132,11 +107,7 @@ export type ContextUsage = {
   readonly contextWindow: number;
 };
 
-/**
- * pi passes `sessionManager`, `cwd` and `modelRegistry` here; none has an
- * analogue in a browser chat, so they are omitted in favour of the app's own
- * state. `ui`, `mode`, `hasUI` and `signal` keep pi's names and meanings.
- */
+/** pi's context minus `sessionManager`/`cwd`/`modelRegistry`, which have no browser analogue. */
 export type PluginContext = {
   readonly ui: PluginUIContext;
   /** A new member of pi's union — existing `ctx.mode === "tui"` guards stay false. */
@@ -161,12 +132,7 @@ export type PluginContext = {
   /** Start a fresh conversation, as pi's `ctx.newSession()` does. */
   newSession(): void;
 
-  /**
-   * pi's, adapted: pi re-runs `/reload` over extensions discovered on disk,
-   * this re-runs every plugin factory and rebuilds the registry. Both resolve
-   * once the new runtime is live, and in both a plugin that no longer registers
-   * is gone. Ours is also how a plugin installed at runtime is applied.
-   */
+  /** Re-runs every plugin factory and rebuilds the registry, resolving once the new runtime is live. */
   reload(): Promise<void>;
 };
 
@@ -196,20 +162,8 @@ export type ShortcutOptions = {
   handler(ctx: PluginContext): Promise<void> | void;
 };
 
-/**
- * What an event handler receives.
- *
- * pi hands event handlers the same context its commands get — `ui` included,
- * which is what makes a permission gate possible at all — so this widens
- * `@tiny/ai`'s `{ model, signal }` with the plugin's own context rather than
- * asking plugins to smuggle `ui` out of a contributed component.
- *
- * `model` and `signal` always come from the live request. `hasUI` is the one
- * field that loosens: a registry loaded without a host (`loadPlugins` on its
- * own) still gets every method, but they return pi's dismissal values and
- * `hasUI` is false — exactly what pi reports in print mode, and exactly what
- * pi's own permission gates already guard on.
- */
+/** What an event handler receives: `ExtensionContext` widened with the plugin context.
+ * `hasUI` is false (with methods returning pi's dismissal values) when no host is mounted. */
 export type PluginEventContext = ExtensionContext &
   Omit<PluginContext, "hasUI"> & { readonly hasUI: boolean };
 
@@ -225,13 +179,7 @@ export type PluginEventHandler<E, R = undefined> = (
  * and no addresses, so neither of these has a pi equivalent to inherit.
  * ------------------------------------------------------------------ */
 
-/**
- * A panel in the app's right-hand rail.
- *
- * The rail does not exist until a plugin registers one, and it is the plugin's
- * whole width to use — unlike `contribute`, which places a fragment among the
- * app's own chrome. Several panels become a tab strip, in registration order.
- */
+/** A panel in the app's right-hand rail; several panels become a tab strip, in registration order. */
 export type PanelOptions = {
   /** The tab's label, and the panel's heading when it is the only one. */
   readonly title: string;
@@ -241,19 +189,11 @@ export type PanelOptions = {
   readonly component: ComponentType;
 };
 
-/**
- * A page of the plugin's own, at a path the app routes to.
- *
- * The page replaces the thread; the app's chrome stays, so the user is never
- * stranded somewhere with no way back.
- */
+/** A page of the plugin's own, at a path the app routes to; it replaces the thread, the app's chrome stays. */
 export type RouteOptions = {
   /** Rendered as the whole main area. Declare it outside the factory. */
   readonly component: ComponentType;
-  /**
-   * When set, the app links to this page from its navigation. Leave it out for
-   * a page reached some other way — a command, a button, `ctx.navigate`.
-   */
+  /** When set, the app links to this page from its navigation. */
   readonly label?: string | undefined;
   readonly icon?: ReactNode | undefined;
 };
@@ -271,16 +211,7 @@ export type MarkdownContext = {
 /** pi's transformer, minus `availableWidth` — a browser has no column count. */
 export type MarkdownTransformer = (markdown: string, context: MarkdownContext) => string;
 
-/**
- * Withdraws one registration.
- *
- * Every `register*` hands one back, so a plugin can take back a command that no
- * longer applies, or a host can retire a plugin without `reload()` re-running
- * every factory in the app to remove one. Calling it twice is harmless.
- *
- * Ignoring it is the normal case — a plugin that registers for the life of the
- * page has nothing to do with it — so nothing warns when it goes unused.
- */
+/** Withdraws one registration. Calling it twice is harmless; ignoring it is the normal case. */
 export type Dispose = () => void;
 
 export interface PluginAPI {
@@ -292,12 +223,7 @@ export interface PluginAPI {
 
   registerCommand(name: string, options: CommandOptions): Dispose;
   registerShortcut(shortcut: KeyId, options: ShortcutOptions): Dispose;
-  /**
-   * Register a tool the model may call. pi's shape, including `execute`'s
-   * positional arguments and content-block result, except that `parameters` is
-   * a plain JSON Schema object rather than a typebox `TSchema` — see
-   * `ToolDefinition` in `@tiny/ai` for why.
-   */
+  /** Register a tool the model may call; pi's shape, but `parameters` is plain JSON Schema, not typebox. */
   registerTool(tool: ToolDefinition): Dispose;
   /** Every command available to `runCommand`, in invocation order. */
   getCommands(): readonly CommandInfo[];
@@ -326,48 +252,22 @@ export interface PluginAPI {
   /** The bus plugins talk to each other over — not the lifecycle events above. */
   readonly events: PluginEvents;
 
-  /**
-   * Ours: render a React component into a named slot.
-   *
-   * `component`'s props are inferred from the slot — `message.actions` hands its
-   * component a `message` and an `index`, and says so — so a mismatch is a
-   * compile error rather than an `undefined` read at render time. A plugin
-   * declaring a slot of its own gets the same by augmenting `SlotProps`.
-   */
+  /** Ours: render a React component into a named slot. Props are inferred from the slot,
+   * so a mismatch is a compile error; plugins declare their own slots by augmenting `SlotProps`. */
   contribute<S extends SlotName>(slot: S, component: ComponentType<PropsOf<S>>): Dispose;
 
-  /**
-   * Ours: add a panel to the app's right-hand rail.
-   *
-   * `id` is namespaced by the plugin, so two plugins may both call theirs
-   * `notes`; registering the same id twice within one plugin is a mistake and
-   * the second is dropped with an error.
-   */
+  /** Ours: add a panel to the app's right-hand rail. `id` is namespaced by the plugin;
+   * a repeat id within one plugin is dropped with an error. */
   registerPanel(id: string, options: PanelOptions): Dispose;
 
-  /**
-   * Ours: add a page at `path`, which must start with `/`.
-   *
-   * Unlike a command, a path cannot be disambiguated — it is the address the
-   * router resolves — so the first registration wins and a later claim on the
-   * same path is reported rather than silently shadowing it.
-   */
+  /** Ours: add a page at `path`, which must start with `/`. First registration wins; later claims are reported. */
   registerRoute(path: string, options: RouteOptions): Dispose;
 }
 
 export type Plugin = {
-  /**
-   * Nothing is done with what a factory returns; a promise is awaited before the
-   * next plugin loads. `Dispose` is in the union only so the common one-liner
-   * — `(tiny) => tiny.registerCommand(…)` — still typechecks now that
-   * registering hands a disposer back. Returning it means nothing.
-   */
+  /** A returned promise is awaited before the next plugin loads; the return value is otherwise ignored. */
   (tiny: PluginAPI): void | Promise<void> | Dispose;
-  /**
-   * Stable identity, used to namespace `ctx.storage` and to label this plugin's
-   * errors. Declare it with `definePlugin` — see there for why it cannot be
-   * inferred from the function's name.
-   */
+  /** Stable identity, namespacing `ctx.storage` and labelling errors; declare it with `definePlugin`. */
   readonly id?: string | undefined;
   /** Ids this plugin loads after; `"*"` for all of them. See `PluginOrder`. */
   readonly after?: readonly string[] | undefined;
@@ -378,43 +278,16 @@ export type Plugin = {
 };
 
 /**
- * A plugin with an explicit, stable identity.
- *
+ * `definePlugin` gives a plugin an explicit, stable id (minifiers erase `Function.name`,
+ * and the id namespaces `ctx.storage`):
  * ```ts
  * export const greet = (): Plugin =>
  *   definePlugin("greet", (tiny) => {
  *     tiny.registerCommand("greet", { handler: (_a, ctx) => ctx.ui.notify("hi") });
  *   });
  * ```
- *
- * The id has to be written down because it cannot be derived. `Function.name`
- * would be the obvious source, and it is what a reader expects — but every
- * JavaScript minifier erases it, so a plugin identified that way has one
- * identity in development and a different one in the build users actually run.
- * Since the id namespaces `ctx.storage`, getting that wrong silently relocates
- * the user's data on their next release.
- *
- * A plugin without an id still loads: it falls back to its position in the list,
- * with a warning. That is fine for a throwaway, and wrong for anything that
- * stores something.
  */
-/**
- * When a plugin needs to load relative to another, rather than where it happens
- * to sit in the list.
- *
- * Load order is mostly not load-bearing — `tool_call` fires for every tool in
- * the registry however late it was registered — but where it *is*, it was kept
- * in a comment: "list this last so the plugins that ship with the app claim
- * their command names first". A comment cannot stop the next person reordering
- * the array, and getting it wrong is silent.
- *
- * Names that are not installed are ignored, deliberately: `after: ["fs"]` from a
- * plugin that works better alongside the filesystem tools should not fail, or
- * warn, when they are absent.
- *
- * The list's own order decides everything these constraints leave open, so a
- * plugin that declares nothing loads exactly where it always did.
- */
+/** Relative load order. Names that are not installed are ignored; the list's own order decides the rest. */
 export type PluginOrder = {
   /** Load after these ids. `"*"` means after every other plugin. */
   readonly after?: readonly string[] | undefined;
@@ -422,14 +295,7 @@ export type PluginOrder = {
   readonly before?: readonly string[] | undefined;
 };
 
-/**
- * Something a plugin has to ask for.
- *
- * Deliberately three, and only things this package can actually withhold. A
- * longer list would read as a permission system, and most of what a plugin can
- * do — `fetch`, the DOM, `localStorage` — is not this package's to grant or
- * refuse. See `needs` for what the declaration is and is not.
- */
+/** Something a plugin has to ask for — only things this package can actually withhold. */
 export type Capability =
   /** Read `ctx.settings`, which carries the user's API key, and change it. */
   | "settings"
@@ -439,24 +305,8 @@ export type Capability =
   | "tools";
 
 export type PluginOptions = PluginOrder & {
-  /**
-   * What this plugin needs, and by omission what it does not.
-   *
-   * **Opt-in and narrowing.** A plugin that declares nothing gets everything, as
-   * every plugin always has; one that declares `["tools"]` gets tools and is
-   * handed no settings and no conversation. So adding this breaks nothing and
-   * costs nothing to adopt, and the plugins in this repo have adopted it.
-   *
-   * **It is a declaration, not a cage.** A plugin is ordinary code in the page:
-   * the settings it is not handed are still in `localStorage` where it can read
-   * them, and nothing here stops a `fetch`. What it buys is real all the same —
-   * the plugin that only wanted to count tokens is no longer handed the user's
-   * API key by accident, and someone installing a plugin at runtime is shown
-   * what it asked for next to the hash they are approving. A plugin that
-   * declares `["chat"]` and then reads the key from `localStorage` has done
-   * something a reviewer can point at, which is the difference between a
-   * mistake and a lie.
-   */
+  /** What this plugin needs. Declaring nothing grants everything; declaring narrows what `ctx` is handed.
+   * A declaration, not a sandbox — it does not stop page-level access. */
   readonly needs?: readonly Capability[] | undefined;
 };
 
@@ -485,12 +335,6 @@ export function definePlugin(
   });
 }
 
-/**
- * A plugin that has declared its id — what `definePlugin` returns.
- *
- * `Plugin` stays permissive so a bare pi extension runs here unmodified, which
- * is the point of this package. An application that ships a fixed list should
- * type it as `readonly IdentifiedPlugin[]` instead, and let the compiler insist
- * on identity rather than finding out from a console warning in production.
- */
+/** A plugin that has declared its id — what `definePlugin` returns.
+ * Apps shipping a fixed list should type it `readonly IdentifiedPlugin[]`. */
 export type IdentifiedPlugin = Plugin & { readonly id: string };

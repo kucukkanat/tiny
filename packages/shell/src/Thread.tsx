@@ -32,12 +32,7 @@ function Tools({ runs }: { runs: readonly StoredToolRun[] }) {
   );
 }
 
-/**
- * One message's text, after every `registerMarkdownTransformer` has had a turn.
- *
- * Display-only, exactly as in pi: the original text is what stays in the
- * conversation and in the model's context.
- */
+/** One message's text after every markdown transformer; display-only, as in pi. */
 function Transformed({ text, context }: { text: string; context: MarkdownContext }) {
   return <>{useMarkdown(text, context)}</>;
 }
@@ -57,16 +52,10 @@ function Assistant({
   done: boolean;
   reasoningLive: boolean;
   tools: readonly StoredToolRun[];
-  /**
-   * The finished message and where it sits, or nothing while one is streaming.
-   *
-   * One prop rather than two, because `message.actions` needs both and they are
-   * never separately available: a reply being written has neither.
-   */
+  /** The finished message and its index; absent while one is streaming. */
   stored?: { readonly message: StoredMessage; readonly index: number };
 }) {
-  // `isStreaming` is pi's flag for a partial assistant update, so a transformer
-  // can skip work until the text settles.
+  // `isStreaming` is pi's flag so a transformer can skip work until text settles.
   const body = useMarkdown(
     content,
     useMemo(() => ({ messageType: "assistant", isStreaming: !done }) as const, [done]),
@@ -86,8 +75,6 @@ function Assistant({
       )}
       <Tools runs={tools} />
       {(content !== "" || done) && <StreamText text={body} done={done} />}
-      {/* Only finished replies carry actions — there is nothing to copy or
-          retry while the tokens are still arriving. */}
       {done && stored !== undefined && (
         <div className="flex items-center gap-1">
           <Slot name="message.actions" message={stored.message} index={stored.index} />
@@ -162,10 +149,8 @@ export function Thread({
               tools={streaming.tools}
             />
           )}
-          {/* Outside the branch above on purpose: a reply can be waiting on the
-              user before any delta has arrived, and a question the run is parked
-              on must render either way. Inside `Assistant` it would depend on
-              `streamChat` happening to yield a tool delta first. */}
+          {/* Outside the branch: a question the run is parked on must render
+              before any delta has arrived. */}
           <Slot name="message.pending" />
         </>
       )}

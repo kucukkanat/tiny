@@ -88,35 +88,14 @@ export type Registry = {
   readonly providers: readonly ProviderEntry[];
   /** One `@tiny/ai` extension replaying every `on()` call, in registration order. */
   readonly extensions: readonly Extension[];
-  /**
-   * What each plugin that declared `needs` asked for, by id.
-   *
-   * Absent from the map means the plugin declared nothing and is narrowed by
-   * nothing — see `PluginOptions.needs`. The host reads this to decide what to
-   * put on that plugin's `ctx`, and the Plugins dialog reads it to tell a user
-   * what they are about to approve.
-   */
+  /** What each plugin that declared `needs` asked for, by id; absent means narrowed by nothing. */
   readonly needs: ReadonlyMap<string, readonly Capability[]>;
 };
 
-/**
- * A registry that can still change, which is what `loadPlugins` returns.
- *
- * It *is* a `Registry` — every field is the snapshot taken when it was made — so
- * anything reading `registry.commands` is unaffected. What it adds is the two
- * operations a snapshot cannot express: retiring one plugin, and hearing that
- * something was retired.
- *
- * Before this, the only way to remove anything was `ctx.reload()`, which re-runs
- * every factory in the app to take one plugin out. Registrations hand back a
- * disposer now, so a plugin can withdraw a command it no longer applies to, and
- * a host can disable one plugin without disturbing its neighbours.
- */
+/** A registry that can still change — what `loadPlugins` returns: a `Registry` snapshot
+ * plus retiring one plugin and hearing about changes. */
 export type PluginRuntime = Registry & {
-  /**
-   * Retire everything one plugin registered, including its providers.
-   * Returns whether there was anything to retire.
-   */
+  /** Retire everything one plugin registered, including its providers; returns whether anything was retired. */
   readonly dispose: (pluginId: string) => boolean;
   /** Called with a fresh snapshot whenever a registration is added or withdrawn. */
   readonly subscribe: (listener: (next: PluginRuntime) => void) => () => void;
@@ -142,12 +121,7 @@ export const emptyRegistry: PluginRuntime = {
   ...noRuntime,
 };
 
-/**
- * Applies every registered transformer in order, each seeing the previous
- * one's output. pi keeps the markdown produced so far when a transformer
- * throws and continues with the next, which is what makes the chain safe to
- * run on every streamed frame.
- */
+/** Applies every registered transformer in order; a throwing transformer keeps the markdown so far, as in pi. */
 export const transformMarkdown = (
   entries: readonly MarkdownEntry[],
   markdown: string,
@@ -167,83 +141,34 @@ export const transformMarkdown = (
 /** Whether an id was derived from list position rather than declared. */
 export const isPositionalId = (id: string): boolean => /^plugin-\d+$/.test(id);
 
-/**
- * Characters that must not reach a route pattern.
- *
- * A router compiles the path into a regular expression and escapes the regex
- * metacharacters — all except `?`, which survives as an optionality quantifier.
- * So `/note?s` would match `/notes`, claiming an address that was never
- * registered and that another plugin may own. `#` and whitespace never appear
- * in a pathname either, and in a path are far likelier to be a typo than intent.
- */
+// `?` survives router regex-escaping as an optionality quantifier, so `/note?s` would match `/notes`.
 const UNUSABLE_IN_PATH = /[?#\s]/;
 
-/**
- * The path as it will be stored and routed on, or `undefined` if unusable.
- *
- * Collapsed and trailing-slash-trimmed because those spellings are *not* inert:
- * `/notes/` scores higher than `/notes` in a router's ranking, so registering
- * the slashed spelling of a path someone else owns silently outranks them —
- * including the app's own. Canonicalising on the way in is what makes the clash
- * check below able to see such a pair as the one address it really is.
- */
+// Canonicalised because `/notes/` outranks `/notes` in router scoring; returns undefined if unusable.
 const canonicalPath = (path: string): string | undefined => {
   if (!path.startsWith("/") || UNUSABLE_IN_PATH.test(path)) return undefined;
   const collapsed = path.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
   return collapsed === "" ? "/" : collapsed;
 };
 
-/**
- * What two canonical paths have to share to be a clash.
- *
- * Route matching is case-insensitive by default, so `/Notes` and `/notes` are
- * one address however differently they are spelled. Only the comparison is
- * lower-cased — the stored path keeps its case, because a path may carry
- * `:paramName`s whose casing the page reads back.
- */
+// Routing is case-insensitive; only the comparison is lower-cased, since `:paramName` casing matters.
 const addressOf = (path: string): string => path.toLowerCase();
 
-/**
- * A plugin's identity — the namespace for its `ctx.storage` and the label on
- * its errors, so it has to be the same in every build.
- *
- * Deliberately not `plugin.name`: minifiers erase function names, so that would
- * differ between `bun run dev` and `bun run build` and move the user's stored
- * data on release. `definePlugin` is how a plugin says who it is; a plugin that
- * does not is identified by position, and warns the first time it uses storage,
- * which is the only moment the difference can cost anything.
- */
+// Not `plugin.name`: minifiers erase function names, which would move stored data between builds.
 const pluginId = (plugin: Plugin, index: number): string =>
   plugin.id !== undefined && plugin.id !== "" ? plugin.id : `plugin-${index}`;
 
 /** A plugin and the identity the list it was written in gave it. */
 type Loading = { readonly plugin: Plugin; readonly id: string };
 
-/**
- * The plugins in the order they should run, honouring `after` and `before`.
- *
- * The rule, applied until every plugin has run: **take the earliest-listed
- * plugin whose prerequisites have already run.** So the list decides everything
- * the constraints leave open, and a list with no constraints in it runs exactly
- * as written. A plugin held back by a constraint lets the ones behind it past,
- * which is the whole point of having said so.
- *
- * Constraints naming a plugin that is not installed are dropped rather than
- * reported — `after: ["fs"]` is a preference about a plugin that may not be
- * there, and treating it as an error would make optional ordering unusable.
- *
- * A cycle cannot be honoured, so it is reported and the plugins in it fall back
- * to list order. Refusing to load them would turn a mistake about *when* two
- * plugins run into the app losing them entirely.
- */
+// Load order: repeatedly take the earliest-listed plugin whose prerequisites have run.
+// Constraints naming uninstalled plugins are dropped; a cycle is reported and falls back to list order.
 const inLoadOrder = (entries: readonly Loading[]): readonly Loading[] => {
   const plugins = entries.map((entry) => entry.plugin);
   if (!plugins.some((plugin) => plugin.after !== undefined || plugin.before !== undefined))
     return entries;
 
-  // Ids come from the list as written, before any of this reorders it: a
-  // positional id that moved with the sort would name a different plugin than
-  // the one the author counted.
+  // Ids come from the list as written, before any of this reorders it.
   const positionOf = new Map(entries.map((entry, index) => [entry.id, index]));
   // `edges[i]` holds the plugins that must wait for `i`.
   const edges: Set<number>[] = plugins.map(() => new Set());
@@ -272,8 +197,7 @@ const inLoadOrder = (entries: readonly Loading[]): readonly Loading[] => {
   const order: Loading[] = [];
   const placed = plugins.map(() => false);
   while (order.length < entries.length) {
-    // Scanned in list order rather than pulled from a queue: that is what makes
-    // the sort stable, and the list is short enough for it not to matter.
+    // Scanned in list order rather than a queue: that is what keeps the sort stable.
     const next = plugins.findIndex((_, index) => !placed[index] && waitingOn[index] === 0);
     if (next === -1) {
       const stuck = entries.filter((_, index) => !placed[index]).map((entry) => entry.id);
@@ -293,11 +217,7 @@ const inLoadOrder = (entries: readonly Loading[]): readonly Loading[] => {
   return order;
 };
 
-/**
- * pi keeps every registration of a duplicated command name and disambiguates
- * with numeric suffixes in load order (`/review:1`, `/review:2`); a name claimed
- * once is invoked unsuffixed.
- */
+// Duplicated command names get numeric suffixes in load order (`/review:1`), as in pi.
 const withInvocationNames = (
   registered: readonly Omit<CommandEntry, "invocationName">[],
 ): readonly CommandEntry[] => {
@@ -313,14 +233,7 @@ const withInvocationNames = (
   });
 };
 
-/**
- * The host actions `tiny.*` methods reach through.
- *
- * `loadPlugins` runs before the app has published any state, and pi allows
- * these to be called long after the factory returns — from a command handler,
- * or an event. So they are resolved at call time through a getter rather than
- * captured when the factory runs.
- */
+/** The host actions `tiny.*` methods reach through — resolved at call time, not captured at load. */
 export type HostActions = {
   getCommands(): readonly CommandInfo[];
   getAllTools(): readonly string[];
@@ -352,15 +265,7 @@ const detachedHost = (): HostActions => {
   };
 };
 
-/**
- * The context an event handler gets when no host is mounted.
- *
- * pi runs extensions in print and JSON modes too, where every `ctx.ui` method
- * exists but nothing can be asked of the user; handlers are expected to notice
- * via `ctx.hasUI` and decide for themselves. This is that mode. Dialogs resolve
- * to pi's dismissal values rather than throwing, so a permission gate written
- * for pi fails closed here instead of crashing.
- */
+// The hostless context: dialogs resolve to pi's dismissal values, so permission gates fail closed.
 const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: false } => {
   const memory = new Map<string, unknown>();
   const ui: PluginUIContext = {
@@ -375,8 +280,6 @@ const detachedContext = (): Omit<PluginContext, "hasUI"> & { readonly hasUI: fal
     setTitle: () => {},
     setEditorText: () => {},
     pasteToEditor: () => {},
-    // No host means no composer, so there is no draft to read. The mounted
-    // host overrides this with the real one.
     getEditorText: () => "",
   };
   return {
@@ -411,22 +314,12 @@ export type LoadOptions = {
   readonly events?: PluginEvents | undefined;
   /** Resolved per call, so a handler running later sees the live host. */
   readonly host?: (() => HostActions) | undefined;
-  /**
-   * The plugin context to widen event handlers with, so `ctx.ui` reaches them
-   * as it does in pi. Resolved per call for the same reason as `host`, and
-   * allowed to return nothing while the host is still mounting.
-   */
+  /** The plugin context to widen event handlers with; resolved per call, may be absent while mounting. */
   readonly context?: ((pluginId: string) => PluginContext | undefined) | undefined;
 };
 
-/**
- * Run every plugin factory once, collecting what each registers.
- *
- * `@tiny/ai` builds its own `ExtensionAPI` inside `loadExtensions`, so it can
- * never be handed this richer object. It does not need to be: the `on()` calls
- * are recorded here and replayed into whatever API `streamChat` constructs, so
- * `@tiny/ai` needs no change to carry plugin event handlers.
- */
+/** Run every plugin factory once, collecting what each registers.
+ * `on()` calls are recorded and replayed into whatever API `streamChat` constructs. */
 export const loadPlugins = async (
   plugins: readonly Plugin[],
   options: LoadOptions = {},
@@ -446,34 +339,19 @@ export const loadPlugins = async (
   const listeners = new Set<(next: PluginRuntime) => void>();
   /** False until the first snapshot exists, so clashes are reported once. */
   let built = false;
-  /**
-   * Announce a change, once the lists already reflect it.
-   *
-   * Iterated over a copy for the same reason `events.ts` does: a listener that
-   * unsubscribes itself must not disturb the dispatch it is in.
-   */
+  // Iterated over a copy: a listener that unsubscribes itself must not disturb the dispatch.
   const notify = () => {
     if (listeners.size === 0) return;
     const next = runtime();
     for (const listener of [...listeners]) listener(next);
   };
 
-  /**
-   * Records one registration and hands back the disposer that undoes it.
-   *
-   * Both halves announce themselves. pi allows registering long after the
-   * factory returns — from a command handler, or from a plugin the user just
-   * installed — and a command that appears in the registry but not in the
-   * command palette is not registered as far as the user is concerned. During
-   * the load itself there is nobody subscribed yet, so this costs nothing.
-   */
+  // Records one registration and hands back the disposer that undoes it; both halves notify.
   const record = <T>(list: T[], entry: T): Dispose => {
     list.push(entry);
     notify();
     return () => {
       const at = list.indexOf(entry);
-      // Already withdrawn — by a second call, or by `dispose` sweeping the
-      // plugin — so there is nothing to announce.
       if (at === -1) return;
       list.splice(at, 1);
       notify();
@@ -484,8 +362,7 @@ export const loadPlugins = async (
   const events = options.events ?? createEvents();
   const host = options.host ?? detachedHost;
   const context = options.context ?? (() => undefined);
-  // A reload re-runs every factory, so provider registrations must not stack up
-  // on top of the previous load's.
+  // A reload re-runs every factory, so provider registrations must not stack up.
   providers.reset();
 
   for (const { plugin, id } of inLoadOrder(
@@ -496,16 +373,9 @@ export const loadPlugins = async (
     const granted = (capability: Capability) =>
       plugin.needs === undefined || plugin.needs.includes(capability);
     if (plugin.needs !== undefined) needs.set(id, plugin.needs);
-    // Annotated, not asserted. `as PluginAPI` over the whole literal would only
-    // check what is here against the interface, never that all of it is here —
-    // so a method added to `PluginAPI` and forgotten below would compile, and
-    // surface as `tiny.<method> is not a function` when a plugin first calls it,
-    // swallowed by the host's load handler into one console line. The cast is
-    // therefore narrowed to the single property that needs it.
+    // Annotated, not asserted: `as PluginAPI` over the literal would not catch a missing method.
     const api: PluginAPI = {
-      // `on` alone: its overloads cannot be satisfied by one implementation
-      // signature, and the recorder is deliberately untyped so pi events this
-      // host never fires are stored just the same.
+      // `on` alone is cast: its overloads cannot be satisfied by one implementation signature.
       on: ((event: string, handler: unknown) => {
         return record(recorded, { pluginId: id, event, handler });
       }) as PluginAPI["on"],
@@ -542,8 +412,7 @@ export const loadPlugins = async (
       setSessionName: (name) => host().setSessionName(name),
       events,
       contribute: (slot, component) => {
-        // Counted per plugin, not across all of them: the id is a React key, so
-        // it has to stay stable when a neighbouring plugin is retired.
+        // Counted per plugin: the id is a React key, stable when a neighbouring plugin is retired.
         return record(contributions, {
           id: `${id}#${contributed++}`,
           slot,
@@ -552,8 +421,7 @@ export const loadPlugins = async (
         });
       },
       registerPanel: (panelId, options) => {
-        // Namespaced, so two plugins may both call their panel "notes"; only a
-        // plugin colliding with itself is a mistake worth reporting.
+        // Namespaced, so only a plugin colliding with itself is reported.
         const key = `${id}:${panelId}`;
         if (panels.some((panel) => panel.id === key)) {
           reportPluginProblem({
@@ -575,9 +443,7 @@ export const loadPlugins = async (
           });
           return () => {};
         }
-        // A path is an address, not a name: it cannot be suffixed the way a
-        // duplicate command is, so a clash has to be reported instead. Compared
-        // as a router matches, not as a string — see `addressOf`.
+        // A path cannot be suffixed like a duplicate command; compared as a router matches — see `addressOf`.
         if (routes.some((route) => addressOf(route.path) === addressOf(path))) {
           reportPluginProblem({
             pluginId: id,
@@ -591,38 +457,26 @@ export const loadPlugins = async (
     await plugin(api);
   }
 
-  // Built at most once per load, so a plugin running without a host still gets
-  // storage that survives between events rather than a fresh empty one each time.
+  // Built at most once per load, so hostless storage survives between events.
   let detached: ReturnType<typeof detachedContext> | undefined;
   const fallbackContext = () => (detached ??= detachedContext());
 
-  // Replay is idempotent: `loadExtensions` builds fresh handler arrays per call.
-  // It reads `recorded` when it runs rather than closing over a copy, so a
-  // handler withdrawn between requests is simply not registered on the next one.
+  // Reads `recorded` live, so a handler withdrawn between requests is not registered on the next.
   const replay: Extension = (tiny) => {
     for (const { pluginId: owner, event, handler } of recorded) {
-      // Events this facade never fires are dropped rather than registered, so a
-      // pi extension subscribing to `session_start` loads without erroring.
+      // Events this facade never fires are dropped, so pi extensions load without erroring.
       if (!firesEvent(event)) continue;
       const on = tiny.on as (event: string, handler: unknown) => void;
       const run = handler as (event: unknown, ctx: PluginEventContext) => unknown;
-      // `@tiny/ai` can only supply `{ model, signal }`; pi hands handlers the
-      // same context its commands get. The request's own half wins, so `model`
-      // and `signal` always describe the call in flight.
+      // The request's own half wins, so `model` and `signal` always describe the call in flight.
       on(event, (fired: unknown, ctx: ExtensionContext) =>
         run(fired, { ...(context(owner) ?? fallbackContext()), ...ctx }),
       );
     }
   };
 
-  /**
-   * The tools the model may address, deduplicated.
-   *
-   * A tool name has to be unique for the model to address it, so unlike commands
-   * a duplicate cannot be suffixed — the first registration wins and the clash is
-   * reported. Recomputed per snapshot rather than once: when the plugin holding
-   * the winning `fs_read` is retired, the runner-up should get the name.
-   */
+  // Tool names must be unique: first registration wins, the clash is reported.
+  // Recomputed per snapshot so a retired winner's name passes to the runner-up.
   const activeTools = (report: boolean): ToolDefinition[] => {
     const tools: ToolDefinition[] = [];
     for (const { pluginId: owner, tool } of toolEntries) {
@@ -645,12 +499,10 @@ export const loadPlugins = async (
       return removed;
     };
     const removed = [recorded, commands, shortcuts, contributions, panels, routes, toolEntries]
-      // `.map` before `.some`: every list must be swept, not just those up to
-      // the first that had something in it.
+      // `.map`, not `.some`: every list must be swept.
       .map((list) => owned(list as { readonly pluginId: string }[]))
       .includes(true);
     const sweptMarkdown = owned(markdown);
-    // Providers live in a store of their own, since pi allows late registration.
     const sweptProviders = providers.removeOwner(owner);
     const any = removed || sweptMarkdown || sweptProviders;
     if (any) notify();
@@ -663,8 +515,7 @@ export const loadPlugins = async (
     contributions: [...contributions],
     panels: [...panels],
     routes: [...routes],
-    // Only the first build reports clashes; a rebuild after a disposal would
-    // otherwise repeat every warning the load already printed.
+    // Only the first build reports clashes, so rebuilds do not repeat warnings.
     tools: activeTools(!built),
     toolEntries: [...toolEntries],
     markdown: [...markdown],

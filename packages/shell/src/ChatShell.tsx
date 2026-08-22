@@ -31,11 +31,7 @@ import { loadSettings, OWN_ENDPOINT, type Settings, saveSettings } from "./setti
 import { Thread } from "./Thread.tsx";
 import { useChat } from "./useChat.ts";
 
-/**
- * A picker entry addresses a model *and* the endpoint it lives on, because the
- * same model id can exist on several. Kept opaque behind these two helpers so
- * the separator never leaks into a comparison somewhere else.
- */
+// A picker value addresses model + endpoint; the separator stays behind these two helpers.
 const optionValue = (providerId: string, model: string) => `${providerId}\u0000${model}`;
 const parseOption = (value: string): { providerId: string; model: string } => {
   const at = value.indexOf("\u0000");
@@ -44,24 +40,10 @@ const parseOption = (value: string): { providerId: string; model: string } => {
     : { providerId: value.slice(0, at), model: value.slice(at + 1) };
 };
 
-/**
- * The assembled chat application: sidebar, thread, composer, model picker,
- * panels and the route table, already wired to the plugin host.
- *
- * Everything in here is glue an app used to write for itself — publishing the
- * bridge, resolving providers into endpoints, handing the registry to
- * `useChat`, holding the router's fallback until the factories finish. None of
- * it is privileged: it reaches plugins through the same hooks any host would
- * use, so it doubles as the reference implementation for hosting
- * `@tiny/plugin` in an app of your own.
- *
- * It expects a `PluginHost` and a router above it — `TinyApp` mounts both, and
- * is the component to reach for unless you own either.
- */
+/** The assembled chat application, wired to the plugin host. Expects a `PluginHost`
+ * and a router above it — reach for `TinyApp` unless you own either. */
 export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefined } = {}) {
-  // `useMatch` rather than `useParams`: this is the shell, mounted above the
-  // routes rather than by one of them, so the conversation id has to be read
-  // off the location instead of arriving as a param.
+  // Mounted above the routes, so the id must be read off the location, not params.
   const id = useMatch("/c/:id")?.params.id;
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -70,13 +52,9 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
   const [chats, setChats] = useState<readonly Conversation[]>([]);
   const { runCommand, editorText, setEditorText, ready } = usePluginHost();
 
-  // Endpoints plugins added with `tiny.registerProvider`, and the models each
-  // publishes. Live state: a provider may be registered from a command handler
-  // after a setup flow, which pi allows and this list has to reflect.
+  // Live state: a provider may be registered after startup, e.g. from a command handler.
   const providers = usePluginProviders();
 
-  // Pages plugins registered. One that declared a `label` also wants a row in
-  // the navigation; one that did not is reached from a command or a button.
   const pages = usePluginRoutes();
   const links = useMemo<readonly SidebarLink[]>(
     () =>
@@ -95,9 +73,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
   }, []);
   useEffect(refreshChats, [refreshChats]);
 
-  // Stable: `useChat` folds this into `send`, which the plugin bridge below
-  // depends on. An inline arrow here gives `send` a new identity every render
-  // and spins the host.
+  // Stable: an inline arrow gives `send` a new identity every render and spins the host.
   const onConversationCreated = useCallback(
     (createdId: string) => {
       navigate(`/c/${createdId}`);
@@ -106,11 +82,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
     [navigate, refreshChats],
   );
 
-  /**
-   * What the selected model speaks. A provider may declare an api for the whole
-   * endpoint and override it per model, as pi allows; the user's own endpoint
-   * carries its api on the settings object.
-   */
+  // What the selected model speaks; providers may override the api per model.
   const selectedSpec = useMemo<ModelSpec>(() => {
     const providerId = settings?.providerId;
     if (providerId === undefined || providerId === OWN_ENDPOINT)
@@ -129,15 +101,13 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
     modelSpec: selectedSpec,
   });
 
-  // Populate the model picker from the configured endpoint; a failure here is
-  // non-fatal (the saved model still works), so it only empties the list.
+  // A failure here is non-fatal (the saved model still works); it only empties the list.
   useEffect(() => {
     if (!settingsComplete(settings)) return;
     listModels(settings).then(setOwnModels, () => setOwnModels([]));
   }, [settings]);
 
-  // The same, per registered provider. One provider that cannot be reached
-  // contributes no models rather than emptying the picker for the others.
+  // One unreachable provider contributes no models rather than emptying the picker.
   useEffect(() => {
     let live = true;
     Promise.all(
@@ -152,11 +122,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
     };
   }, [providers]);
 
-  /**
-   * Which endpoint this conversation streams through. `providerId` names a
-   * plugin provider; absent means the user's own endpoint, which is what every
-   * settings object saved before providers existed resolves to.
-   */
+  // Which endpoint the conversation streams through; absent providerId = the user's own.
   useEffect(() => {
     if (settings === undefined) return setEndpoint(undefined);
     const providerId = settings.providerId;
@@ -171,8 +137,6 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
           : undefined,
       );
 
-    // A provider disappears when its plugin is disabled or removed; the saved
-    // model then has nowhere to go until another is picked.
     const entry = providers.find((candidate) => candidate.id === providerId);
     if (entry === undefined) return setEndpoint(undefined);
 
@@ -191,8 +155,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
     };
   }, [settings, providers]);
 
-  // Grouped only once there is more than one endpoint to tell apart, so a
-  // single-endpoint app looks exactly as it did.
+  // Grouped only once there is more than one endpoint to tell apart.
   const models = useMemo<readonly ModelOption[]>(() => {
     const grouped = providers.length > 0;
     return [
@@ -244,8 +207,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
     if (chatId === id) navigate("/");
   };
 
-  // Published into the plugin host so plugins can read chat state and act on
-  // it. Memoised because the host stores it as state.
+  // Published into the plugin host; memoised because the host stores it as state.
   useProvideApp(
     useMemo(
       () => ({
@@ -303,8 +265,7 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
             updateSettings({
               ...settings,
               model,
-              // The user's own endpoint is the absence of a provider, which is
-              // also how settings saved before providers existed look.
+              // The user's own endpoint is the absence of a provider.
               ...(providerId === OWN_ENDPOINT ? { providerId: undefined } : { providerId }),
             });
           }}
@@ -337,23 +298,16 @@ export function ChatShell({ title = "Tiny" }: { readonly title?: string | undefi
         footer={<Slot name="sidebar.footer" />}
       />
 
-      {/* Plugin pages replace the thread and nothing else, so the sidebar and
-          the rail stay put and there is always a way back. The app's own routes
-          are listed first, because React Router breaks a tie in specificity by
-          declaration order — and `registerRoute` canonicalises what it stores,
-          so a plugin cannot dodge that tie by spelling the app's own path more
-          specifically (`/c/:id/`). */}
+      {/* App routes first: React Router breaks specificity ties by declaration order,
+          and `registerRoute` canonicalises paths so a plugin cannot dodge the tie. */}
       <Routes>
         <Route path="/" element={thread} />
         <Route path="/c/:id" element={thread} />
         {pages.map((entry) => (
           <Route key={entry.path} path={entry.path} element={<PluginPage entry={entry} />} />
         ))}
-        {/* The fallback answers a path nothing else claimed — but only once the
-            factories have run, because until then no plugin page exists yet and
-            this would answer a bookmarked plugin URL with the chat. It still
-            matches in the meantime, holding the layout with an empty page
-            rather than leaving the router with nothing to render. */}
+        {/* Until the factories run, a bookmarked plugin URL must not answer with the
+            chat — the fallback holds the layout with an empty page instead. */}
         <Route path="*" element={ready ? thread : <main className="min-w-0 flex-1 bg-page" />} />
       </Routes>
 

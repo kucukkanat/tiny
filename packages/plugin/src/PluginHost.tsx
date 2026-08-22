@@ -53,86 +53,55 @@ const emptyBridge: AppBridge = {
   navigate: () => {},
 };
 
-/**
- * Runs the plugin registry and owns every piece of UI state plugins can drive:
- * the dialog queue, notifications, widgets and status entries.
- *
- * The app's own composition is untouched — `App` publishes its chat state in
- * with `useProvideApp` and renders `<Slot>`s where contributions belong.
- */
+/** Runs the plugin registry and owns every piece of UI state plugins can drive:
+ * dialogs, notifications, widgets and status entries. */
 export function PluginHost({
   plugins,
   uiFallbacks,
   children,
 }: {
   plugins: readonly Plugin[];
-  /**
-   * Extra `ctx.ui` members, for methods this host cannot implement.
-   *
-   * There is one use: `piTerminalUI` from `@tiny/plugin-pi`, which adds pi's
-   * terminal-only half so a ported extension calling `setFooter` degrades the
-   * way it would over pi's RPC transport rather than throwing. It used to be
-   * unconditional, which meant every app carried seventeen methods that do
-   * nothing so that some apps could run pi extensions. An app that does not
-   * want them now has a `ctx.ui` where everything works.
-   */
+  /** Extra `ctx.ui` members for methods this host cannot implement, e.g. `piTerminalUI` from `@tiny/plugin-pi`. */
   uiFallbacks?: Readonly<Record<string, unknown>> | undefined;
   children: ReactNode;
 }) {
   const [registry, setRegistry] = useState<PluginRuntime>(emptyRegistry);
-  // Whether the factories have run at all. A reload leaves this true: the
-  // previous registry stays live until the new one lands, so there is no moment
-  // where the app has to pretend it knows nothing.
+  // A reload leaves this true: the previous registry stays live until the new one lands.
   const [ready, setReady] = useState(false);
   const [dialogs, setDialogs] = useState<readonly DialogRequest[]>([]);
   const [toasts, setToasts] = useState<readonly Toast[]>([]);
   const [widgets, setWidgets] = useState<ReadonlyMap<string, Widget>>(new Map());
   const [statuses, setStatuses] = useState<ReadonlyMap<string, string>>(new Map());
   const [editorText, setEditorText] = useState("");
-  // The composer is controlled by this state, so it is what the user typed as
-  // well as what a plugin pushed. Mirrored into a ref because `ui` is built once
-  // and `getEditorText()` must still see the text as it is now.
+  // Mirrored into a ref: `ui` is built once, `getEditorText()` must see the text as it is now.
   const editorTextRef = useRef(editorText);
   editorTextRef.current = editorText;
 
-  // State, not a ref: contributed components read chat state through the
-  // context and must re-render when it moves.
+  // State, not a ref: contributed components must re-render when chat state moves.
   const [bridge, setBridge] = useState<AppBridge>(emptyBridge);
   const resolvers = useRef(new Map<string, (value: unknown) => void>());
 
-  // Bumped by `reload()`, which rebuilds the registry from scratch — so a plugin
-  // dropped from the list loses everything it registered. Taking one plugin out
-  // no longer needs that: `registry.dispose(pluginId)` withdraws its
-  // registrations in place and the subscription below re-renders.
+  // Bumped by `reload()`, which rebuilds the registry from scratch.
   const [nonce, setNonce] = useState(0);
   const reloading = useRef<(() => void)[]>([]);
 
-  // Declared up here because the load effect below reads it, while the context
-  // it holds is only built further down.
+  // Declared up here because the load effect reads it before the context is built below.
   const contextForRef = useRef<((pluginId: string) => PluginContext) | undefined>(undefined);
 
-  // Providers and the event bus outlive one load: pi allows `registerProvider`
-  // long after the factory returns, and a bus that reset on reload would drop
-  // subscriptions mid-conversation.
+  // Providers and the event bus outlive one load; a bus reset on reload would drop subscriptions.
   const providerStore = useRef<ProviderStore>(undefined);
   providerStore.current ??= createProviderStore();
   const providers = useProviders(providerStore.current);
   const events = useRef(createEvents()).current;
-  // Held by the host, not the module: two hosts in one page — which is every
-  // test file — must not read each other's unidentified plugins' values.
+  // Held by the host, not the module: two hosts in one page must not share these.
   const forgetfulStores = useRef<ForgetfulStores>(new Map()).current;
 
-  // `undefined` means "everything the registry has"; pi's `setActiveTools`
-  // replaces that with an explicit list.
+  // `undefined` means "everything the registry has"; `setActiveTools` replaces it with a list.
   const [activeNames, setActiveNames] = useState<readonly string[] | undefined>(undefined);
 
-  // Recorded by an extension this host adds itself, so `ctx.getContextUsage()`
-  // works without the app having to track or publish token counts.
+  // Recorded by the host's own extension, so `ctx.getContextUsage()` needs nothing from the app.
   const usage = useRef<ContextUsage>({ input: 0, output: 0, totalTokens: 0, contextWindow: 0 });
 
-  // pi's `ctx.getContextUsage()` reads the harness's own accounting. This host
-  // has none of its own, so it subscribes like any other extension — which also
-  // means the app needs no change to support it.
   const usageRecorder = useRef<Extension>((tiny) => {
     tiny.on("message_end", (event, context) => {
       const { input, output, totalTokens } = event.message.usage;
@@ -140,8 +109,7 @@ export function PluginHost({
     });
   }).current;
 
-  // Factories may be async, so the registry arrives after first paint; the app
-  // renders immediately and contributions appear when they are ready.
+  // Factories may be async: the app renders immediately, contributions appear when ready.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the reload trigger — the effect re-runs on it rather than reading it
   useEffect(() => {
     let live = true;
@@ -149,8 +117,7 @@ export function PluginHost({
     const settleReloads = () => {
       for (const done of reloading.current.splice(0)) done();
     };
-    // Appended rather than registered as a plugin: it is the host's own
-    // bookkeeping, and must not show up in anything plugins can enumerate.
+    // Appended, not registered as a plugin: it must not show up in anything plugins can enumerate.
     const withRecorder = (loaded: PluginRuntime): PluginRuntime => ({
       ...loaded,
       extensions: [...loaded.extensions, usageRecorder],
@@ -164,8 +131,7 @@ export function PluginHost({
       (loaded) => {
         if (!live) return;
         setRegistry(withRecorder(loaded));
-        // A registration withdrawn later — a plugin retiring a command, or the
-        // host disabling a plugin — arrives here rather than through a reload.
+        // A registration withdrawn later arrives here rather than through a reload.
         unsubscribe = loaded.subscribe((next) => {
           if (live) setRegistry(withRecorder(next));
         });
@@ -174,9 +140,7 @@ export function PluginHost({
       },
       (error: unknown) => {
         reportPluginProblem({ pluginId: undefined, message: "failed to load", error });
-        // A failed load still ends the wait — `reload()` promises that the
-        // attempt is over, not that it succeeded — and still counts as ready,
-        // or the app would wait forever on plugins that are never coming.
+        // A failed load still ends the wait and still counts as ready.
         if (!live) return;
         setReady(true);
         settleReloads();
@@ -206,11 +170,7 @@ export function PluginHost({
     resolve(value);
   }, []);
 
-  /**
-   * One dialog request, resolved by the user, by `opts.timeout`, or by
-   * `opts.signal` — the same three outcomes pi documents, with pi's fallback
-   * values on the latter two.
-   */
+  // One dialog request, resolved by the user, `opts.timeout`, or `opts.signal` — pi's three outcomes.
   const ask = useCallback(
     <T,>(build: (id: string) => DialogRequest, opts: DialogOptions | undefined, onDismiss: T) =>
       new Promise<T>((resolve) => {
@@ -241,11 +201,7 @@ export function PluginHost({
     setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 4000);
   }, []);
 
-  // Problems reach the developer, not only the console: in development each
-  // report — a clash, a withheld capability, a throwing handler — becomes an
-  // error toast, so a tool that silently failed to register is seen the day it
-  // is written rather than the day a user misses it. Production keeps the
-  // console line only, because a user cannot fix a clash.
+  // In development each report becomes an error toast; production keeps the console line only.
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
     return onPluginProblem(({ pluginId, message }) =>
@@ -255,9 +211,7 @@ export function PluginHost({
 
   const ui = useMemo<PluginUIContext>(
     () => ({
-      // First, so nothing an adapter adds can shadow a method this host really
-      // implements. Filling gaps is what it is for; replacing behaviour other
-      // plugins depend on is not.
+      // First, so nothing an adapter adds can shadow a method this host really implements.
       ...uiFallbacks,
 
       /* — portable: dialogs — */
@@ -312,9 +266,6 @@ export function PluginHost({
           undefined,
         ),
 
-      // This host owns the composer's text —
-      // `PromptBar` is controlled by `editorText` — so a plugin reading the
-      // draft gets the draft, including what the user typed by hand.
       getEditorText: () => editorTextRef.current,
     }),
     [ask, toast, uiFallbacks],
@@ -331,17 +282,14 @@ export function PluginHost({
 
   const allTools = useMemo(() => registry.tools.map((tool) => tool.name), [registry]);
   const activeTools = useMemo(
-    // An unset list means every tool, so a plugin that never calls
-    // `setActiveTools` sees exactly what it registered.
+    // An unset list means every tool.
     () => (activeNames === undefined ? allTools : allTools.filter((n) => activeNames.includes(n))),
     [allTools, activeNames],
   );
 
   const contextFor = useCallback(
     (pluginId: string): PluginContext => {
-      // Undeclared means everything, as it always did; declaring narrows. What
-      // is withheld is withheld from `ctx`, not from the page — see
-      // `PluginOptions.needs` for why that is still worth doing.
+      // Undeclared means everything; declaring narrows `ctx` — see `PluginOptions.needs`.
       const declared = registry.needs.get(pluginId);
       const granted = (capability: Capability) =>
         declared === undefined || declared.includes(capability);
@@ -352,8 +300,7 @@ export function PluginHost({
         hasUI: true,
         signal: bridge.signal,
         chat: {
-          // The actions stay: sending is something the user can see happening,
-          // and reading the conversation is what a plugin has to ask for.
+          // The actions stay; only reading the conversation is gated.
           messages: granted("chat") ? bridge.messages : EMPTY_MESSAGES,
           streaming: granted("chat") ? bridge.streaming : undefined,
           send: bridge.send,
@@ -368,8 +315,7 @@ export function PluginHost({
         runCommand: (name, args) => runCommandRef.current(name, args),
         commands,
         abort: bridge.stop,
-        // Nothing is queued here — a reply is either streaming or it is not — so
-        // pi's two questions have the same answer, from opposite directions.
+        // Nothing is queued here, so pi's two questions have the same answer.
         isIdle: () => bridge.streaming === undefined,
         hasPendingMessages: () => bridge.streaming !== undefined,
         getContextUsage: () => usage.current,
@@ -431,20 +377,14 @@ export function PluginHost({
     return () => document.removeEventListener("keydown", onKey);
   }, [registry, contextFor]);
 
-  // Skip the update when nothing actually moved. `useProvideApp` is called with
-  // a fresh object every render, so without this an app that rebuilds one
-  // identical bridge per render would re-render the host forever.
+  // Skip the update when nothing moved, or an identical bridge per render would loop forever.
   const publish = useCallback((next: AppBridge) => {
     setBridge((current) => (sameBridge(current, next) ? current : next));
   }, []);
 
-  // Same reason as `hostActions`: `loadPlugins` captures the getter once, but an
-  // event handler runs much later and must see the context of that moment. It
-  // is unset only until the first render finishes, before any plugin can fire.
+  // Refs because `loadPlugins` captures the getters once, while handlers run much later.
   contextForRef.current = contextFor;
 
-  // Read through a ref because `loadPlugins` captures the getter once, while a
-  // `tiny.*` method may be called from a handler running long afterwards.
   const hostActions = useRef<HostActions>(undefined as unknown as HostActions);
   hostActions.current = {
     getCommands: () => commands,
@@ -518,11 +458,7 @@ export function PluginHost({
   );
 }
 
-/**
- * Subscribes to the provider store, which is mutable state outside React —
- * `tiny.registerProvider` may be called from a command handler at any time, so the
- * host cannot read it once and hold the result.
- */
+// Subscribes to the provider store — mutable state outside React that may change at any time.
 const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {
   const [entries, setEntries] = useState<readonly ProviderEntry[]>(() => store.list());
   useEffect(() => {
@@ -532,43 +468,22 @@ const useProviders = (store: ProviderStore): readonly ProviderEntry[] => {
   return entries;
 };
 
-/**
- * Whether two bridges hold the same values, field by field.
- *
- * Read off the objects rather than from a list of field names: a list would have
- * to be updated by hand every time `AppBridge` gains a field, and — because
- * `satisfies readonly (keyof AppBridge)[]` accepts a list that is merely valid,
- * not complete — forgetting would compile clean and silently stop republishing
- * that field to plugins.
- */
+// Field-by-field equality, read off the objects so a new `AppBridge` field cannot be forgotten.
 const sameBridge = (a: AppBridge, b: AppBridge): boolean => {
-  // The union of both key sets, so an absent optional field and one present as
-  // `undefined` still compare equal — an app that only sometimes spreads
-  // `sessionName` in must not re-publish on every render because of it.
+  // Union of both key sets, so an absent optional field and one present as `undefined` compare equal.
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof AppBridge>;
   return [...keys].every((key) => Object.is(a[key], b[key]));
 };
 
-/**
- * Storage for a plugin that never said who it is: real, but only for this page.
- *
- * The alternative was persisting under the plugin's position in the list, which
- * reads fine until someone inserts a plugin above it and every user's data moves
- * to a namespace nothing looks in. That failure is silent, permanent, and
- * discovered by the user rather than the author, so an unidentified plugin gets
- * a store that works and forgets instead of one that persists and lies.
- *
- * Declaring an id with `definePlugin` is the whole fix, and the warning says so.
- */
+// Storage for an unidentified plugin: real, but page-lifetime only — persisting under a
+// positional id would silently move user data when the list changes.
 type Forgetful = { readonly values: Map<string, unknown>; warned: boolean };
 
 /** Where unidentified plugins' values live, for as long as the host does. */
 export type ForgetfulStores = Map<string, Forgetful>;
 
 const forgetfulStorage = (pluginId: string, stores: ForgetfulStores) => {
-  // Keyed by plugin rather than built per context: a context is rebuilt for
-  // every command and every event, and a store that started empty each time
-  // would not be storage at all.
+  // Keyed by plugin: contexts are rebuilt per command/event, and the store must survive that.
   const store = stores.get(pluginId) ?? { values: new Map<string, unknown>(), warned: false };
   stores.set(pluginId, store);
   const { values } = store;

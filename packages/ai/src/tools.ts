@@ -1,11 +1,6 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { type Infer, type JsonSchema, schemaProblems } from "./schema.ts";
 
-/**
- * The tool contract: what a tool is, what it returns, and what it is handed.
- * pi's shapes, with the one deliberate difference noted on `ToolDefinition`.
- */
-
 /** One block of tool output. pi carries more kinds; text is what a chat reads. */
 export type ToolContent = { readonly type: "text"; readonly text: string };
 
@@ -15,10 +10,7 @@ export type ToolResult = {
   readonly content: readonly ToolContent[];
   /** Structured payload for rendering and state; never sent to the model. */
   readonly details?: unknown;
-  /**
-   * Stop after this tool batch instead of asking the model again — honoured
-   * only when every finalized result in the batch also sets it, as in pi.
-   */
+  /** Stop after this batch — honoured only when every result in the batch sets it, as in pi. */
   readonly terminate?: boolean;
 };
 
@@ -28,18 +20,8 @@ export type ToolUpdate = {
   readonly details?: unknown;
 };
 
-/**
- * A tool the model may call.
- *
- * pi's `ToolDefinition`, with one deliberate difference: `parameters` is a plain
- * JSON Schema object rather than a typebox `TSchema`. A typebox schema *is* a
- * JSON Schema object at runtime, so definitions port unchanged — and typebox
- * stays out of the browser bundle, which `packages/ai/README.md` "Browser notes"
- * explains is not optional here.
- *
- * The `execute` signature is pi's exactly, positional arguments and all, so a
- * tool written for pi runs here without being rewritten.
- */
+/** A tool the model may call — pi's `ToolDefinition`, except `parameters` is plain
+ * JSON Schema (not typebox) so typebox stays out of the browser bundle. */
 export type ToolDefinition = {
   readonly name: string;
   /** Display name. Falls back to `name`. */
@@ -53,11 +35,7 @@ export type ToolDefinition = {
   readonly parameters: Record<string, unknown>;
   /** Last chance to repair arguments a model got subtly wrong. */
   prepareArguments?(args: Record<string, unknown>): Record<string, unknown>;
-  /**
-   * Runs the call. Throwing marks the result as an error and hands the message
-   * back to the model, which can then correct itself rather than the turn
-   * failing.
-   */
+  /** Runs the call. Throwing marks the result as an error the model reads and can correct. */
   execute(
     toolCallId: string,
     params: Record<string, unknown>,
@@ -67,15 +45,8 @@ export type ToolDefinition = {
   ): Promise<ToolResult> | ToolResult;
 };
 
-/**
- * What a tool's `execute` receives as `ctx`. This, and nothing else.
- *
- * pi hands tools its `ExtensionContext` rather than the richer context commands
- * get, and so does `streamChat`. It is spelled out rather than left open on
- * purpose: an index signature here would let `ctx.storage.get(...)` compile in a
- * tool that then crashes at runtime, because no host puts `storage` on it. If
- * your tool needs more than this, capture it in the closure that built the tool.
- */
+/** What `execute` receives as `ctx` — deliberately closed: a tool needing more
+ * must capture it in the closure that built the tool. */
 export type ToolExecuteContext = {
   readonly signal: AbortSignal | undefined;
   readonly model: Model<Api>;
@@ -93,10 +64,6 @@ export const toolOutput = (text: string, rest: Omit<ToolResult, "content"> = {})
   content: [{ type: "text", text }],
   ...rest,
 });
-
-/* ------------------------------------------------------------------ *
- * defineTool — the same tool, declared once
- * ------------------------------------------------------------------ */
 
 /** What `defineTool`'s `execute` is handed: one object, every field named. */
 export type ToolCall<Args> = {
@@ -126,38 +93,8 @@ export type ToolSpec<S extends JsonSchema> = {
   execute(call: ToolCall<Infer<S>>): Promise<ToolResult> | ToolResult;
 };
 
-/**
- * A tool whose arguments are typed by the schema that describes them.
- *
- * `ToolDefinition` is pi's shape, and it costs a tool author two things pi pays
- * for elsewhere: `execute` takes five positional parameters, and `params` is
- * `Record<string, unknown>`, so every tool starts by re-deriving the schema it
- * just wrote — `plugin-fs` had a `text(args, key)` helper for exactly this. Two
- * copies of one decision, which is the failure LEAN_CODE §5 is about.
- *
- * So: one options object instead of five positions, `args` inferred from
- * `parameters`, and the same schema checked at runtime before `execute` is
- * called. A bad argument becomes an error result the model reads and can correct
- * — the same outcome as throwing, reached without the tool writing the check.
- *
- * ```ts
- * defineTool({
- *   name: "fs_read",
- *   description: "Read a text file.",
- *   parameters: {
- *     type: "object",
- *     properties: { path: { type: "string" } },
- *     required: ["path"],
- *   },
- *   // `args.path` is a string, and cannot not be.
- *   execute: async ({ args }) => toolOutput(await read(args.path)),
- * });
- * ```
- *
- * Returns a plain `ToolDefinition`, so the registry, `streamChat` and any pi
- * extension reading the tool list see no difference. `ToolDefinition` remains
- * public and unchanged for a tool ported from pi verbatim.
- */
+/** Declare a tool once: `args` is typed by `parameters` and validated against it before
+ * `execute` runs. Returns a plain `ToolDefinition`, indistinguishable to the host. */
 export const defineTool = <const S extends JsonSchema>(spec: ToolSpec<S>): ToolDefinition => ({
   name: spec.name,
   ...(spec.label === undefined ? {} : { label: spec.label }),
@@ -168,9 +105,7 @@ export const defineTool = <const S extends JsonSchema>(spec: ToolSpec<S>): ToolD
   ...(spec.prepareArguments === undefined ? {} : { prepareArguments: spec.prepareArguments }),
   execute: (toolCallId, params, signal, onUpdate, ctx) => {
     const problems = schemaProblems(spec.parameters, params);
-    // Thrown, not returned: `streamChat` turns a throw into an error result and
-    // hands the message back to the model, which is the path a hand-written
-    // check already took. The difference is that nobody had to write it.
+    // Thrown: `streamChat` turns a throw into an error result for the model.
     if (problems.length > 0) throw new Error(problems.join("; "));
     return spec.execute({ args: params as Infer<S>, toolCallId, signal, onUpdate, ctx });
   },

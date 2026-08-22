@@ -24,18 +24,11 @@ const toChatMessages = (stored: readonly StoredMessage[]): ChatMessage[] =>
 
 export type ChatOptions = {
   readonly conversationId: string | undefined;
-  /**
-   * Where this conversation streams from — the user's own endpoint, or one a
-   * plugin registered with `tiny.registerProvider`. Resolved by `ChatShell`, because
-   * only it can see both the settings and the provider registry.
-   */
+  /** Resolved by `ChatShell`, which alone sees both settings and the provider registry. */
   readonly endpoint: Endpoint | undefined;
   readonly model: string;
   onConversationCreated(id: string): void;
-  /**
-   * Supplied by the plugin host, which is the one place plugin factories run.
-   * Optional so a screen or a test can drive the hook on its own.
-   */
+  /** Supplied by the plugin host; optional so a screen or test can drive the hook alone. */
   readonly extensions?: readonly Extension[];
   /** Tools the model may call, also collected by the plugin host. */
   readonly tools?: readonly ToolDefinition[];
@@ -43,13 +36,7 @@ export type ChatOptions = {
   readonly modelSpec?: ModelSpec;
 };
 
-/**
- * One conversation: its messages, the reply in flight, and how to send.
- *
- * Named options rather than positional arguments — `extensions` and `tools` are
- * both arrays arriving from the same place, and at a call site nothing but
- * position would tell them apart.
- */
+/** One conversation: its messages, the reply in flight, and how to send. */
 export function useChat({
   conversationId,
   endpoint,
@@ -65,9 +52,8 @@ export function useChat({
   const abortRef = useRef<AbortController | undefined>(undefined);
   const selfIdRef = useRef<string | undefined>(undefined);
 
-  // Load the conversation whenever the route changes; abort any stream from the
-  // previous one. Skip the id this hook just created itself — that navigation
-  // happens mid-stream and must not abort or clobber the live reply.
+  // Load on route change, aborting the previous stream — except the id this hook
+  // just created, whose navigation happens mid-stream and must not clobber the reply.
   useEffect(() => {
     if (conversationId !== undefined && conversationId === selfIdRef.current) return;
     selfIdRef.current = undefined;
@@ -121,8 +107,7 @@ export function useChat({
       let answer = "";
       let reasoningStarted: number | undefined;
       let reasoningSeconds = 0;
-      // The tool *calls* this reply made, for the UI — distinct from `tools`,
-      // the definitions the model may call.
+      // The tool *calls* this reply made — distinct from `tools`, the definitions.
       let toolRuns: readonly StoredToolRun[] = [];
       setStreaming({ reasoning, text: answer, reasoningSeconds, tools: toolRuns });
 
@@ -137,8 +122,7 @@ export function useChat({
             reasoningStarted ??= Date.now();
             reasoning += delta.text;
           } else if (delta.kind === "tool") {
-            // A call is announced as "running" and then replaced in place, so
-            // the row updates rather than the list growing twice per call.
+            // Announced as "running", then replaced in place so the row updates.
             const { id, name, status, summary } = delta;
             toolRuns = toolRuns.some((run) => run.id === id)
               ? toolRuns.map((run) => (run.id === id ? { id, name, status, summary } : run))

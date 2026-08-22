@@ -1,13 +1,7 @@
 import { PluginBoundary } from "./Boundary.tsx";
 import type { RouteEntry } from "./registry.ts";
 
-/**
- * One plugin-registered page, filling the app's main area.
- *
- * Deliberately not a router: this package stays router-agnostic, so the host app
- * maps `registry.routes` onto whatever routing it already has and renders this
- * as the element. See `usePluginRoutes`, and Hosting in the docs.
- */
+/** One plugin-registered page, filling the app's main area; router-agnostic — see `usePluginRoutes`. */
 export function PluginPage({ entry }: { entry: RouteEntry }) {
   const Page = entry.options.component;
   return (

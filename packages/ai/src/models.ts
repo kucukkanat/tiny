@@ -12,23 +12,14 @@ const trimBase = (baseUrl: string): string => baseUrl.replace(/\/+$/, "");
 export type ModelSpec = {
   /** Which pi streaming implementation to talk to. */
   readonly api?: ApiType | undefined;
-  /**
-   * Whether to let pi-ai send reasoning parameters. Off by default because
-   * servers like Ollama and vLLM reject `reasoning_effort`; reasoning deltas are
-   * parsed regardless of this flag.
-   */
+  /** Off by default: servers like Ollama reject `reasoning_effort`. Deltas parse regardless. */
   readonly reasoning?: boolean | undefined;
   readonly contextWindow?: number | undefined;
   readonly maxTokens?: number | undefined;
 };
 
-/**
- * Describe one model on an endpoint. An arbitrary server publishes nothing but
- * an id, so the metadata below defaults to placeholders: pi-ai uses it for
- * display and cost reporting and never derives request parameters from it
- * (`max_tokens` is only sent when a caller asks for it). A provider that knows
- * better can say so through `ModelSpec`.
- */
+/** Describe one model on an endpoint. Metadata defaults to placeholders —
+ * pi-ai never derives request parameters from it. */
 export const endpointModel = (
   endpoint: Endpoint,
   id: string,
@@ -52,15 +43,8 @@ type ModelsPayload = {
   models?: readonly { name?: string }[];
 };
 
-/**
- * Whether an endpoint's base URL is expected to carry the version segment.
- *
- * This is not a style choice — it follows what each implementation does with
- * `model.baseUrl`. The OpenAI SDK appends `/chat/completions` to it and Google
- * is handed `apiVersion: ""` because "baseUrl already includes version path", so
- * both want the version in the base. The Anthropic SDK appends `/v1/messages`
- * and Mistral resolves `v1/chat/completions` against it, so those two must not.
- */
+// Follows each SDK's use of `model.baseUrl`: OpenAI and Google want the version
+// in the base; the Anthropic and Mistral SDKs append it themselves.
 const VERSION_IN_PATH: Record<ApiType, string> = {
   "openai-completions": "",
   "openai-responses": "",
@@ -70,12 +54,7 @@ const VERSION_IN_PATH: Record<ApiType, string> = {
   "mistral-conversations": "/v1",
 };
 
-/**
- * How each API family asks for its model list.
- *
- * The route and the auth header differ per family even though most of the
- * response shapes agree, so this is the one place that knows the difference.
- */
+/** The models route and auth header, which differ per API family. */
 const modelsRequest = (
   endpoint: Endpoint,
   api: ApiType,
@@ -85,9 +64,7 @@ const modelsRequest = (
     case "anthropic-messages":
       return {
         url: `${base}/models`,
-        // Anthropic authenticates with `x-api-key`, and versions its API through
-        // a header rather than the path. Without the third header it refuses a
-        // cross-origin request outright.
+        // Without the third header Anthropic refuses a cross-origin request outright.
         headers: {
           "x-api-key": endpoint.apiKey,
           "anthropic-version": "2023-06-01",
@@ -95,7 +72,7 @@ const modelsRequest = (
         },
       };
     case "google-generative-ai":
-      // Google takes the key in the query string and returns `models/<id>`.
+      // Google takes the key in the query string.
       return { url: `${base}/models?key=${encodeURIComponent(endpoint.apiKey)}`, headers: {} };
     default:
       return { url: `${base}/models`, headers: { Authorization: `Bearer ${endpoint.apiKey}` } };
@@ -137,8 +114,7 @@ export async function fetchModelIds(
   const ids =
     payload.models === undefined
       ? (payload.data ?? []).map((entry) => entry.id)
-      : // Google qualifies every id as `models/gemini-…`; the bare id is what a
-        // request wants back.
+      : // Google qualifies ids as `models/…`; a request wants the bare id back.
         payload.models.map((entry) => entry.name?.replace(/^models\//, ""));
   return ids.filter((id): id is string => typeof id === "string");
 }

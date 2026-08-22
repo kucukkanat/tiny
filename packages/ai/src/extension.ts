@@ -6,24 +6,10 @@ import type {
   Model,
 } from "@earendil-works/pi-ai";
 
-/**
- * Extensions follow the shape of pi's extension SDK
- * (`@earendil-works/pi-coding-agent`): a default-exported factory that receives
- * an `ExtensionAPI` and subscribes to named lifecycle events, whose handlers
- * return a patch object or nothing.
- *
- * Only the events a browser chat facade can actually fire are implemented —
- * there is no agent loop, tool executor, session store or TUI here, so pi's
- * `registerTool`, `registerCommand`, `ctx.ui` and session events have nothing
- * to bind to. See the README for the full list of deviations.
- */
+/** A pi-shaped extension factory: receives an `ExtensionAPI` and subscribes to lifecycle events. */
 export type Extension = (tiny: ExtensionAPI) => void | Promise<void>;
 
-/**
- * Handlers may be sync or async and may return nothing, exactly as in pi — the
- * signature below is pi's `ExtensionHandler`, kept as-is so handlers port
- * between the two hosts unchanged.
- */
+/** pi's `ExtensionHandler` signature, kept verbatim so handlers port between hosts unchanged. */
 export type ExtensionHandler<E, R = undefined> = (
   event: E,
   ctx: ExtensionContext,
@@ -33,9 +19,8 @@ export type ExtensionHandler<E, R = undefined> = (
 /** Fired once before the request. Handlers can replace the system prompt. */
 export type BeforeAgentStartEvent = {
   readonly type: "before_agent_start";
-  /** The latest user turn, as sent. */
   readonly prompt: string;
-  /** The assembled system prompt; already chained through earlier extensions. */
+  /** Already chained through earlier extensions. */
   readonly systemPrompt: string;
 };
 export type BeforeAgentStartEventResult = { readonly systemPrompt?: string };
@@ -66,14 +51,7 @@ export type MessageEndEvent = {
   readonly message: AssistantMessage;
 };
 
-/**
- * Fired before a tool executes. **Can block.**
- *
- * `input` is deliberately mutable: pi's contract is that a handler patches the
- * model's arguments by mutating it in place, and that the return value does one
- * thing only — block the call. Later handlers see earlier mutations, and no
- * re-validation happens afterwards.
- */
+/** Fired before a tool executes; can block. No re-validation happens after handlers run. */
 export type ToolCallEvent = {
   readonly type: "tool_call";
   readonly toolCallId: string;
@@ -92,10 +70,7 @@ export type ToolCallEventResult = {
 /** pi's wording when a handler blocks without saying why. */
 export const BLOCKED_MESSAGE = "Tool execution was blocked";
 
-/**
- * The reduced context handlers receive. pi passes session, cwd, model registry
- * and UI here; a browser facade has only the model and the request's signal.
- */
+/** The reduced context handlers receive: only the model and the request's signal. */
 export type ExtensionContext = {
   readonly model: Model<Api>;
   readonly signal: AbortSignal | undefined;
@@ -131,26 +106,16 @@ const emptyHandlers = (): Handlers => ({
   tool_call: [],
 });
 
-/**
- * Whether this package fires `event` at all.
- *
- * Read off `Handlers` rather than listed again, so a host that drops
- * subscriptions to events nothing emits — as `@tiny/plugin` does for the pi
- * events with no analogue here — cannot fall out of step with what is emitted.
- */
+/** Whether this package fires `event`; read off `Handlers` so it cannot drift from what is emitted. */
 const FIRED = emptyHandlers();
 export const firesEvent = (event: string): boolean => Object.hasOwn(FIRED, event);
 
-/**
- * Run each factory to collect its subscriptions. Factories may be async — pi
- * awaits them before starting a session, so one-time setup finishes first.
- */
+/** Run each factory to collect its subscriptions; factories may be async, as in pi. */
 export const loadExtensions = async (extensions: readonly Extension[]): Promise<Handlers> => {
   const handlers = emptyHandlers();
   const tiny: ExtensionAPI = {
     on: (event, handler) => {
-      // The `on` overload above enforces that event and handler agree; widening
-      // to unknown[] here is what lets the generic key index the record.
+      // Widening to unknown[] lets the generic key index the record.
       const registered: unknown[] = handlers[event];
       registered.push(handler);
     },
@@ -168,10 +133,7 @@ export const notify = async <E extends { readonly type: string }>(
   for (const handler of registered) await handler(event, ctx);
 };
 
-/**
- * Chain the system prompt through every handler, so each one sees the previous
- * result rather than the original — pi chains this event the same way.
- */
+/** Chain the system prompt through every handler, each seeing the previous result, as pi does. */
 export const emitBeforeAgentStart = async (
   handlers: Handlers,
   prompt: string,
@@ -197,22 +159,14 @@ export const emitContext = async (
 ): Promise<Message[]> => {
   let current = messages;
   for (const handler of handlers.context) {
-    // pi hands each handler a copy it is free to modify in place.
     const result = await handler({ type: "context", messages: [...current] }, ctx);
     if (result?.messages !== undefined) current = result.messages;
   }
   return current;
 };
 
-/**
- * Run every `tool_call` handler until one blocks.
- *
- * pi's semantics exactly (`ExtensionRunner.emitToolCall`): handlers run in
- * registration order, each seeing `event.input` as the ones before it left it,
- * and the first `block: true` short-circuits the rest. A handler that throws is
- * left to propagate — pi treats a gate that crashes as a gate that blocked,
- * which is what the caller's error path already does here.
- */
+/** Run `tool_call` handlers in registration order until one blocks; each sees `event.input`
+ * as earlier handlers left it. A throwing handler propagates, as in pi. */
 export const emitToolCall = async (
   handlers: Handlers,
   event: ToolCallEvent,

@@ -4,10 +4,8 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { visit } from "unist-util-visit";
 
-/* Answers arrive as markdown, so they render as markdown — GFM tables, lists,
- * links and fenced code included. Raw HTML in a reply is left as text:
- * react-markdown drops it unless `rehype-raw` is added, and a model's output is
- * untrusted input. */
+/* Raw HTML in a reply stays text: react-markdown drops it without `rehype-raw`,
+ * and a model's output is untrusted input. */
 
 type Node = RootContent | ElementContent;
 
@@ -22,8 +20,7 @@ const span = (className: string, children: ElementContent[]): Element => ({
 const isCode = (parent: Root | Element): boolean =>
   parent.type === "element" && (parent.tagName === "code" || parent.tagName === "pre");
 
-/* Markdown leaves whitespace text nodes between block elements. They carry no
- * words, and wrapping them would put a span where only `<tr>`/`<td>` may go. */
+/* Wrapping blank text nodes would put a span where only `<tr>`/`<td>` may go. */
 const isBlank = (node: Node): boolean => node.type === "text" && node.value.trim() === "";
 
 const lastMeaningful = (node: Root | Element): Node | undefined => {
@@ -31,10 +28,8 @@ const lastMeaningful = (node: Root | Element): Node | undefined => {
   return kids.filter((child) => !isBlank(child)).at(-1);
 };
 
-/* Each word becomes its own span so it can resolve out of blur as it arrives.
- * The spans are position-free, so react-markdown keys them by index within the
- * parent: appending a word leaves earlier keys untouched and only the new word
- * animates. */
+/* One span per word; position-free spans keep earlier index keys stable, so only
+ * the newly appended word animates. */
 const splitWords = (tree: Root): void => {
   visit(tree, "text", (node, index, parent) => {
     if (parent === undefined || index === undefined || isCode(parent) || isBlank(node)) return;
@@ -60,8 +55,6 @@ const appendCaret = (tree: Root): void => {
   node.children.push(span("stream-caret", []));
 };
 
-/* Block spacing lives on the wrapper; every element below carries only what
- * makes it read as that element, in design tokens. */
 const components: Components = {
   h1: ({ children }) => <h1 className="text-2xl font-semibold text-ink">{children}</h1>,
   h2: ({ children }) => <h2 className="text-xl font-semibold text-ink">{children}</h2>,
@@ -101,14 +94,8 @@ const components: Components = {
   td: ({ children }) => <td className="border border-line px-2 py-1 text-left">{children}</td>,
 };
 
-/**
- * A streamed answer, rendered as markdown, word by word.
- *
- * Memoised because the host owns the composer's draft, so every keystroke
- * re-renders the app — and re-parsing every message's markdown on each one is
- * work nobody asked for. Its props are a string and a boolean, so the default
- * comparison is exactly right.
- */
+/** A streamed answer rendered as markdown, word by word. Memoised: every keystroke
+ * re-renders the app, and the default prop comparison is exactly right. */
 export const StreamText = memo(function StreamText({
   text,
   done,

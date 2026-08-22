@@ -1,14 +1,7 @@
 import { type ReactNode, useState } from "react";
 
-/* Approval card: the question an agent asks before it acts, rendered inline in
- * the reply rather than over it. Adapted from Beautiful UI's Approval Card —
- * radio rows, the free-text row that sits among them, and the arrow that lights
- * up once there is something to send.
- *
- * Two deliberate departures from the original. It asks one question rather than
- * paging through several, because a tool call is one decision. And choosing an
- * option arms the arrow instead of sending on a timer: the original is a survey,
- * this is a permission gate, and a mis-click should not be able to spend money. */
+/* Approval card: the question an agent asks before it acts, inline in the reply.
+ * Choosing an option arms the arrow rather than sending — a mis-click must not spend money. */
 
 export type ApprovalOption = {
   readonly id: string;
@@ -126,8 +119,7 @@ export function ApprovalCard({
             );
           })}
 
-          {/* The free-text row sits among the options, as in the original: it is
-              another way to answer, not a separate field. */}
+          {/* The free-text row sits among the options: another way to answer. */}
           <label className="-mx-1.5 flex items-center gap-2 rounded-control px-1.5 py-1 transition-colors duration-100 focus-within:bg-hover hover:bg-hover">
             <span aria-hidden className="size-4 shrink-0" />
             <input

@@ -1,5 +1,4 @@
-// Re-exported so consumers can drop to pi-ai's full event stream (tool calls,
-// usage, cost) alongside `endpointModel()` without adding a direct dependency.
+// Re-exported so consumers can use pi-ai's types without a direct dependency.
 export type {
   AssistantMessage,
   AssistantMessageEvent,

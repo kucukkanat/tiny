@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-/* Pixel-grid loader ("Drive" variant): a chevron wavefront sweeps a 3×3 grid,
- * paired with a shimmering label and a live elapsed timer. */
+/* Pixel-grid loader: a wavefront sweeps a 3×3 grid beside a shimmer label and timer. */
 
 const DELAYS = Array.from({ length: 9 }, (_, i) => {
   const row = Math.floor(i / 3);

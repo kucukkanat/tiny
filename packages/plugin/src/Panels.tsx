@@ -3,15 +3,8 @@ import { PluginBoundary } from "./Boundary.tsx";
 import { usePluginHost } from "./hooks.ts";
 import type { PanelEntry } from "./registry.ts";
 
-/**
- * The app's right-hand rail, and the one surface that does not exist until a
- * plugin asks for it.
- *
- * With no panels registered this renders nothing at all — not an empty rail, not
- * a toggle for something that is not there — so an app that ships no panelled
- * plugin looks exactly as it did. One panel gives the rail a heading; several
- * give it a tab strip, in registration order.
- */
+/** The app's right-hand rail; renders nothing until a plugin registers a panel.
+ * One panel gives it a heading, several a tab strip in registration order. */
 export function Panels() {
   const { registry } = usePluginHost();
   const { panels } = registry;
@@ -22,8 +15,7 @@ export function Panels() {
 
   if (panels.length === 0) return null;
 
-  // The remembered panel can be gone — its plugin disabled, or removed by a
-  // reload — in which case the rail falls back to the first rather than blanking.
+  // The remembered panel can be gone; fall back to the first rather than blanking.
   const active = panels.find((panel) => panel.id === state.activeId) ?? panels[0];
   if (active === undefined) return null;
 
@@ -132,13 +124,7 @@ const iconOf = (panel: PanelEntry): ReactNode =>
     <span className="flex size-4 items-center justify-center">{panel.options.icon}</span>
   );
 
-/**
- * The title's initial, standing in for an icon a panel never declared.
- *
- * Only used in the collapsed rail, where there is no room for the title. Beside
- * a visible title it would render as "O Outline" — repeating the word rather
- * than identifying it.
- */
+// The title's initial, standing in for an undeclared icon; collapsed rail only.
 const initialOf = (panel: PanelEntry): ReactNode => (
   <span className="flex size-4 items-center justify-center text-sm font-semibold text-ink-2">
     {panel.options.title.slice(0, 1).toUpperCase()}
@@ -164,8 +150,7 @@ const readState = (): RailState => {
       activeId: typeof parsed.activeId === "string" ? parsed.activeId : undefined,
     };
   } catch {
-    // A preference, not data: an unreadable one is replaced rather than
-    // reported, exactly as the host's own `storage.get` does.
+    // A preference, not data: an unreadable one is replaced rather than reported.
     return closed;
   }
 };

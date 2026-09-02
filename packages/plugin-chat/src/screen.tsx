@@ -17,8 +17,9 @@ import {
   saveConversation,
   useConversations,
 } from './conversations'
-import { agentFor, type ChatMessage } from './model'
-import { MessageParts, Thinking } from './parts'
+import { agentFor, textOf, type ChatMessage } from './model'
+import { MessageParts, ReplyActions, Thinking } from './parts'
+import { SelectionActions } from './selection'
 
 /** `/#/chat/:id`. Anything else is a conversation that hasn't started yet. */
 export function ChatScreen() {
@@ -113,20 +114,23 @@ function Chat({
               description="Ask it something."
             />
           ) : (
-            messages.map((message) => (
-              <Message
-                key={message.id}
-                from={message.role}
-                data-testid={`message-${message.role}`}
-              >
-                <MessageContent>
-                  <MessageParts
-                    parts={message.parts}
-                    streaming={status === 'streaming' && message === messages.at(-1)}
-                  />
-                </MessageContent>
-              </Message>
-            ))
+            messages.map((message) => {
+              const live = status === 'streaming' && message === messages.at(-1)
+              return (
+                <Message
+                  key={message.id}
+                  from={message.role}
+                  data-testid={`message-${message.role}`}
+                >
+                  <MessageContent>
+                    <MessageParts parts={message.parts} streaming={live} />
+                  </MessageContent>
+                  {message.role === 'assistant' && !live && (
+                    <ReplyActions text={textOf(message.parts)} />
+                  )}
+                </Message>
+              )
+            })
           )}
           {status === 'submitted' && <Thinking />}
         </ConversationContent>
@@ -138,6 +142,10 @@ function Chat({
           {error.message}
         </p>
       )}
+
+      <SelectionActions
+        onPick={(passage) => void sendMessage({ text: `Rewrite this:\n\n> ${passage}` })}
+      />
 
       <Composer
         draftKey={draftKey(id)}

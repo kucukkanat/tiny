@@ -22,3 +22,7 @@ export const agentFor = (provider: Provider) =>
   new ToolLoopAgent({ model: languageModel(provider) })
 
 export type ChatMessage = InferAgentUIMessage<ReturnType<typeof agentFor>>
+
+/** Everything a message said out loud, with the non-text parts left out. */
+export const textOf = (parts: ChatMessage['parts']): string =>
+  parts.map((part) => (part.type === 'text' ? part.text : '')).join('')

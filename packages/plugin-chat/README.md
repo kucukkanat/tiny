@@ -36,9 +36,19 @@ labelled "Thinking" while it arrives and "Thought it through" once it's done.
 <MessageParts parts={message.parts} streaming={message === messages.at(-1)} />
 ```
 
+A finished reply carries `ReplyActions` — copy, for now. `SelectionActions`
+watches for a highlight inside a reply and offers to hand that passage back to
+the model; selecting your own words does nothing, because that's just copying.
+
 Parts with no feature behind them — tool calls, files, sources — render nothing
 on purpose. A chip for a tool the agent can't call is a promise the app doesn't
 keep. `ToolLoopAgent` is built without tools; give it some and they belong here.
+
+## Finding an old chat
+
+The sidebar filters on what you type, and only shows the box once there's more
+than one chat to filter. No match says which search found nothing, so you can
+see the typo.
 
 The transport is the whole trick:
 

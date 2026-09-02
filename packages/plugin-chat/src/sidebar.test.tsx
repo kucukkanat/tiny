@@ -81,3 +81,39 @@ test('new chat takes you somewhere you have not been', async () => {
   expect(path()).toStartWith('/chat/')
   expect(path()).not.toBe('/chat/a')
 })
+
+test('search cuts the list down to what matches', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('what is a monad')))
+  act(() => saveConversation('b', said('best pasta shape')))
+
+  fireEvent.change(await screen.findByTestId('chat-search'), {
+    target: { value: 'monad' },
+  })
+
+  const rows = await screen.findAllByTestId(/^chat-open-/)
+  expect(rows.map((row) => row.textContent)).toEqual(['what is a monad'])
+})
+
+test('a search that matches nothing says so, and says what', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('one')))
+  act(() => saveConversation('b', said('two')))
+
+  fireEvent.change(await screen.findByTestId('chat-search'), {
+    target: { value: 'three' },
+  })
+
+  expect((await screen.findByTestId('chat-list-no-match')).textContent).toBe(
+    'Nothing matches "three".',
+  )
+  expect(screen.queryByTestId('chat-list-empty')).toBeNull()
+})
+
+test('one chat is not a list worth searching', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('alone')))
+
+  await screen.findByTestId('chat-open-a')
+  expect(screen.queryByTestId('chat-search')).toBeNull()
+})

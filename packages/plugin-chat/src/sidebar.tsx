@@ -2,6 +2,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -9,6 +10,7 @@ import {
   useSidebar,
 } from '@tiny/ui/components/sidebar'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import {
   chatPath,
@@ -23,6 +25,10 @@ export function ChatSidebar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { setOpenMobile } = useSidebar()
+  const [query, setQuery] = useState('')
+
+  const needle = query.trim().toLowerCase()
+  const shown = conversations?.filter(({ title }) => title.toLowerCase().includes(needle))
 
   // On a phone the sidebar is covering the thing you just chose.
   const go = (path: string) => {
@@ -56,9 +62,20 @@ export function ChatSidebar() {
 
       <SidebarGroup>
         <SidebarGroupLabel>Chats</SidebarGroupLabel>
-        <SidebarGroupContent>
+        <SidebarGroupContent className="flex flex-col gap-2">
+          {/* Worth the room only once there's a list to cut down. */}
+          {(conversations?.length ?? 0) > 1 && (
+            <SidebarInput
+              data-testid="chat-search"
+              type="search"
+              placeholder="Search chats"
+              aria-label="Search chats"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          )}
           <SidebarMenu data-testid="chat-list">
-            {conversations?.map(({ id, title }) => (
+            {shown?.map(({ id, title }) => (
               <SidebarMenuItem key={id}>
                 <SidebarMenuButton size="lg" asChild isActive={pathname === chatPath(id)}>
                   <Link
@@ -80,12 +97,12 @@ export function ChatSidebar() {
                 </SidebarMenuAction>
               </SidebarMenuItem>
             ))}
-            {conversations?.length === 0 && (
+            {shown?.length === 0 && (
               <p
                 className="text-sidebar-foreground/60 px-2 py-1 text-sm"
-                data-testid="chat-list-empty"
+                data-testid={needle ? 'chat-list-no-match' : 'chat-list-empty'}
               >
-                Nothing yet.
+                {needle ? `Nothing matches "${query.trim()}".` : 'Nothing yet.'}
               </p>
             )}
           </SidebarMenu>

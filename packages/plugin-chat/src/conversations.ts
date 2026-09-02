@@ -1,7 +1,7 @@
 import { safeValidateUIMessages } from 'ai'
 import { useSyncExternalStore } from 'react'
 import * as z from 'zod'
-import type { ChatMessage } from './model'
+import { textOf, type ChatMessage } from './model'
 
 // One key per conversation. Saving one doesn't re-serialise the whole history,
 // and two tabs writing different conversations don't overwrite each other.
@@ -90,11 +90,8 @@ const subscribe = (listener: () => void) => {
 
 /** The first thing you said, which is what you'll recognise it by. */
 const titleOf = (messages: readonly ChatMessage[]): string => {
-  const said = messages
-    .find((message) => message.role === 'user')
-    ?.parts.map((part) => (part.type === 'text' ? part.text : ''))
-    .join('')
-    .trim()
+  const first = messages.find((message) => message.role === 'user')
+  const said = first ? textOf(first.parts).trim() : ''
   return said ? said.slice(0, 60) : 'New chat'
 }
 

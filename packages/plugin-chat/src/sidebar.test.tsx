@@ -117,3 +117,81 @@ test('one chat is not a list worth searching', async () => {
   await screen.findByTestId('chat-open-a')
   expect(screen.queryByTestId('chat-search')).toBeNull()
 })
+
+const swipe = (
+  id: string,
+  {
+    dx,
+    dy = 0,
+    pointerType = 'touch',
+  }: { dx: number; dy?: number; pointerType?: string },
+) => {
+  const row = screen.getByTestId(`chat-open-${id}`)
+  fireEvent.pointerDown(row, { pointerType, clientX: 200, clientY: 100 })
+  fireEvent.pointerMove(row, { pointerType, clientX: 200 - dx, clientY: 100 + dy })
+  fireEvent.pointerUp(row, { pointerType })
+}
+
+const uncovered = (id: string) =>
+  screen.getByTestId(`chat-row-${id}`).getAttribute('data-swiped') === 'true'
+
+test('swiping a row aside uncovers its delete', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('swipe me')))
+  await screen.findByTestId('chat-open-a')
+
+  swipe('a', { dx: 60 })
+  expect(uncovered('a')).toBe(true)
+})
+
+test('a swipe that changes its mind puts the row back', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('nearly')))
+  await screen.findByTestId('chat-open-a')
+
+  swipe('a', { dx: 20 })
+  expect(uncovered('a')).toBe(false)
+})
+
+test('scrolling the list past a row does not open it', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('scrolling by')))
+  await screen.findByTestId('chat-open-a')
+
+  swipe('a', { dx: 12, dy: 40 })
+  expect(uncovered('a')).toBe(false)
+})
+
+test('a mouse drag is not a swipe — a pointer gets hover instead', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('with a mouse')))
+  await screen.findByTestId('chat-open-a')
+
+  swipe('a', { dx: 60, pointerType: 'mouse' })
+  expect(uncovered('a')).toBe(false)
+})
+
+test('only one row sits open at a time', async () => {
+  renderSidebar()
+  act(() => saveConversation('a', said('first')))
+  act(() => saveConversation('b', said('second')))
+  await screen.findByTestId('chat-open-a')
+
+  swipe('a', { dx: 60 })
+  swipe('b', { dx: 60 })
+
+  expect(uncovered('a')).toBe(false)
+  expect(uncovered('b')).toBe(true)
+})
+
+test('tapping an open row puts it back rather than opening the chat', async () => {
+  renderSidebar('/chat/x')
+  act(() => saveConversation('a', said('careful')))
+  await screen.findByTestId('chat-open-a')
+  swipe('a', { dx: 60 })
+
+  fireEvent.click(screen.getByTestId('chat-open-a'))
+
+  expect(uncovered('a')).toBe(false)
+  expect(path()).toBe('/chat/x')
+})

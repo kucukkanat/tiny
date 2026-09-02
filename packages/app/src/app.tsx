@@ -54,7 +54,12 @@ function Shell() {
               .filter(({ Sidebar: Section }) => !Section)
               .map(({ id, title }) => (
                 <SidebarMenuItem key={id}>
-                  <SidebarMenuButton size="lg" asChild isActive={active?.id === id}>
+                  {/* Matches the plugin rows: thumb-sized on touch, tight on a pointer. */}
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active?.id === id}
+                    className="h-11 md:h-8"
+                  >
                     <NavLink
                       to={`/${id}`}
                       data-testid={`nav-${id}`}

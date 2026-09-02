@@ -50,6 +50,18 @@ The sidebar filters on what you type, and only shows the box once there's more
 than one chat to filter. No match says which search found nothing, so you can
 see the typo.
 
+## Deleting one
+
+Two ways in, because the two devices don't have the same vocabulary. With a
+pointer, the delete fades in on row hover or keyboard focus and stays out of the
+way otherwise. With a thumb, there is no hover to wait for, so the row slides
+aside to uncover it — a permanent trash icon sitting a thumb's width from the
+row you meant to open is a mis-tap waiting to happen.
+
+The gesture only claims a drag once it is clearly sideways, so the list still
+scrolls under it, and `touch-pan-y` leaves the vertical axis to the browser.
+Tapping a row that's already open puts it back rather than opening the chat.
+
 The transport is the whole trick:
 
 ```ts

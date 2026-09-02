@@ -98,12 +98,16 @@ When a registry component is mostly features we don't want, write the small one
 and say so here. Measure the build before and after: `bun run build` prints the
 precache size, and what `index.html` preloads is what every visit pays for.
 
-Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`. Colour,
-type, spacing and radius are overridden there; elevation and motion ride on
-Tailwind's own scales until something needs otherwise. Restyling is one file.
+Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`:
+colour, type, spacing, radius, elevation and motion, all of it, so restyling is
+one file. The values are beautifului.dev's own, read off its stylesheet. shadcn's
+names (`--background`, `--muted`, `--primary`…) are aliases onto that palette
+rather than a second set, so a registry component inherits the look untouched —
+which is why `--accent` there means "hover surface" and the blue is `--brand`.
 
 [beautifului.dev](https://beautifului.dev/) is the visual target: how it should
-look and feel, not where code comes from. It ships no package.
+look and feel, not where code comes from. It ships no package — no registry, no
+npm, no copy-paste source, checked. What it showcases we build, on its tokens.
 
 ### Routing
 

@@ -6,11 +6,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@tiny/ui/components/ai-elements/conversation'
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from '@tiny/ui/components/ai-elements/message'
+import { Message, MessageContent } from '@tiny/ui/components/ai-elements/message'
 import { DirectChatTransport } from 'ai'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
@@ -22,6 +18,7 @@ import {
   useConversations,
 } from './conversations'
 import { agentFor, type ChatMessage } from './model'
+import { MessageParts, Thinking } from './parts'
 
 /** `/#/chat/:id`. Anything else is a conversation that hasn't started yet. */
 export function ChatScreen() {
@@ -123,15 +120,15 @@ function Chat({
                 data-testid={`message-${message.role}`}
               >
                 <MessageContent>
-                  {message.parts.map((part, index) =>
-                    part.type === 'text' ? (
-                      <MessageResponse key={index}>{part.text}</MessageResponse>
-                    ) : null,
-                  )}
+                  <MessageParts
+                    parts={message.parts}
+                    streaming={status === 'streaming' && message === messages.at(-1)}
+                  />
                 </MessageContent>
               </Message>
             ))
           )}
+          {status === 'submitted' && <Thinking />}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -144,7 +141,7 @@ function Chat({
 
       <Composer
         draftKey={draftKey(id)}
-        placeholder={`Message ${provider.model}`}
+        model={provider.model}
         status={status}
         onSend={(text) => void sendMessage({ text })}
         onStop={() => void stop()}

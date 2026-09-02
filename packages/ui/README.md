@@ -44,7 +44,25 @@ scrollbars and mobile browser chrome match.
 ## Tokens
 
 All of them live in `src/styles/globals.css` as Tailwind v4 `@theme` custom
-properties — colour, type, spacing and radius. Restyling the app is editing that
-one file. `--spacing-control` is the height every form control
-shares, so a select and the button beside it line up without anyone guessing.
-[beautifului.dev](https://beautifului.dev/) is the target.
+properties — colour, type, spacing, radius, elevation and motion. Restyling the
+app is editing that one file.
+
+The palette is [beautifului.dev](https://beautifului.dev/)'s, which is the visual
+target. Surfaces run back to front — `page`, `canvas`, `surface`, `inset` — text
+runs loud to quiet as `ink`, `ink-2`, `ink-3`, and there is one blue, `brand`.
+
+```tsx
+<div className="bg-surface text-ink shadow-card rounded-window p-4">
+  <p className="text-ink-2 text-sm">Quieter than the line above it.</p>
+</div>
+```
+
+shadcn's names are aliases onto those, so `bg-background` and `bg-page` are the
+same colour and a registry component picks up the look without being edited.
+Note `--accent` is shadcn's meaning — a hover surface — and the blue is `--brand`.
+
+Radii are named for what they wrap: `chip` 6px, `control` 8px, `card` 10px,
+`window` 14px. Elevation is always a hairline plus a shadow (`shadow-card`,
+`shadow-raised`, `shadow-overlay`), never a bare shadow. `--spacing-control` is
+the height every form control shares, so a select and the button beside it line
+up without anyone guessing.

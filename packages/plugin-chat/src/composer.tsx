@@ -1,26 +1,26 @@
 import { Button } from '@tiny/ui/components/button'
 import { Textarea } from '@tiny/ui/components/textarea'
 import type { ChatStatus } from 'ai'
-import { CornerDownLeftIcon, Loader2Icon, SquareIcon } from 'lucide-react'
+import { ArrowUpIcon, Loader2Icon, SquareIcon } from 'lucide-react'
 import { useState, type KeyboardEvent, type ReactElement } from 'react'
 
 const ICON: Readonly<Record<ChatStatus, ReactElement>> = {
   submitted: <Loader2Icon className="animate-spin" />,
   streaming: <SquareIcon />,
-  ready: <CornerDownLeftIcon />,
-  error: <CornerDownLeftIcon />,
+  ready: <ArrowUpIcon />,
+  error: <ArrowUpIcon />,
 }
 
-/** The message box: a textarea, and one button that sends or stops. */
+/** The prompt bar: what you're typing, what will answer, and one button. */
 export function Composer({
   draftKey,
-  placeholder,
+  model,
   status,
   onSend,
   onStop,
 }: {
   draftKey: string
-  placeholder: string
+  model: string
   status: ChatStatus
   onSend: (text: string) => void
   onStop: () => void
@@ -53,9 +53,9 @@ export function Composer({
 
   return (
     <form
-      // The border lives on the wrapper so the textarea and the button read as
-      // one control, which is why the textarea gives its own up.
-      className="border-input focus-within:border-ring focus-within:ring-ring/50 dark:bg-input/30 flex flex-col rounded-lg border transition-colors focus-within:ring-3"
+      // A raised window, not a bordered box: the hairline comes with the
+      // elevation, and the field inside gives up its own chrome to sit in it.
+      className="bg-surface shadow-card rounded-window focus-within:ring-brand/40 flex flex-col transition-shadow focus-within:ring-2"
       onSubmit={(event) => {
         event.preventDefault()
         send()
@@ -63,18 +63,24 @@ export function Composer({
     >
       <Textarea
         data-testid="chat-input"
-        className="max-h-48 resize-none rounded-none border-0 bg-transparent focus-visible:ring-0 dark:bg-transparent"
-        placeholder={placeholder}
+        className="max-h-48 resize-none rounded-none border-0 bg-transparent px-3.5 pt-3 pb-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
+        placeholder="Ask anything"
         value={text}
         onChange={(event) => write(event.target.value)}
         onKeyDown={onKeyDown}
       />
-      <div className="flex justify-end p-2">
+      <div className="flex items-center justify-between gap-2 px-2 pb-2">
+        <span
+          data-testid="chat-model"
+          className="text-ink-2 bg-inset rounded-chip min-w-0 truncate px-2 py-1 text-xs"
+        >
+          {model}
+        </span>
         <Button
           data-testid="chat-send"
           type={busy ? 'button' : 'submit'}
           size="icon"
-          className="size-10"
+          className="rounded-control size-10 shrink-0"
           aria-label={busy ? 'Stop' : 'Send'}
           disabled={!busy && text.trim().length === 0}
           onClick={busy ? onStop : undefined}

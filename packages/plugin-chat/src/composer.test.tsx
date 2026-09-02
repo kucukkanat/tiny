@@ -12,7 +12,7 @@ const renderComposer = (status: ChatStatus = 'ready') => {
   const view = render(
     <Composer
       draftKey="tiny.draft.a"
-      placeholder="Message it"
+      model="a-model"
       status={status}
       onSend={(text) => sent.push(text)}
       onStop={() => stopped.push('stop')}
@@ -77,4 +77,9 @@ test('sending clears the draft rather than leaving it behind', () => {
 
   expect(renderComposer().input.value).toBe('')
   expect(localStorage.getItem('tiny.draft.a')).toBeNull()
+})
+
+test('the model answering is named on the bar', () => {
+  renderComposer()
+  expect(screen.getByTestId('chat-model').textContent).toBe('a-model')
 })

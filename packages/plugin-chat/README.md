@@ -6,14 +6,16 @@ before. Calls the provider straight from the tab — no server in between.
 Two pieces: `ChatScreen` at `/#/chat/:id`, and `ChatSidebar` in the shell's
 sidebar listing the conversations.
 
-`Composer` is the message box. It's local rather than AI Elements' `PromptInput`
+`Composer` is the prompt bar — a raised window holding the field, the model
+answering, and one button. It's local rather than AI Elements' `PromptInput`
 because that one is 1,363 lines of attachments, screenshot paste and model
-pickers this app doesn't have; what's left is a textarea and a button:
+pickers this app doesn't have.
 
 ```tsx
 <Composer
-  placeholder={`Message ${provider.model}`}
-  status={status} // from useChat: send icon, spinner, or stop square
+  draftKey={draftKey(id)}
+  model={provider.model} // named on a chip beside the button
+  status={status} // send arrow, spinner, or stop square
   onSend={(text) => void sendMessage({ text })}
   onStop={() => void stop()}
 />
@@ -21,6 +23,22 @@ pickers this app doesn't have; what's left is a textarea and a button:
 
 Enter sends, shift-Enter breaks the line, and neither fires while an IME
 candidate is open.
+
+## What a message is made of
+
+`parts.tsx` renders a message part by part. Text fades in a word at a time with
+a caret at the end while it streams — Streamdown's own animation, not a
+hand-rolled one. Reasoning gets a `<details>` block, shut until you open it,
+labelled "Thinking" while it arrives and "Thought it through" once it's done.
+`Thinking` covers the gap between sending and the first token.
+
+```tsx
+<MessageParts parts={message.parts} streaming={message === messages.at(-1)} />
+```
+
+Parts with no feature behind them — tool calls, files, sources — render nothing
+on purpose. A chip for a tool the agent can't call is a promise the app doesn't
+keep. `ToolLoopAgent` is built without tools; give it some and they belong here.
 
 The transport is the whole trick:
 

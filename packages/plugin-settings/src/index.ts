@@ -7,15 +7,5 @@ export const settings: Plugin = {
   Screen: SettingsScreen,
 }
 
-export { fetchModels, type ModelsResult } from './models'
-export {
-  DEFAULT_BASE_URL,
-  PROVIDER_KINDS,
-  hasCredentials,
-  isProviderKind,
-  isUsable,
-  readProvider,
-  useProvider,
-  type Provider,
-  type ProviderKind,
-} from './provider'
+// What another plugin needs to make a model call. The rest stays internal.
+export { isUsable, useProvider, type Provider } from './provider'

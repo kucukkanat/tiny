@@ -44,7 +44,7 @@ scrollbars and mobile browser chrome match.
 ## Tokens
 
 All of them live in `src/styles/globals.css` as Tailwind v4 `@theme` custom
-properties — colour, type, spacing, radius, shadow, motion. Restyling the app is
-editing that one file. `--spacing-control` is the height every form control
+properties — colour, type, spacing and radius. Restyling the app is editing that
+one file. `--spacing-control` is the height every form control
 shares, so a select and the button beside it line up without anyone guessing.
 [beautifului.dev](https://beautifului.dev/) is the target.

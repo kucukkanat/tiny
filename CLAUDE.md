@@ -82,13 +82,20 @@ Reach past the SDK only for what it genuinely doesn't cover, and keep that part 
 
 Vercel AI Elements (`bun x ai-elements@latest add <name>`) is where AI components
 come from — it's a shadcn registry built on the AI SDK, so its components already
-speak `useChat`'s message parts. No adapter layer, nothing hand-rolled.
+speak `useChat`'s message parts. Never write an adapter layer around them.
 
 Everything lands in `packages/ui`. Plugins import `@tiny/ui`; nothing else touches
 the registry. Add a component when a plugin needs it — not the whole catalogue.
 
+Weigh what a component costs before adding it. `prompt-input` was 1,363 lines and
+dragged in six more files for a command palette, a dropdown and an attachment
+picker this app has no use for; the composer that replaced it is 70 lines in
+`plugin-chat`. When a registry component is mostly features we don't want, write
+the small one and say so here.
+
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`. Colour,
-type, spacing, radius, elevation, motion — all of it, so restyling is one file.
+type, spacing and radius are overridden there; elevation and motion ride on
+Tailwind's own scales until something needs otherwise. Restyling is one file.
 
 [beautifului.dev](https://beautifului.dev/) is the visual target: how it should
 look and feel, not where code comes from. It ships no package.

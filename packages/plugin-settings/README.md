@@ -5,20 +5,20 @@ OpenAI-compatible endpoint — the hosted ones, a proxy, or a local server.
 
 Stored in `localStorage`. The key never goes anywhere but the endpoint you set.
 
-```ts
-import { isUsable, readProvider, useProvider } from '@tiny/plugin-settings'
-
-const provider = readProvider()
-// { kind: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', apiKey: '' }
-
-if (!isUsable(provider)) throw new Error('Set an endpoint and key in Settings')
-```
-
-In a component, `useProvider` gives you the same value plus a patch function:
+The package exports three things, which is everything another plugin needs:
 
 ```tsx
-const [provider, setProvider] = useProvider()
+import { isUsable, useProvider, type Provider } from '@tiny/plugin-settings'
 
+const [provider, setProvider] = useProvider()
+// { kind: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', apiKey: '', model: '' }
+
+if (!isUsable(provider)) return <p>Set an endpoint, key and model in Settings.</p>
+```
+
+`setProvider` takes a patch:
+
+```tsx
 setProvider({ apiKey: 'sk-ant-...' })
 setProvider({ kind: 'openai' }) // endpoint follows, key stays
 setProvider({ kind: 'openai', baseUrl: 'http://localhost:1234/v1' }) // or set both

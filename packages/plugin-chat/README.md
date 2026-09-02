@@ -6,6 +6,22 @@ before. Calls the provider straight from the tab — no server in between.
 Two pieces: `ChatScreen` at `/#/chat/:id`, and `ChatSidebar` in the shell's
 sidebar listing the conversations.
 
+`Composer` is the message box. It's local rather than AI Elements' `PromptInput`
+because that one is 1,363 lines of attachments, screenshot paste and model
+pickers this app doesn't have; what's left is a textarea and a button:
+
+```tsx
+<Composer
+  placeholder={`Message ${provider.model}`}
+  status={status} // from useChat: send icon, spinner, or stop square
+  onSend={(text) => void sendMessage({ text })}
+  onStop={() => void stop()}
+/>
+```
+
+Enter sends, shift-Enter breaks the line, and neither fires while an IME
+candidate is open.
+
 The transport is the whole trick:
 
 ```ts

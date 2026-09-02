@@ -27,10 +27,8 @@ export const newChatPath = () =>
 let conversations: readonly Conversation[] | undefined
 const listeners = new Set<() => void>()
 
-const newestFirst = (a: Conversation, b: Conversation) => b.updatedAt - a.updatedAt
-
 const publish = (next: readonly Conversation[]) => {
-  conversations = [...next].sort(newestFirst)
+  conversations = [...next].sort((a, b) => b.updatedAt - a.updatedAt)
   for (const listener of listeners) listener()
 }
 
@@ -41,10 +39,10 @@ const Stored = z.object({
   messages: z.array(z.unknown()),
 })
 
+// A missing key and unparseable JSON are the same answer: nothing usable.
 const parse = (raw: string | null): unknown => {
-  if (raw === null) return null
   try {
-    return JSON.parse(raw)
+    return JSON.parse(raw ?? '')
   } catch {
     return null
   }

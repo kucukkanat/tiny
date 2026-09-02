@@ -12,13 +12,6 @@ export type Provider = {
   readonly model: string
 }
 
-const PROVIDER_FIELDS = [
-  'kind',
-  'baseUrl',
-  'apiKey',
-  'model',
-] as const satisfies readonly (keyof Provider)[]
-
 export const DEFAULT_BASE_URL: Readonly<Record<ProviderKind, string>> = {
   anthropic: 'https://api.anthropic.com/v1',
   openai: 'https://api.openai.com/v1',
@@ -33,7 +26,7 @@ export const isUsable = (provider: Provider): boolean =>
   hasCredentials(provider) && provider.model.length > 0
 
 // One string per field — nothing to parse, so nothing to fail on.
-const storageKey = (field: keyof Provider) => `tiny.provider.${field}`
+const storageKey = (field: string) => `tiny.provider.${field}`
 
 export const isProviderKind = (value: unknown): value is ProviderKind =>
   PROVIDER_KINDS.some((kind) => kind === value)
@@ -62,8 +55,9 @@ export function useProvider(): readonly [Provider, (patch: Partial<Provider>) =>
           : {}),
         ...patch,
       }
-      for (const field of PROVIDER_FIELDS)
-        localStorage.setItem(storageKey(field), next[field])
+      // Every field is a string, so the provider itself is the write list.
+      for (const [field, value] of Object.entries(next))
+        localStorage.setItem(storageKey(field), value)
       return next
     })
   }, [])

@@ -11,16 +11,10 @@ import {
   MessageContent,
   MessageResponse,
 } from '@tiny/ui/components/ai-elements/message'
-import {
-  PromptInput,
-  PromptInputBody,
-  PromptInputFooter,
-  PromptInputSubmit,
-  PromptInputTextarea,
-} from '@tiny/ui/components/ai-elements/prompt-input'
 import { DirectChatTransport } from 'ai'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
+import { Composer } from './composer'
 import { newChatPath, saveConversation, useConversations } from './conversations'
 import { agentFor, type ChatMessage } from './model'
 
@@ -143,21 +137,12 @@ function Chat({
         </p>
       )}
 
-      <PromptInput
-        onSubmit={({ text }) => {
-          if (text.trim().length > 0) void sendMessage({ text })
-        }}
-      >
-        <PromptInputBody>
-          <PromptInputTextarea
-            data-testid="chat-input"
-            placeholder={`Message ${provider.model}`}
-          />
-        </PromptInputBody>
-        <PromptInputFooter className="justify-end">
-          <PromptInputSubmit data-testid="chat-send" status={status} />
-        </PromptInputFooter>
-      </PromptInput>
+      <Composer
+        placeholder={`Message ${provider.model}`}
+        status={status}
+        onSend={(text) => void sendMessage({ text })}
+        onStop={() => void stop()}
+      />
     </div>
   )
 }

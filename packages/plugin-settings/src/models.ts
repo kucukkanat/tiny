@@ -4,7 +4,7 @@ import type { Provider } from './provider'
 // Both dialects answer GET /models with { data: [{ id }] }.
 const ModelList = z.object({ data: z.array(z.object({ id: z.string() })) })
 
-export type ModelsResult =
+type ModelsResult =
   | { readonly ok: true; readonly models: readonly string[] }
   | { readonly ok: false; readonly error: string }
 

@@ -22,6 +22,20 @@ export default defineConfig({
         theme_color: '#0a0a0a',
         icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
       },
+      workbox: {
+        // Shiki ships a grammar per language and Mermaid a renderer per diagram
+        // type — some 380 chunks the app fetches only when a message actually
+        // contains one. Precaching them charged every first visit 13 MB on a
+        // phone. Precache the shell; cache a chunk the first time it's wanted.
+        globPatterns: ['**/*.{html,css,svg,woff2,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'script',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'scripts' },
+          },
+        ],
+      },
     }),
   ],
 })

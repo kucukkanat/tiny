@@ -18,7 +18,7 @@ Run these from `packages/ui`. They land in `src/components/` and rewrite their
 own imports to `@tiny/ui/*`.
 
 ```sh
-bun x shadcn@latest add dialog          # general UI
+bun x shadcn@latest add popover         # general UI
 bun x ai-elements@latest add reasoning  # AI UI, from the Vercel AI SDK registry
 ```
 

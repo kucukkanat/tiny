@@ -60,6 +60,9 @@ land inside it — whatever was written while reading wins.
 A conversation is named after the first thing you said in it, and is stamped
 only when a message is added. Opening one to read it doesn't move it up the list.
 
+An unsent message is state too, so it's kept under `tiny.draft.<id>` and restored
+when you come back. Deleting a conversation takes its draft with it.
+
 ## Anthropic from a browser
 
 `api.anthropic.com` refuses browser requests unless you send

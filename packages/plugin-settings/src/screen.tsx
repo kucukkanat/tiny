@@ -41,6 +41,14 @@ export function SettingsScreen() {
   const [loading, setLoading] = useState(false)
   const endpointIsBad = provider.baseUrl.length > 0 && !URL.canParse(provider.baseUrl)
 
+  // A loaded list describes the endpoint it came from, so touching the endpoint,
+  // the key or the dialect throws it away. Picking a model doesn't.
+  const change = (patch: Partial<Provider>) => {
+    setProvider(patch)
+    setModels([])
+    setModelsError('')
+  }
+
   const loadModels = async (from: Provider) => {
     setLoading(true)
     const result = await fetchModels(from)
@@ -59,10 +67,7 @@ export function SettingsScreen() {
           aria-labelledby="api-label"
           value={provider.kind}
           onValueChange={(kind) => {
-            if (!isProviderKind(kind)) return
-            setProvider({ kind })
-            setModels([])
-            setModelsError('')
+            if (isProviderKind(kind)) change({ kind })
           }}
           className="w-full"
         >
@@ -92,7 +97,7 @@ export function SettingsScreen() {
           className="h-control"
           aria-invalid={endpointIsBad}
           value={provider.baseUrl}
-          onChange={(event) => setProvider({ baseUrl: event.target.value })}
+          onChange={(event) => change({ baseUrl: event.target.value })}
         />
         <p className="text-muted-foreground text-sm" data-testid="settings-base-url-hint">
           {endpointIsBad
@@ -111,7 +116,7 @@ export function SettingsScreen() {
           placeholder={provider.kind === 'anthropic' ? 'sk-ant-...' : 'sk-...'}
           className="h-control"
           value={provider.apiKey}
-          onChange={(event) => setProvider({ apiKey: event.target.value })}
+          onChange={(event) => change({ apiKey: event.target.value })}
         />
         <p className="text-muted-foreground text-sm">Stored on this device only.</p>
       </fieldset>

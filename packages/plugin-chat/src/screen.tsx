@@ -15,7 +15,12 @@ import { DirectChatTransport } from 'ai'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
 import { Composer } from './composer'
-import { newChatPath, saveConversation, useConversations } from './conversations'
+import {
+  draftKey,
+  newChatPath,
+  saveConversation,
+  useConversations,
+} from './conversations'
 import { agentFor, type ChatMessage } from './model'
 
 /** `/#/chat/:id`. Anything else is a conversation that hasn't started yet. */
@@ -53,11 +58,11 @@ function Thread() {
   // first message from racing the conversation it belongs to.
   if (conversations === undefined) return null
 
-  // Remounting rebuilds the transport and reseeds the messages, which is what
-  // both switching conversation and changing provider need.
+  // Remounting reseeds the messages and the draft. The provider can't change
+  // under us — this screen only ever reads it — so the id is the whole key.
   return (
     <Chat
-      key={`${id}:${JSON.stringify(provider)}`}
+      key={id}
       id={id}
       provider={provider}
       history={
@@ -138,6 +143,7 @@ function Chat({
       )}
 
       <Composer
+        draftKey={draftKey(id)}
         placeholder={`Message ${provider.model}`}
         status={status}
         onSend={(text) => void sendMessage({ text })}

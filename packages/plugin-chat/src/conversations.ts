@@ -16,6 +16,9 @@ export type Conversation = {
 
 export const chatPath = (id: string) => `/chat/${id}`
 
+/** Where a message you started but didn't send waits for you to come back. */
+export const draftKey = (id: string) => `tiny.draft.${id}`
+
 // Unique enough to name a conversation, and available outside a secure context —
 // `crypto.randomUUID` is not, which bites the moment you open the dev server on
 // a phone over plain http.
@@ -104,6 +107,7 @@ export const saveConversation = (id: string, messages: readonly ChatMessage[]) =
 export const removeConversation = (id: string) => {
   publish((conversations ?? []).filter((one) => one.id !== id))
   localStorage.removeItem(PREFIX + id)
+  localStorage.removeItem(draftKey(id))
 }
 
 /** Every conversation, newest first, or `undefined` while storage is being read. */

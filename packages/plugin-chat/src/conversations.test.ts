@@ -121,3 +121,33 @@ test('deleting drops that conversation and leaves the others in storage', async 
   expect(localStorage.getItem('tiny.chat.b')).toBeNull()
   expect(localStorage.getItem('tiny.chat.a')).not.toBeNull()
 })
+
+test('a reply that called a tool comes back whole', async () => {
+  const withToolCall: ChatMessage[] = [
+    { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'weather in Istanbul' }] },
+    {
+      id: 'm2',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'dynamic-tool',
+          toolName: 'weather',
+          toolCallId: 'call-1',
+          state: 'output-available',
+          input: { city: 'Istanbul' },
+          output: { celsius: '23' },
+        },
+        { type: 'text', text: 'Clear and 23.' },
+      ],
+    },
+  ]
+
+  const first = await watch()
+  act(() => saveConversation('a', withToolCall))
+  first.unmount()
+
+  // The SDK vouches for stored messages, and it has to keep vouching for these:
+  // a dropped transcript is silent, and the tool call is the part it would eat.
+  const { result } = await watch()
+  expect(result.current?.[0]?.messages).toEqual(withToolCall)
+})

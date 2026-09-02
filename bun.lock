@@ -22,6 +22,7 @@
         "@tiny/plugin-chat": "workspace:*",
         "@tiny/plugin-host": "workspace:*",
         "@tiny/plugin-settings": "workspace:*",
+        "@tiny/plugin-tools": "workspace:*",
         "@tiny/ui": "workspace:*",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
@@ -46,6 +47,7 @@
         "@ai-sdk/react": "^4.0.80",
         "@tiny/plugin-host": "workspace:*",
         "@tiny/plugin-settings": "workspace:*",
+        "@tiny/plugin-tools": "workspace:*",
         "@tiny/ui": "workspace:*",
         "ai": "^7.0.77",
         "lucide-react": "^1.33.0",
@@ -69,6 +71,21 @@
       "dependencies": {
         "@tiny/plugin-host": "workspace:*",
         "@tiny/ui": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "peerDependencies": {
+        "react": "^19",
+      },
+    },
+    "packages/plugin-tools": {
+      "name": "@tiny/plugin-tools",
+      "version": "0.0.0",
+      "dependencies": {
+        "@tiny/plugin-host": "workspace:*",
+        "@tiny/ui": "workspace:*",
+        "ai": "^7.0.77",
+        "lucide-react": "^1.33.0",
+        "react-router": "^7.13.0",
         "zod": "^4.4.3",
       },
       "peerDependencies": {
@@ -683,6 +700,8 @@
     "@tiny/plugin-host": ["@tiny/plugin-host@workspace:packages/plugin-host"],
 
     "@tiny/plugin-settings": ["@tiny/plugin-settings@workspace:packages/plugin-settings"],
+
+    "@tiny/plugin-tools": ["@tiny/plugin-tools@workspace:packages/plugin-tools"],
 
     "@tiny/ui": ["@tiny/ui@workspace:packages/ui"],
 

@@ -72,3 +72,51 @@ test('the thinking row counts the seconds it has been waiting', async () => {
 
   await waitFor(() => expect(row.textContent).toBe('Thinking1s'), { timeout: 2500 })
 })
+
+test('a tool still running is named, so you know what it is waiting on', () => {
+  show([
+    {
+      type: 'dynamic-tool',
+      toolName: 'weather',
+      toolCallId: 'call-1',
+      state: 'input-available',
+      input: { city: 'Istanbul' },
+    },
+  ])
+
+  expect(screen.getByTestId('message-tool').textContent).toContain('weather')
+})
+
+test('a finished tool shows what went in and what came back', () => {
+  show([
+    {
+      type: 'dynamic-tool',
+      toolName: 'weather',
+      toolCallId: 'call-1',
+      state: 'output-available',
+      input: { city: 'Istanbul' },
+      output: { celsius: '19' },
+    },
+  ])
+
+  const block = screen.getByTestId('message-tool')
+  expect(block.textContent).toContain('Istanbul')
+  expect(block.textContent).toContain('19')
+})
+
+test('a tool that failed says so instead of swallowing it', () => {
+  show([
+    {
+      type: 'dynamic-tool',
+      toolName: 'weather',
+      toolCallId: 'call-1',
+      state: 'output-error',
+      input: { city: 'Istanbul' },
+      errorText: 'wttr.in said 503',
+    },
+  ])
+
+  const block = screen.getByTestId('message-tool')
+  expect(block.textContent).toContain('weather failed')
+  expect(block.textContent).toContain('wttr.in said 503')
+})

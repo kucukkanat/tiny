@@ -96,7 +96,19 @@ whether or not a reply drew a diagram — a quarter of the payload. Both are gon
 
 When a registry component is mostly features we don't want, write the small one
 and say so here. Measure the build before and after: `bun run build` prints the
-precache size, and what `index.html` preloads is what every visit pays for.
+precache size, and what `index.html` preloads is what every visit pays for. Note
+that `globPatterns` keeps scripts out of the precache, so the number that moves
+for a JS change is the `index-*.js` line, not the precache total.
+
+`switch` is the only registry component added since; the tool list needs an
+on/off that reads as state rather than a button, and `radix-ui` was already a
+dependency, so it cost one file.
+
+`plugin-tools` costs 42 kB gzipped, and all of it is zod. Handing `z` to
+`new Function` makes it opaque, so the whole library is retained where the
+storage schemas alone shake it down to a handful of members. That is the feature
+— you can't write `z.enum` in a tool if `z.enum` was shaken out — but it is the
+first thing to look at if the payload ever needs to come back down.
 
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`:
 colour, type, spacing, radius, elevation and motion, all of it, so restyling is

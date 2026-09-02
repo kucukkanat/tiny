@@ -1,5 +1,6 @@
 import { useChat } from '@ai-sdk/react'
 import { isUsable, useProvider, type Provider } from '@tiny/plugin-settings'
+import { ToolQuestions, useToolSet } from '@tiny/plugin-tools'
 import {
   Conversation,
   ConversationContent,
@@ -79,9 +80,10 @@ function Chat({
   provider: Provider
   history: readonly ChatMessage[]
 }) {
+  const tools = useToolSet()
   const transport = useMemo(
-    () => new DirectChatTransport({ agent: agentFor(provider) }),
-    [provider],
+    () => new DirectChatTransport({ agent: agentFor(provider, tools) }),
+    [provider, tools],
   )
 
   const { messages, sendMessage, status, error, stop } = useChat<ChatMessage>({
@@ -142,6 +144,8 @@ function Chat({
           {error.message}
         </p>
       )}
+
+      <ToolQuestions />
 
       <SelectionActions
         onPick={(passage) => void sendMessage({ text: `Rewrite this:\n\n> ${passage}` })}

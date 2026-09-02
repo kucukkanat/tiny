@@ -22,6 +22,7 @@ bun run build  # static files in packages/app/dist
 | `@tiny/ui`              | Design tokens and components (shadcn + AI Elements) |
 | `@tiny/plugin-host`     | The `Plugin` contract, and nothing else             |
 | `@tiny/plugin-chat`     | Chat and its history, straight from the tab         |
+| `@tiny/plugin-tools`    | Tools you write in the app, for the model to call   |
 | `@tiny/plugin-settings` | Model endpoint, API key and theme, kept on device   |
 
 ## Look

@@ -12,6 +12,7 @@
     "@tiny/plugin-chat": "workspace:*",
     "@tiny/plugin-host": "workspace:*",
     "@tiny/plugin-settings": "workspace:*",
+    "@tiny/plugin-tools": "workspace:*",
     "@tiny/ui": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

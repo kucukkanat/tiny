@@ -36,23 +36,33 @@ test('survives a reload', () => {
   })
 })
 
-test('switching provider drops the endpoint and model, keeping the key', () => {
+test('switching dialect leaves the endpoint, key and model where they are', () => {
   const { result } = renderHook(useProvider)
-  act(() => result.current[1]({ apiKey: 'sk-test', model: 'claude-opus-5' }))
+  act(() =>
+    result.current[1]({
+      baseUrl: 'http://localhost:1234/v1',
+      apiKey: 'sk-test',
+      model: 'claude-opus-5',
+    }),
+  )
   act(() => result.current[1]({ kind: 'openai' }))
 
+  // A local server can speak both dialects; switching is not a reason to
+  // forget which one you pointed at.
   expect(result.current[0]).toEqual({
     kind: 'openai',
-    baseUrl: DEFAULT_BASE_URL.openai,
+    baseUrl: 'http://localhost:1234/v1',
     apiKey: 'sk-test',
-    model: '',
+    model: 'claude-opus-5',
   })
 })
 
-test('a custom endpoint given with the switch wins', () => {
-  const { result } = renderHook(useProvider)
-  act(() => result.current[1]({ kind: 'openai', baseUrl: 'http://localhost:1234/v1' }))
-  expect(result.current[0].baseUrl).toBe('http://localhost:1234/v1')
+test('an emptied endpoint falls back to the dialect default', () => {
+  const { result, unmount } = renderHook(useProvider)
+  act(() => result.current[1]({ kind: 'openai', baseUrl: '' }))
+  unmount()
+
+  expect(readProvider().baseUrl).toBe(DEFAULT_BASE_URL.openai)
 })
 
 test('credentials are enough to list models, but not to call one', () => {

@@ -16,15 +16,18 @@ const [provider, setProvider] = useProvider()
 if (!isUsable(provider)) return <p>Set an endpoint, key and model in Settings.</p>
 ```
 
-`setProvider` takes a patch:
+`setProvider` takes a patch, and a patch changes what it names and nothing else:
 
 ```tsx
 setProvider({ apiKey: 'sk-ant-...' })
-setProvider({ kind: 'openai' }) // endpoint follows, key stays
-setProvider({ kind: 'openai', baseUrl: 'http://localhost:1234/v1' }) // or set both
+setProvider({ kind: 'openai' }) // endpoint, key and model all stay put
+setProvider({ baseUrl: '' }) // empty falls back to this dialect's default
 ```
 
-Switching `kind` swaps in that dialect's default endpoint unless you pass one.
+Switching dialect leaves the endpoint alone — one local server or proxy often
+speaks both, and having the address wiped for changing how you talk to it is no
+help. To get a dialect's own default back, clear the endpoint field.
+
 `isUsable` is the check to run before a model call — it wants a key and a
 parseable URL, and it can't tell you the key is _right_.
 

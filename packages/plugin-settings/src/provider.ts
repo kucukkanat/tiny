@@ -47,14 +47,10 @@ export function useProvider(): readonly [Provider, (patch: Partial<Provider>) =>
 
   const update = useCallback((patch: Partial<Provider>) => {
     setState((current) => {
-      const next: Provider = {
-        ...current,
-        // switching dialect invalidates the endpoint and the model, unless given
-        ...(patch.kind !== undefined && patch.kind !== current.kind
-          ? { baseUrl: DEFAULT_BASE_URL[patch.kind], model: '' }
-          : {}),
-        ...patch,
-      }
+      // A patch changes what it names and nothing else. Switching dialect used
+      // to drag the endpoint with it, which threw away a proxy or a local
+      // server that speaks both. Clear the field to fall back to the default.
+      const next: Provider = { ...current, ...patch }
       // Every field is a string, so the provider itself is the write list.
       for (const [field, value] of Object.entries(next))
         localStorage.setItem(storageKey(field), value)

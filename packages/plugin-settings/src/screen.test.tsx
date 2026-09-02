@@ -6,12 +6,21 @@ import { SettingsScreen } from './screen'
 
 const endpoint = () => screen.getByTestId<HTMLInputElement>('settings-base-url')
 
-test('picking a provider fills in its endpoint', () => {
+test('picking a different API leaves the endpoint you set alone', () => {
   render(<SettingsScreen />)
+  fireEvent.change(endpoint(), { target: { value: 'http://localhost:1234/v1' } })
   fireEvent.click(screen.getByTestId('settings-kind-openai'))
 
-  expect(endpoint().value).toBe(DEFAULT_BASE_URL.openai)
+  expect(endpoint().value).toBe('http://localhost:1234/v1')
   expect(readProvider().kind).toBe('openai')
+})
+
+test('the endpoint placeholder still offers the dialect default', () => {
+  render(<SettingsScreen />)
+  fireEvent.change(endpoint(), { target: { value: '' } })
+  fireEvent.click(screen.getByTestId('settings-kind-openai'))
+
+  expect(endpoint().getAttribute('placeholder')).toBe(DEFAULT_BASE_URL.openai)
 })
 
 test('the model list cannot be loaded without credentials', () => {

@@ -87,11 +87,16 @@ speak `useChat`'s message parts. Never write an adapter layer around them.
 Everything lands in `packages/ui`. Plugins import `@tiny/ui`; nothing else touches
 the registry. Add a component when a plugin needs it — not the whole catalogue.
 
-Weigh what a component costs before adding it. `prompt-input` was 1,363 lines and
-dragged in six more files for a command palette, a dropdown and an attachment
-picker this app has no use for; the composer that replaced it is 70 lines in
-`plugin-chat`. When a registry component is mostly features we don't want, write
-the small one and say so here.
+Weigh what a component costs before adding it, in bundle as well as lines.
+`prompt-input` was 1,363 lines and dragged in six more files for a command
+palette, a dropdown and an attachment picker this app has no use for; the
+composer that replaced it is 84 lines in `plugin-chat`. `message`'s mermaid
+plugin was a static import, so mermaid, d3 and rough loaded on first paint
+whether or not a reply drew a diagram — a quarter of the payload. Both are gone.
+
+When a registry component is mostly features we don't want, write the small one
+and say so here. Measure the build before and after: `bun run build` prints the
+precache size, and what `index.html` preloads is what every visit pays for.
 
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`. Colour,
 type, spacing and radius are overridden there; elevation and motion ride on

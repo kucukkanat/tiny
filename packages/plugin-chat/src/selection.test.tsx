@@ -10,7 +10,7 @@ const selectInside = (testid: string, text: string) => {
   render(
     <>
       <div data-testid={testid}>{text}</div>
-      <SelectionActions onPick={(passage) => picked.push(passage)} />
+      <SelectionActions onPick={(prompt) => picked.push(prompt)} />
     </>,
   )
 
@@ -24,32 +24,40 @@ const selectInside = (testid: string, text: string) => {
   })
 }
 
-const take = () => act(() => void fireEvent.click(screen.getByTestId('selection-ask')))
+const take = (action: string) =>
+  act(() => void fireEvent.click(screen.getByTestId(`selection-${action}`)))
 
 test('selecting inside a reply offers to hand it back', () => {
   selectInside('message-assistant', 'pistachio holds the top slot')
-  take()
+  take('explain')
 
-  expect(picked).toEqual(['pistachio holds the top slot'])
+  expect(picked).toEqual(['Explain this:\n\n> pistachio holds the top slot'])
+})
+
+test('each action asks for something different', () => {
+  selectInside('message-assistant', 'some words')
+  take('shorten')
+
+  expect(picked).toEqual(['Shorten this:\n\n> some words'])
 })
 
 test('the offer goes away once it has been taken', () => {
   selectInside('message-assistant', 'some words')
-  take()
+  take('improve')
 
-  expect(screen.queryByTestId('selection-ask')).toBeNull()
+  expect(screen.queryByTestId('selection-improve')).toBeNull()
 })
 
 test('selecting your own message offers nothing', () => {
   selectInside('message-user', 'what i asked')
 
-  expect(screen.queryByTestId('selection-ask')).toBeNull()
+  expect(screen.queryByTestId('selection-explain')).toBeNull()
 })
 
 test('no selection, no offer', () => {
   picked.length = 0
-  render(<SelectionActions onPick={(passage) => picked.push(passage)} />)
+  render(<SelectionActions onPick={(prompt) => picked.push(prompt)} />)
   act(() => document.getSelection()?.removeAllRanges())
 
-  expect(screen.queryByTestId('selection-ask')).toBeNull()
+  expect(screen.queryByTestId('selection-explain')).toBeNull()
 })

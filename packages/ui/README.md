@@ -24,6 +24,44 @@ bun x ai-elements@latest add reasoning  # AI UI, from the Vercel AI SDK registry
 
 Add a component when a plugin needs it, not before.
 
+## Written here, not installed
+
+[beautifului.dev](https://beautifului.dev/) is the visual target and it ships no
+code — no registry, no package. What it showcases and the app has a use for is
+written here from its rendered markup, on our tokens.
+
+`Loading` is its pixel-grid loader: nine cells on one keyframe, offset by where
+the cell sits. The clock is the point — a shimmer alone can't tell you it's
+still going rather than stuck. `Shimmer` is the text half on its own.
+
+```tsx
+import { Loading, Shimmer } from '@tiny/ui/components/loading'
+
+<Loading label="Thinking" seconds={4.2} /> // pixels, shimmer, 4.2s
+<Loading label="Asking the endpoint" />    // no clock when nothing is timing it
+<summary>{busy ? <Shimmer>weather</Shimmer> : 'weather'}</summary>
+```
+
+`CodeBlock` is a listing with a name on it, numbers down the side and a copy
+button. It wraps rather than scrolls, so a long line stays readable on a phone.
+
+```tsx
+import { CodeBlock } from '@tiny/ui/components/code-block'
+
+;<CodeBlock label="Input" code={JSON.stringify({ city: 'Istanbul' }, null, 2)} />
+```
+
+`useCopy` is the copy-and-say-so behind both that button and the one under a
+reply. The confirmation is shown for a moment rather than hovered into view,
+because there is no hover on a phone.
+
+```tsx
+import { useCopy } from '@tiny/ui/hooks/use-copy'
+
+const [copied, copy] = useCopy()
+<button onClick={() => copy(text)}>{copied ? 'Copied' : 'Copy'}</button>
+```
+
 ## Theme
 
 Dark first. `lib/theme.ts` owns the choice and the `.dark` class every token

@@ -1,5 +1,6 @@
 import { Button } from '@tiny/ui/components/button'
 import { Input } from '@tiny/ui/components/input'
+import { Loading } from '@tiny/ui/components/loading'
 import { Label } from '@tiny/ui/components/label'
 import {
   Select,
@@ -17,7 +18,9 @@ import {
   PROVIDER_KINDS,
   hasCredentials,
   isProviderKind,
+  readModels,
   useProvider,
+  writeModels,
   type Provider,
   type ProviderKind,
 } from './provider'
@@ -36,7 +39,7 @@ const THEME_LABEL: Readonly<Record<Theme, string>> = {
 export function SettingsScreen() {
   const [provider, setProvider] = useProvider()
   const [theme, setTheme] = useTheme()
-  const [models, setModels] = useState<readonly string[]>([])
+  const [models, setModels] = useState(readModels)
   const [modelsError, setModelsError] = useState('')
   const [loading, setLoading] = useState(false)
   const endpointIsBad = provider.baseUrl.length > 0 && !URL.canParse(provider.baseUrl)
@@ -46,6 +49,7 @@ export function SettingsScreen() {
   const change = (patch: Partial<Provider>) => {
     setProvider(patch)
     setModels([])
+    writeModels([])
     setModelsError('')
   }
 
@@ -53,6 +57,7 @@ export function SettingsScreen() {
     setLoading(true)
     const result = await fetchModels(from)
     setModels(result.ok ? result.models : [])
+    writeModels(result.ok ? result.models : [])
     setModelsError(result.ok ? '' : result.error)
     setLoading(false)
   }
@@ -158,15 +163,19 @@ export function SettingsScreen() {
             disabled={loading || !hasCredentials(provider)}
             onClick={() => void loadModels(provider)}
           >
-            {loading ? 'Loading' : 'Load'}
+            Load
           </Button>
         </div>
-        <p className="text-muted-foreground text-sm" data-testid="settings-model-hint">
-          {modelsError ||
-            (models.length > 0
-              ? `${models.length} models from this endpoint.`
-              : 'Load the list to pick a model.')}
-        </p>
+        {loading ? (
+          <Loading label="Asking the endpoint" data-testid="settings-loading" />
+        ) : (
+          <p className="text-muted-foreground text-sm" data-testid="settings-model-hint">
+            {modelsError ||
+              (models.length > 0
+                ? `${models.length} models from this endpoint.`
+                : 'Load the list to pick a model.')}
+          </p>
+        )}
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">

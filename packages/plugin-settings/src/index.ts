@@ -8,4 +8,4 @@ export const settings: Plugin = {
 }
 
 // What another plugin needs to make a model call. The rest stays internal.
-export { isUsable, useProvider, type Provider } from './provider'
+export { isUsable, readModels, useProvider, type Provider } from './provider'

@@ -14,8 +14,8 @@ test('text is rendered', () => {
 test('reasoning gets its own block, shut until you open it', () => {
   show([{ type: 'reasoning', text: 'first, consider', state: 'done' }])
 
-  const block = screen.getByTestId<HTMLDetailsElement>('message-reasoning')
-  expect(block.open).toBe(false)
+  const block = screen.getByTestId('message-reasoning')
+  expect(block.querySelector('button')?.getAttribute('aria-expanded')).toBe('false')
   expect(block.textContent).toContain('Thought it through')
   expect(block.textContent).toContain('first, consider')
 })
@@ -46,7 +46,7 @@ test('a part with no UI behind it is skipped, not a crash', () => {
 
 test('waiting on the first token says what it is doing', () => {
   render(<Thinking />)
-  expect(screen.getByTestId('chat-thinking').textContent).toBe('Thinking')
+  expect(screen.getByTestId('chat-thinking').textContent).toBe('Thinking0.0s')
 })
 
 test('a reply can be copied, and says when it has been', async () => {
@@ -68,9 +68,9 @@ test('a reply can be copied, and says when it has been', async () => {
 test('the thinking row counts the seconds it has been waiting', async () => {
   render(<Thinking />)
   const row = screen.getByTestId('chat-thinking')
-  expect(row.textContent).toBe('Thinking')
+  expect(row.textContent).toBe('Thinking0.0s')
 
-  await waitFor(() => expect(row.textContent).toBe('Thinking1s'), { timeout: 2500 })
+  await waitFor(() => expect(row.textContent).toBe('Thinking1.0s'), { timeout: 2500 })
 })
 
 test('a tool still running is named, so you know what it is waiting on', () => {
@@ -119,4 +119,45 @@ test('a tool that failed says so instead of swallowing it', () => {
   const block = screen.getByTestId('message-tool')
   expect(block.textContent).toContain('weather failed')
   expect(block.textContent).toContain('wttr.in said 503')
+})
+
+const call = (name: string, id: string) =>
+  ({
+    type: 'dynamic-tool',
+    toolName: name,
+    toolCallId: id,
+    state: 'output-available',
+    input: { city: 'Istanbul' },
+    output: { celsius: '19' },
+  }) as const
+
+test('a run of calls is one row, not one box each', () => {
+  show([call('weather', 'call-1'), call('time', 'call-2')])
+
+  expect(screen.getAllByTestId('message-tools')).toHaveLength(1)
+  expect(screen.getByTestId('message-tools').textContent).toContain('2 tool calls')
+  expect(screen.getAllByTestId('message-tool')).toHaveLength(2)
+})
+
+test('calls either side of an answer are separate runs', () => {
+  show([
+    call('weather', 'call-1'),
+    { type: 'text', text: 'warm' },
+    call('time', 'call-2'),
+  ])
+
+  expect(screen.getAllByTestId('message-tools')).toHaveLength(2)
+})
+
+test('what a tool was handed can be copied off the block showing it', () => {
+  const copied: string[] = []
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: (text: string) => void copied.push(text) },
+  })
+
+  show([call('weather', 'call-1')])
+  fireEvent.click(screen.getByTestId('code-copy-input'))
+
+  expect(copied).toEqual([JSON.stringify({ city: 'Istanbul' }, null, 2)])
 })

@@ -104,6 +104,18 @@ for a JS change is the `index-*.js` line, not the precache total.
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
 
+beautifului.dev ships no code — no registry, no npm package, no per-component
+page, checked. So what it showcases gets written here from its rendered markup,
+on our tokens, and only where the app already has the data to fill it: its
+loading state and code block are in `packages/ui`, its tool chips and selection
+actions in `plugin-chat`, its approval card in `plugin-tools`. Together they
+cost 1.5 kB gzipped, because none of them pull a dependency.
+
+The other twelve it showcases aren't built and shouldn't be until something
+produces what they display: task rows, recommendation, context cards, three
+tables, insight cards and the fine-tune inspector have no data behind them here,
+and the flowchart needs mermaid, which was removed on purpose for its weight.
+
 `plugin-tools` costs 42 kB gzipped, and all of it is zod. Handing `z` to
 `new Function` makes it opaque, so the whole library is retained where the
 storage schemas alone shake it down to a handful of members. That is the feature

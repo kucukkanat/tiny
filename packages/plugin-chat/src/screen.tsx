@@ -1,5 +1,5 @@
 import { useChat } from '@ai-sdk/react'
-import { isUsable, useProvider, type Provider } from '@tiny/plugin-settings'
+import { isUsable, readModels, useProvider, type Provider } from '@tiny/plugin-settings'
 import { ToolQuestions, useToolSet } from '@tiny/plugin-tools'
 import {
   Conversation,
@@ -34,8 +34,10 @@ export function ChatScreen() {
 
 function Thread() {
   const { id = '' } = useParams()
-  const [provider] = useProvider()
+  const [provider, setProvider] = useProvider()
   const conversations = useConversations()
+  // Read once: the list only changes on the Settings screen, which isn't this one.
+  const models = useMemo(() => readModels(), [])
 
   if (!isUsable(provider)) {
     return (
@@ -57,13 +59,15 @@ function Thread() {
   // first message from racing the conversation it belongs to.
   if (conversations === undefined) return null
 
-  // Remounting reseeds the messages and the draft. The provider can't change
-  // under us — this screen only ever reads it — so the id is the whole key.
+  // Remounting reseeds the messages and the draft, so the id is the whole key:
+  // switching model swaps the transport without throwing the thread away.
   return (
     <Chat
       key={id}
       id={id}
       provider={provider}
+      models={models}
+      onModel={(model) => setProvider({ model })}
       history={
         conversations.find((conversation) => conversation.id === id)?.messages ?? []
       }
@@ -74,11 +78,15 @@ function Thread() {
 function Chat({
   id,
   provider,
+  models,
   history,
+  onModel,
 }: {
   id: string
   provider: Provider
+  models: readonly string[]
   history: readonly ChatMessage[]
+  onModel: (model: string) => void
 }) {
   const tools = useToolSet()
   const transport = useMemo(
@@ -147,16 +155,16 @@ function Chat({
 
       <ToolQuestions />
 
-      <SelectionActions
-        onPick={(passage) => void sendMessage({ text: `Rewrite this:\n\n> ${passage}` })}
-      />
+      <SelectionActions onPick={(text) => void sendMessage({ text })} />
 
       <Composer
         draftKey={draftKey(id)}
         model={provider.model}
+        models={models}
         status={status}
         onSend={(text) => void sendMessage({ text })}
         onStop={() => void stop()}
+        onModel={onModel}
       />
     </div>
   )

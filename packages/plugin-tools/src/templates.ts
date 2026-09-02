@@ -44,8 +44,9 @@ export const TEMPLATES = [
   inputSchema: z.object({
     question: z.string().describe('What to ask, in one sentence'),
   }),
-  // ask() puts the question in the chat and waits for the answer.
-  execute: ({ question }) => ask(question),
+  // ask() puts the question in the chat and waits for the answer. A second
+  // argument offers choices; you can always type something else instead.
+  execute: ({ question }) => ask(question, ['Yes', 'No']),
 })`,
   },
 ] as const

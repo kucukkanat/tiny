@@ -1,8 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { newId } from './id'
 
-/** A tool waiting on you to answer it. */
-export type Question = { readonly id: string; readonly question: string }
+/** A tool waiting on you to answer it, and what it offered to choose from. */
+export type Question = {
+  readonly id: string
+  readonly question: string
+  readonly options: readonly string[]
+}
 
 let pending: readonly Question[] = []
 const waiting = new Map<string, (answer: string) => void>()
@@ -16,12 +20,22 @@ const publish = (next: readonly Question[]) => {
 /**
  * The `ask` a tool is given. The call parks here until the chat screen hands an
  * answer back — the agent loop runs in this tab, so nothing times out waiting.
+ *
+ * Both arguments come from source you wrote in the app, so neither is trusted
+ * to be the shape it should be: whatever arrives is coerced, not validated.
  */
-export const askUser = (question: string): Promise<string> =>
+export const askUser = (question: string, options?: unknown): Promise<string> =>
   new Promise((resolve) => {
     const id = newId()
     waiting.set(id, resolve)
-    publish([...pending, { id, question: String(question) }])
+    publish([
+      ...pending,
+      {
+        id,
+        question: String(question),
+        options: Array.isArray(options) ? options.map(String) : [],
+      },
+    ])
   })
 
 export const answerQuestion = (id: string, answer: string) => {

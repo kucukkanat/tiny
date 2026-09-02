@@ -3,58 +3,38 @@ import {
   MessageActions,
   MessageResponse,
 } from '@tiny/ui/components/ai-elements/message'
-import { CheckIcon, ChevronRightIcon, CopyIcon } from 'lucide-react'
+import { CodeBlock } from '@tiny/ui/components/code-block'
+import { Loading, Shimmer } from '@tiny/ui/components/loading'
+import { useCopy } from '@tiny/ui/hooks/use-copy'
 import type { DynamicToolUIPart } from 'ai'
+import { CheckIcon, ChevronRightIcon, CopyIcon } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { ChatMessage } from './model'
 
-/** A band of brighter ink sweeping across the words: something is happening. */
-const Shimmer = ({ children }: { children: string }) => (
-  <span className="animate-shimmer bg-[length:200%_100%] bg-clip-text text-transparent [background-image:linear-gradient(90deg,var(--ink-3)_0%,var(--ink-3)_40%,var(--ink)_50%,var(--ink-3)_60%,var(--ink-3)_100%)]">
-    {children}
-  </span>
-)
+type Part = ChatMessage['parts'][number]
 
-/**
- * Between sending and the first token, when there is nothing else to show.
- * The count is the point: a shimmer alone can't tell you it's still going.
- */
+/** Between sending and the first token, when there is nothing else to show. */
 export function Thinking() {
-  const [seconds, setSeconds] = useState(0)
+  const [tenths, setTenths] = useState(0)
 
   useEffect(() => {
-    const tick = setInterval(() => setSeconds((so_far) => so_far + 1), 1000)
+    const tick = setInterval(() => setTenths((so_far) => so_far + 1), 100)
     return () => clearInterval(tick)
   }, [])
 
-  return (
-    <div className="flex items-center gap-2 text-sm" data-testid="chat-thinking">
-      <Shimmer>Thinking</Shimmer>
-      {seconds > 0 && <span className="text-ink-3 tabular-nums">{seconds}s</span>}
-    </div>
-  )
+  return <Loading label="Thinking" seconds={tenths / 10} data-testid="chat-thinking" />
 }
 
 /** What you can do with a reply once it's finished arriving. */
 export function ReplyActions({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-
-  // Shown, not hovered into view: there is no hover on a phone.
-  useEffect(() => {
-    if (!copied) return
-    const clear = setTimeout(() => setCopied(false), 1500)
-    return () => clearTimeout(clear)
-  }, [copied])
+  const [copied, copy] = useCopy()
 
   return (
     <MessageActions className="text-ink-3">
       <MessageAction
         data-testid="message-copy"
         label={copied ? 'Copied' : 'Copy'}
-        onClick={() => {
-          void navigator.clipboard?.writeText(text)
-          setCopied(true)
-        }}
+        onClick={() => copy(text)}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </MessageAction>
@@ -73,67 +53,137 @@ const Text = ({ text, streaming }: { text: string; streaming: boolean }) => (
   </MessageResponse>
 )
 
-/** A block folded away until asked for: what reasoning and tool calls share. */
-const Disclosure = ({
-  label,
+/**
+ * A summary you can open. The rows stay in the tree while shut — grid tracks
+ * animate from `0fr`, which a height can't do without measuring first.
+ */
+function Expander({
+  summary,
   testid,
+  className = 'hover:bg-hover-2 -mx-1.5 px-1.5',
+  open: initially = false,
   children,
 }: {
-  label: ReactNode
+  summary: ReactNode
   testid: string
+  className?: string
+  open?: boolean
   children: ReactNode
-}) => (
-  <details
-    className="group border-line bg-inset rounded-card w-full border"
-    data-testid={testid}
-  >
-    <summary className="text-ink-2 hover:text-ink flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-sm">
-      <ChevronRightIcon className="size-4 shrink-0 transition-transform group-open:rotate-90" />
-      {label}
-    </summary>
-    <div className="border-line text-ink-2 border-t px-3 py-2 text-sm">{children}</div>
-  </details>
-)
+}) {
+  const [open, setOpen] = useState(initially)
+
+  return (
+    <div className="w-full" data-testid={testid}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className={`text-ink-2 hover:text-ink rounded-control flex w-fit max-w-full items-center gap-1.5 py-1 text-left text-sm transition-colors ${className}`}
+      >
+        <ChevronRightIcon
+          className={`size-3.5 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+        />
+        {summary}
+      </button>
+      <div
+        className="grid transition-[grid-template-rows] duration-300"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-1.5 pt-1.5">{children}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /** What the model worked through before answering, folded away until asked. */
 const Reasoning = ({ text, streaming }: { text: string; streaming: boolean }) => (
-  <Disclosure
+  <Expander
     testid="message-reasoning"
-    label={streaming ? <Shimmer>Thinking</Shimmer> : 'Thought it through'}
+    summary={streaming ? <Shimmer>Thinking</Shimmer> : 'Thought it through'}
   >
     <Text text={text} streaming={streaming} />
-  </Disclosure>
+  </Expander>
 )
 
-const Code = ({ value }: { value: unknown }) => (
-  <pre className="overflow-x-auto text-xs">{JSON.stringify(value, null, 2)}</pre>
-)
+const json = (value: unknown) => JSON.stringify(value, null, 2) ?? 'undefined'
+
+// Green when it came back, red when it didn't, orange while it's still out.
+const DOT: Partial<Record<DynamicToolUIPart['state'], string>> = {
+  'output-available': 'bg-green',
+  'output-error': 'bg-red',
+}
 
 /**
  * One of your tools, called. The name rides on the part rather than in the type,
  * because you wrote the tool after the build — so there is one branch here and
  * not one per tool.
  */
-const ToolCall = ({ part }: { part: DynamicToolUIPart }) => (
-  <Disclosure
+const ToolChip = ({ part }: { part: DynamicToolUIPart }) => (
+  <Expander
     testid="message-tool"
-    label={
-      part.state === 'output-available' ? (
-        part.toolName
-      ) : part.state === 'output-error' ? (
-        `${part.toolName} failed`
-      ) : (
-        <Shimmer>{part.toolName}</Shimmer>
-      )
+    className="border-line bg-inset hover:bg-hover rounded-chip border px-2"
+    summary={
+      <>
+        <span
+          className={`size-1.5 shrink-0 rounded-full ${DOT[part.state] ?? 'bg-orange'}`}
+        />
+        <span className="truncate">
+          {part.state === 'output-error' ? (
+            `${part.toolName} failed`
+          ) : part.state === 'output-available' ? (
+            part.toolName
+          ) : (
+            <Shimmer>{part.toolName}</Shimmer>
+          )}
+        </span>
+      </>
     }
   >
-    <Code value={part.input} />
-    {part.state === 'output-available' && <Code value={part.output} />}
-    {part.state === 'output-error' && (
-      <p className="text-destructive">{part.errorText}</p>
+    <CodeBlock label="Input" code={json(part.input)} />
+    {part.state === 'output-available' && (
+      <CodeBlock label="Output" code={json(part.output)} />
     )}
-  </Disclosure>
+    {part.state === 'output-error' && (
+      <p className="text-destructive text-sm">{part.errorText}</p>
+    )}
+  </Expander>
 )
+
+/** A run of calls as one line you can open, not a stack of boxes. */
+const ToolCalls = ({ parts }: { parts: readonly DynamicToolUIPart[] }) => (
+  <Expander
+    testid="message-tools"
+    // Open while anything is still out, so a call you're waiting on isn't hidden.
+    open={parts.some((part) => part.state !== 'output-available')}
+    summary={
+      <span className="tabular-nums">
+        {parts.length} tool call{parts.length === 1 ? '' : 's'}
+      </span>
+    }
+  >
+    {parts.map((part) => (
+      <ToolChip key={part.toolCallId} part={part} />
+    ))}
+  </Expander>
+)
+
+type Chunk =
+  | { readonly kind: 'tools'; readonly parts: readonly DynamicToolUIPart[] }
+  | { readonly kind: 'part'; readonly part: Part; readonly last: boolean }
+
+/** Consecutive calls travel together; everything else stands on its own. */
+const chunk = (parts: ChatMessage['parts']): readonly Chunk[] =>
+  parts.reduce<readonly Chunk[]>((chunks, part, index) => {
+    if (part.type !== 'dynamic-tool')
+      return [...chunks, { kind: 'part', part, last: index === parts.length - 1 }]
+
+    const previous = chunks.at(-1)
+    return previous?.kind === 'tools'
+      ? [...chunks.slice(0, -1), { kind: 'tools', parts: [...previous.parts, part] }]
+      : [...chunks, { kind: 'tools', parts: [part] }]
+  }, [])
 
 /**
  * Every part of a message the app has something to say about. Files and sources
@@ -149,20 +199,20 @@ export function MessageParts({
 }) {
   return (
     <>
-      {parts.map((part, index) => {
+      {chunk(parts).map((piece, index) => {
+        if (piece.kind === 'tools') return <ToolCalls key={index} parts={piece.parts} />
         // Only the last part is still growing; the ones above it are finished.
-        const live = streaming && index === parts.length - 1
-        if (part.type === 'text')
-          return <Text key={index} text={part.text} streaming={live} />
-        if (part.type === 'reasoning')
+        const live = streaming && piece.last
+        if (piece.part.type === 'text')
+          return <Text key={index} text={piece.part.text} streaming={live} />
+        if (piece.part.type === 'reasoning')
           return (
             <Reasoning
               key={index}
-              text={part.text}
-              streaming={part.state === 'streaming'}
+              text={piece.part.text}
+              streaming={piece.part.state === 'streaming'}
             />
           )
-        if (part.type === 'dynamic-tool') return <ToolCall key={index} part={part} />
         return null
       })}
     </>

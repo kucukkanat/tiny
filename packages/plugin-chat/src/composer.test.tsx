@@ -5,17 +5,21 @@ import { Composer } from './composer'
 
 const sent: string[] = []
 const stopped: string[] = []
+const chosen: string[] = []
 
-const renderComposer = (status: ChatStatus = 'ready') => {
+const renderComposer = (status: ChatStatus = 'ready', models: readonly string[] = []) => {
   sent.length = 0
   stopped.length = 0
+  chosen.length = 0
   const view = render(
     <Composer
       draftKey="tiny.draft.a"
       model="a-model"
+      models={models}
       status={status}
       onSend={(text) => sent.push(text)}
       onStop={() => stopped.push('stop')}
+      onModel={(model) => chosen.push(model)}
     />,
   )
   return { input: screen.getByTestId<HTMLTextAreaElement>('chat-input'), ...view }
@@ -82,4 +86,13 @@ test('sending clears the draft rather than leaving it behind', () => {
 test('the model answering is named on the bar', () => {
   renderComposer()
   expect(screen.getByTestId('chat-model').textContent).toBe('a-model')
+})
+
+test('a loaded list turns the name into something you can change', () => {
+  renderComposer('ready', ['a-model', 'b-model'])
+  const picker = screen.getByTestId('chat-model')
+
+  expect(picker.textContent).toContain('a-model')
+  expect(picker.getAttribute('aria-label')).toBe('Model')
+  expect(picker.hasAttribute('aria-expanded')).toBe(true)
 })

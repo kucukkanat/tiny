@@ -42,6 +42,19 @@ export function readProvider(): Provider {
   }
 }
 
+// The list the endpoint last gave us. Kept because reloading shouldn't cost a
+// round trip, and because the composer picks from it without asking again.
+const MODELS_KEY = 'tiny.provider.models'
+
+export const readModels = (): readonly string[] => {
+  // Storage is the user's to edit; a value that isn't a list means no list.
+  const stored: unknown = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null')
+  return Array.isArray(stored) ? stored.filter((one) => typeof one === 'string') : []
+}
+
+export const writeModels = (models: readonly string[]) =>
+  localStorage.setItem(MODELS_KEY, JSON.stringify(models))
+
 export function useProvider(): readonly [Provider, (patch: Partial<Provider>) => void] {
   const [provider, setState] = useState(readProvider)
 

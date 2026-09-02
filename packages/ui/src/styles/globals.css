@@ -68,6 +68,8 @@
 
   /* A band of brighter ink sweeping left to right: the app is working. */
   --animate-shimmer: shimmer 1.8s linear infinite;
+  /* One cell of the pixel loader. The sweep is the per-cell delay, not this. */
+  --animate-pixel: pixel-on 650ms ease-in-out infinite;
 
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
@@ -228,6 +230,16 @@
 @keyframes shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
   }
 }
 

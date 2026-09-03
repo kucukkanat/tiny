@@ -1,10 +1,27 @@
 # @tiny/plugin-chat
 
-Chat with whatever `@tiny/plugin-settings` points at, and every chat you've had
-before. Calls the provider straight from the tab — no server in between.
+Chat with a model, and every chat you've had before. Calls it straight from the
+tab — no server in between.
 
-Two pieces: `ChatScreen` at `/#/chat/:id`, and `ChatSidebar` in the shell's
-sidebar listing the conversations.
+Chat doesn't know where the model came from, whether there are tools, or who
+answers a tool's question. It is handed all of that:
+
+```tsx
+chat({
+  useModel, // () => { model, name, names, select } | undefined
+  unconfigured, // shown while `useModel` has nothing to call
+  useTools, // () => ToolSet — optional, no tools is a fine chat
+  Panel, // rendered between the thread and the composer
+})
+```
+
+`useModel` and `useTools` are hooks, so call `chat(options)` once, at module
+scope — the same functions every render is what the rules of hooks want, and
+what the app gives it.
+
+`chat(options)` returns a `Plugin`, so the app is where settings and tools meet
+it. Two pieces come out: `ChatScreen` at `/#/chat/:id`, and `ChatSidebar` in the
+shell's sidebar listing the conversations.
 
 `Composer` is the prompt bar — a raised window holding the field, the model
 answering, and one button. It's local rather than AI Elements' `PromptInput`
@@ -14,7 +31,7 @@ pickers this app doesn't have.
 ```tsx
 <Composer
   draftKey={draftKey(id)}
-  model={provider.model} // named on a chip beside the button
+  model={chosen.name} // named on a chip beside the button
   status={status} // send arrow, spinner, or stop square
   onSend={(text) => void sendMessage({ text })}
   onStop={() => void stop()}
@@ -40,9 +57,8 @@ A finished reply carries `ReplyActions` — copy, for now. `SelectionActions`
 watches for a highlight inside a reply and offers to hand that passage back to
 the model; selecting your own words does nothing, because that's just copying.
 
-Parts with no feature behind them — tool calls, files, sources — render nothing
-on purpose. A chip for a tool the agent can't call is a promise the app doesn't
-keep. `ToolLoopAgent` is built without tools; give it some and they belong here.
+Parts with no feature behind them — files, sources — render nothing on purpose.
+A chip for something the app can't do is a promise it doesn't keep.
 
 ## Finding an old chat
 
@@ -68,7 +84,7 @@ The transport is the whole trick:
 import { DirectChatTransport, ToolLoopAgent } from 'ai'
 import { useChat } from '@ai-sdk/react'
 
-const agent = new ToolLoopAgent({ model: languageModel(provider) })
+const agent = new ToolLoopAgent({ model, tools })
 
 const { messages, sendMessage, status } = useChat({
   transport: new DirectChatTransport({ agent }),
@@ -103,10 +119,8 @@ only when a message is added. Opening one to read it doesn't move it up the list
 An unsent message is state too, so it's kept under `tiny.draft.<id>` and restored
 when you come back. Deleting a conversation takes its draft with it.
 
-## Anthropic from a browser
+## The key is in the page
 
-`api.anthropic.com` refuses browser requests unless you send
-`anthropic-dangerous-direct-browser-access: true`, which `languageModel` does.
-It's named that for a reason: the key is in the page, readable by anything
-running there. Fine for a local-first app on your own device, not for one you
-hand to other people.
+Whatever `useModel` hands over is called from the tab, with the key readable by
+anything running there. Fine for a local-first app on your own device, not for
+one you hand to other people.

@@ -70,6 +70,13 @@ If you're about to add a feature to the shell, stop: it's a plugin. The shell on
 grows when plugins need a new extension point, and then it grows by the smallest
 hook that works.
 
+A plugin depends on `plugin-host` and nothing else with `plugin-` in its name.
+When one needs something another owns, it exports a factory that takes it and
+`packages/app/src/plugins.tsx` fills it in — that file is where features meet.
+`chat({ useModel, unconfigured, useTools, Panel })` is the whole of it today:
+chat calls a model without knowing settings exists, and runs tools without
+knowing plugin-tools does. `plugins.test.ts` fails the build if that slips.
+
 ### Talking to models
 
 The Vercel AI SDK (`ai` + the `@ai-sdk/*` providers) is how this app talks to

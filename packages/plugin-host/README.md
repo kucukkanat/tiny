@@ -35,3 +35,16 @@ sitting in the body doesn't need a link to itself.
 
 That's the whole extension point — it grows only when a plugin needs a hook it
 can't get today.
+
+## Needing something a plugin doesn't own
+
+A plugin never imports another plugin. If it needs something from outside — a
+model to call, a component to slot in — it exports a factory that takes it, and
+the app fills it in:
+
+```ts
+export const chat = (options: ChatOptions): Plugin => ({ id: 'chat', ... })
+```
+
+Chat is the one that does this today. It gets its model from settings and its
+tools from tools, and knows about neither.

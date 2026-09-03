@@ -4,15 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.tsx"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.41",
-    "@ai-sdk/openai-compatible": "^3.0.35",
     "@ai-sdk/react": "^4.0.80",
     "@tiny/plugin-host": "workspace:*",
-    "@tiny/plugin-settings": "workspace:*",
-    "@tiny/plugin-tools": "workspace:*",
     "@tiny/ui": "workspace:*",
     "ai": "^7.0.77",
     "lucide-react": "^1.33.0",

@@ -42,12 +42,8 @@
       "name": "@tiny/plugin-chat",
       "version": "0.0.0",
       "dependencies": {
-        "@ai-sdk/anthropic": "^4.0.41",
-        "@ai-sdk/openai-compatible": "^3.0.35",
         "@ai-sdk/react": "^4.0.80",
         "@tiny/plugin-host": "workspace:*",
-        "@tiny/plugin-settings": "workspace:*",
-        "@tiny/plugin-tools": "workspace:*",
         "@tiny/ui": "workspace:*",
         "ai": "^7.0.77",
         "lucide-react": "^1.33.0",
@@ -69,8 +65,11 @@
       "name": "@tiny/plugin-settings",
       "version": "0.0.0",
       "dependencies": {
+        "@ai-sdk/anthropic": "^4.0.41",
+        "@ai-sdk/openai-compatible": "^3.0.35",
         "@tiny/plugin-host": "workspace:*",
         "@tiny/ui": "workspace:*",
+        "ai": "^7.0.77",
         "zod": "^4.4.3",
       },
       "peerDependencies": {

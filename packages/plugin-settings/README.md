@@ -5,10 +5,10 @@ OpenAI-compatible endpoint — the hosted ones, a proxy, or a local server.
 
 Stored in `localStorage`. The key never goes anywhere but the endpoint you set.
 
-The package exports three things, which is everything another plugin needs:
+The package exports what the app needs to hand a model to something else:
 
 ```tsx
-import { isUsable, useProvider, type Provider } from '@tiny/plugin-settings'
+import { isUsable, languageModel, useProvider } from '@tiny/plugin-settings'
 
 const [provider, setProvider] = useProvider()
 // { kind: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', apiKey: '', model: '' }
@@ -30,6 +30,17 @@ help. To get a dialect's own default back, clear the endpoint field.
 
 `isUsable` is the check to run before a model call — it wants a key and a
 parseable URL, and it can't tell you the key is _right_.
+
+`languageModel` turns all of that into a model the AI SDK can call:
+
+```tsx
+const model = languageModel(provider) // an Anthropic or OpenAI-compatible client
+```
+
+Which dialect it builds follows `kind`, same as the auth headers do. Anthropic
+refuses a browser outright without
+`anthropic-dangerous-direct-browser-access: true`, which this sends. It's named
+that for a reason — the key is in the page, readable by anything running there.
 
 ## Appearance
 

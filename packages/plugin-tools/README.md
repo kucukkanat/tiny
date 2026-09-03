@@ -54,16 +54,19 @@ The agent loop runs in this tab, so the call simply waits. Nothing times out.
 
 ## Using them
 
+This plugin doesn't know who calls the tools. It exports the two halves and the
+app hands them to whatever does:
+
 ```tsx
 import { ToolQuestions, useToolSet } from '@tiny/plugin-tools'
 
-const tools = useToolSet() // every tool that is on, named, and compiles
-const agent = new ToolLoopAgent({ model, tools })
+chat({ useTools: useToolSet, Panel: ToolQuestions })
 ```
 
-`useToolSet` is memoised on the stored list, so an agent built from it is only
-rebuilt when a tool actually changes. Render `<ToolQuestions />` somewhere in the
-conversation and `ask` works.
+`useToolSet` is every tool that is on, named, and compiles, memoised on the
+stored list — so an agent built from it is only rebuilt when a tool actually
+changes. `ToolQuestions` has to be rendered somewhere in the conversation, or
+`ask` waits forever.
 
 Tools run as soon as the model calls them. The switch on each row is the control.
 

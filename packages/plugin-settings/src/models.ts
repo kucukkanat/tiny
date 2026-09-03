@@ -1,3 +1,6 @@
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import type { LanguageModel } from 'ai'
 import * as z from 'zod'
 import type { Provider } from './provider'
 
@@ -8,15 +11,31 @@ type ModelsResult =
   | { readonly ok: true; readonly models: readonly string[] }
   | { readonly ok: false; readonly error: string }
 
+// `api.anthropic.com` refuses a browser outright without this one.
+const BROWSER_ACCESS = { 'anthropic-dangerous-direct-browser-access': 'true' }
+
 const authHeaders = (provider: Provider): HeadersInit =>
   provider.kind === 'anthropic'
     ? {
         'x-api-key': provider.apiKey,
         'anthropic-version': '2023-06-01',
-        // without this the browser is refused outright
-        'anthropic-dangerous-direct-browser-access': 'true',
+        ...BROWSER_ACCESS,
       }
     : { Authorization: `Bearer ${provider.apiKey}` }
+
+/** The configured endpoint as a model the SDK can call, straight from the tab. */
+export const languageModel = (provider: Provider): LanguageModel =>
+  provider.kind === 'anthropic'
+    ? createAnthropic({
+        baseURL: provider.baseUrl,
+        apiKey: provider.apiKey,
+        headers: BROWSER_ACCESS,
+      })(provider.model)
+    : createOpenAICompatible({
+        name: 'openai',
+        baseURL: provider.baseUrl,
+        apiKey: provider.apiKey,
+      })(provider.model)
 
 /** Asks the endpoint what it serves. Failure is a value, not a throw — the UI shows it. */
 export async function fetchModels(provider: Provider): Promise<ModelsResult> {

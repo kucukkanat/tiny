@@ -1,6 +1,3 @@
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import type { Provider } from '@tiny/plugin-settings'
 import {
   ToolLoopAgent,
   type InferAgentUIMessage,
@@ -8,25 +5,10 @@ import {
   type ToolSet,
 } from 'ai'
 
-/** The configured endpoint as a model the SDK can call, straight from the tab. */
-const languageModel = (provider: Provider): LanguageModel =>
-  provider.kind === 'anthropic'
-    ? createAnthropic({
-        baseURL: provider.baseUrl,
-        apiKey: provider.apiKey,
-        // without this the browser is refused outright
-        headers: { 'anthropic-dangerous-direct-browser-access': 'true' },
-      })(provider.model)
-    : createOpenAICompatible({
-        name: 'openai',
-        baseURL: provider.baseUrl,
-        apiKey: provider.apiKey,
-      })(provider.model)
-
 // `stopWhen` already defaults to twenty steps, so a tool the model calls gets
 // answered and the reply carries on without anything else being said here.
-export const agentFor = (provider: Provider, tools: ToolSet) =>
-  new ToolLoopAgent({ model: languageModel(provider), tools })
+export const agentFor = (model: LanguageModel, tools: ToolSet) =>
+  new ToolLoopAgent({ model, tools })
 
 export type ChatMessage = InferAgentUIMessage<ReturnType<typeof agentFor>>
 

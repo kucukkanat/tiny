@@ -1,42 +1,52 @@
 import { render, screen } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { ChatScreen } from './screen'
+import { ChatScreen, type ChatOptions } from './screen'
+
+// A model is a provider id or an SDK client; the id alone is enough to render.
+const configured: ChatOptions = {
+  useModel: () => ({
+    model: 'test-model',
+    name: 'test-model',
+    names: ['test-model'],
+    select: () => {},
+  }),
+}
 
 // The shell mounts the plugin at `/chat/*` and the plugin routes below that.
-const renderChat = (at = '/chat/abc') =>
+const renderChat = (options = configured, at = '/chat/abc') =>
   render(
     <MemoryRouter initialEntries={[at]}>
       <Routes>
-        <Route path="/chat/*" element={<ChatScreen />} />
+        <Route path="/chat/*" element={<ChatScreen {...options} />} />
       </Routes>
     </MemoryRouter>,
   )
 
-const configured = () => {
-  localStorage.setItem('tiny.provider.kind', 'openai')
-  localStorage.setItem('tiny.provider.baseUrl', 'http://localhost:1234/v1')
-  localStorage.setItem('tiny.provider.apiKey', 'sk-test')
-  localStorage.setItem('tiny.provider.model', 'llama-3.3-70b')
-}
+test('with nothing to call, the thread gives way to whatever the shell offers', async () => {
+  renderChat({
+    useModel: () => undefined,
+    unconfigured: <p data-testid="chat-unconfigured">Set one up first.</p>,
+  })
 
-test('an unconfigured provider sends you to settings instead of a prompt', async () => {
-  renderChat()
-
-  expect(await screen.findByTestId('chat-to-settings')).toBeDefined()
+  expect(await screen.findByTestId('chat-unconfigured')).toBeDefined()
   expect(screen.queryByTestId('chat-input')).toBeNull()
 })
 
-test('a configured provider gets a prompt', async () => {
-  configured()
+test('with a model to call, you get a prompt', async () => {
   renderChat()
 
   expect(await screen.findByTestId('chat-input')).toBeDefined()
-  expect(screen.queryByTestId('chat-to-settings')).toBeNull()
+  expect(screen.queryByTestId('chat-unconfigured')).toBeNull()
+})
+
+test('the panel slot renders in the conversation', async () => {
+  renderChat({ ...configured, Panel: () => <p data-testid="chat-panel">asking</p> })
+
+  expect(await screen.findByTestId('chat-panel')).toBeDefined()
 })
 
 test('a stored conversation is on screen when you open it', async () => {
-  configured()
   localStorage.setItem(
     'tiny.chat.abc',
     JSON.stringify({
@@ -52,8 +62,7 @@ test('a stored conversation is on screen when you open it', async () => {
 })
 
 test('landing on the plugin without a conversation starts one', async () => {
-  configured()
-  renderChat('/chat')
+  renderChat(configured, '/chat')
 
   // A fresh conversation is an empty prompt, not the transcript of another one.
   expect(await screen.findByTestId('chat-input')).toBeDefined()

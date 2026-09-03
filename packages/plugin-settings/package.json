@@ -7,8 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.41",
+    "@ai-sdk/openai-compatible": "^3.0.35",
     "@tiny/plugin-host": "workspace:*",
     "@tiny/ui": "workspace:*",
+    "ai": "^7.0.77",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

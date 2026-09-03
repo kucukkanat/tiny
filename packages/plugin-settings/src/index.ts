@@ -7,5 +7,6 @@ export const settings: Plugin = {
   Screen: SettingsScreen,
 }
 
-// What another plugin needs to make a model call. The rest stays internal.
+// What the app needs to hand a model to another plugin. The rest stays internal.
+export { languageModel } from './models'
 export { isUsable, readModels, useProvider, type Provider } from './provider'

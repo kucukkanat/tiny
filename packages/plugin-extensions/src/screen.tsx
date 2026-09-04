@@ -61,9 +61,9 @@ function ExtensionList() {
   const problem = url.trim().length > 0 ? refuse(url) : undefined
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+    <div className="@container mx-auto flex w-full max-w-5xl flex-col gap-5">
       <form
-        className="flex flex-col gap-2"
+        className="flex w-full max-w-2xl flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault()
           if (!problem) setFull(add(newInstall(url.trim()), go) ?? '')
@@ -98,7 +98,7 @@ function ExtensionList() {
         )}
       </form>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex w-full max-w-2xl flex-col gap-2">
         <p className="text-muted-foreground text-sm">Or open one you have written:</p>
         <div className="flex flex-wrap gap-2">
           {/* A label is the only way to make a file input look like anything. */}
@@ -138,7 +138,7 @@ function ExtensionList() {
       </div>
 
       {installed.length === 0 ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex w-full max-w-2xl flex-col gap-3">
           <p className="text-muted-foreground text-sm text-balance">
             An extension is a feature someone else wrote, or one you write here — tools
             for the model, a screen, another model provider. It is run when you turn it
@@ -155,7 +155,10 @@ function ExtensionList() {
           </Button>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2" data-testid="ext-list">
+        <ul
+          className="grid gap-2 @2xl:grid-cols-2 @4xl:grid-cols-3"
+          data-testid="ext-list"
+        >
           {installed.map((one) => (
             <Row
               key={one.id}
@@ -181,7 +184,7 @@ function Row({ one, entry }: { one: Installed; entry: Entry | undefined }) {
   const broken = one.enabled && entry?.status === 'error'
 
   return (
-    <li className="border-line bg-surface rounded-card flex items-center gap-2 border p-3">
+    <li className="border-line bg-surface rounded-card flex items-center gap-3 border p-3">
       <Link to={one.id} data-testid={`ext-open-${one.id}`} className="min-w-0 flex-1">
         <span className="block truncate font-medium">{one.title}</span>
         <span
@@ -202,6 +205,7 @@ function Row({ one, entry }: { one: Installed; entry: Entry | undefined }) {
         size="icon"
         aria-label={`Delete ${one.title}`}
         data-testid={`ext-delete-${one.id}`}
+        className="size-11 md:size-8"
         onClick={() => removeInstalled(one.id)}
       >
         <Trash2Icon />
@@ -222,7 +226,7 @@ function Install() {
   if (already) return <Navigate to={`/extensions/${already.id}`} replace />
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h2 className="font-medium">Install an extension?</h2>
       <CodeBlock label="From" code={url || '(nothing)'} />
       {problem ? (
@@ -316,104 +320,117 @@ function Detail() {
       .flatMap((other) => Object.keys(other.extension?.tools ?? {})),
   )
 
+  // The container sits outside the cap it controls: measured inside it, it would
+  // only ever report the capped width and the wide layout would never come.
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate font-medium">{one.title}</h2>
-          <p className="text-ink-3 truncate text-sm" data-testid="ext-origin">
-            {written ? 'Written here' : new URL(one.url ?? '', location.href).origin}
-          </p>
+    <div className="@container w-full">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 @6xl:max-w-6xl">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-medium">{one.title}</h2>
+            <p className="text-ink-3 truncate text-sm" data-testid="ext-origin">
+              {written ? 'Written here' : new URL(one.url ?? '', location.href).origin}
+            </p>
+          </div>
+          <Switch
+            data-testid={`ext-enabled-${one.id}`}
+            checked={one.enabled}
+            onCheckedChange={(enabled) => saveInstalled({ ...one, enabled })}
+          />
         </div>
-        <Switch
-          data-testid={`ext-enabled-${one.id}`}
-          checked={one.enabled}
-          onCheckedChange={(enabled) => saveInstalled({ ...one, enabled })}
-        />
-      </div>
 
-      {written ? (
-        <Editor one={one} stale={stale} />
-      ) : (
-        <CodeBlock label="From" code={one.url ?? ''} />
-      )}
-
-      {one.enabled && (!entry || entry.status === 'loading') && (
-        <Loading label="Starting" />
-      )}
-      {entry?.status === 'error' && (
-        <p className="text-destructive text-sm" data-testid={`ext-error-${one.id}`}>
-          {entry.error}
-        </p>
-      )}
-
-      {extension && (
-        <section className="flex flex-col gap-2" data-testid="ext-registers">
-          <h3 className="text-sm font-medium">What it adds</h3>
-          <ul className="text-ink-2 flex flex-col gap-1 text-sm">
-            {extension.Screen && (
-              <li data-testid="ext-screen">
-                A screen at <code>/#/{extension.id}</code>
-              </li>
+        <div className="grid items-start gap-5 @6xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-5">
+            {written ? (
+              <Editor one={one} stale={stale} />
+            ) : (
+              <CodeBlock label="From" code={one.url ?? ''} />
             )}
-            {Object.entries<Tool>(extension.tools ?? {}).map(([name, tool]) => (
-              <li key={name} data-testid={`ext-tool-${name}`}>
-                <code>{name}</code> — {describe(tool)} Takes{' '}
-                {parameters(tool.inputSchema)}.
-                {elsewhere.has(name) && (
-                  <span className="text-orange" data-testid={`ext-tool-clash-${name}`}>
-                    {' '}
-                    Another extension answers to this name too.
-                  </span>
-                )}
-              </li>
-            ))}
-            {Object.entries(extension.providers ?? {}).map(([kind, spec]) => (
-              <li key={kind} data-testid={`ext-provider-${kind}`}>
-                The {spec.label} provider
-              </li>
-            ))}
-            {(extension.actions ?? []).map(({ label }) => (
-              <li key={label} data-testid={`ext-action-${label}`}>
-                A “{label}” action on a highlighted reply
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
-      {/* Nothing else shows a system prompt, so this is the only place you'd see it. */}
-      {extension?.instructions && (
-        <div data-testid="ext-instructions">
-          <CodeBlock label="Tells the model" code={extension.instructions} />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={stale ? 'default' : 'outline'}
+                data-testid={`ext-reload-${one.id}`}
+                className="h-control flex-1"
+                onClick={() => saveInstalled({ ...one, version: one.version + 1 })}
+              >
+                {written ? <PlayIcon /> : <RotateCwIcon />}
+                {written ? 'Run' : 'Reload'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-control px-4"
+                data-testid={`ext-delete-${one.id}`}
+                onClick={() => {
+                  removeInstalled(one.id)
+                  void navigate('/extensions')
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            {one.enabled && (!entry || entry.status === 'loading') && (
+              <Loading label="Starting" />
+            )}
+            {entry?.status === 'error' && (
+              <p className="text-destructive text-sm" data-testid={`ext-error-${one.id}`}>
+                {entry.error}
+              </p>
+            )}
+
+            {extension && (
+              <section className="flex flex-col gap-2" data-testid="ext-registers">
+                <h3 className="text-sm font-medium">What it adds</h3>
+                <ul className="text-ink-2 flex flex-col gap-1 text-sm">
+                  {extension.Screen && (
+                    <li data-testid="ext-screen">
+                      A screen at <code>/#/{extension.id}</code>
+                    </li>
+                  )}
+                  {Object.entries<Tool>(extension.tools ?? {}).map(([name, tool]) => (
+                    <li key={name} data-testid={`ext-tool-${name}`}>
+                      <code>{name}</code> — {describe(tool)} Takes{' '}
+                      {parameters(tool.inputSchema)}.
+                      {elsewhere.has(name) && (
+                        <span
+                          className="text-orange"
+                          data-testid={`ext-tool-clash-${name}`}
+                        >
+                          {' '}
+                          Another extension answers to this name too.
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                  {Object.entries(extension.providers ?? {}).map(([kind, spec]) => (
+                    <li key={kind} data-testid={`ext-provider-${kind}`}>
+                      The {spec.label} provider
+                    </li>
+                  ))}
+                  {(extension.actions ?? []).map(({ label }) => (
+                    <li key={label} data-testid={`ext-action-${label}`}>
+                      A “{label}” action on a highlighted reply
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Nothing else shows a system prompt, so this is the only place you'd see it. */}
+            {extension?.instructions && (
+              <div data-testid="ext-instructions">
+                <CodeBlock label="Tells the model" code={extension.instructions} />
+              </div>
+            )}
+
+            <Danger />
+          </div>
         </div>
-      )}
-
-      <Danger />
-
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={stale ? 'default' : 'outline'}
-          data-testid={`ext-reload-${one.id}`}
-          className="h-control flex-1"
-          onClick={() => saveInstalled({ ...one, version: one.version + 1 })}
-        >
-          {written ? <PlayIcon /> : <RotateCwIcon />}
-          {written ? 'Run' : 'Reload'}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-control px-4"
-          data-testid={`ext-delete-${one.id}`}
-          onClick={() => {
-            removeInstalled(one.id)
-            void navigate('/extensions')
-          }}
-        >
-          Delete
-        </Button>
       </div>
     </div>
   )
@@ -435,7 +452,7 @@ function Editor({ one, stale }: { one: Installed; stale: boolean }) {
         autoCapitalize="off"
         autoCorrect="off"
         autoComplete="off"
-        className="min-h-72 font-mono text-sm"
+        className="max-h-[60svh] min-h-48 font-mono"
         value={one.source ?? ''}
         onChange={(event) =>
           setFull(!saveInstalled({ ...one, source: event.target.value }))

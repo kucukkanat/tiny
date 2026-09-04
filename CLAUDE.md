@@ -199,6 +199,29 @@ handful of members in the entry, and the full surface sits in `sdk/zod.js` —
 took 176,833 B raw and 39,642 B gzipped off first paint, and a whole chunk with
 it.
 
+### Width
+
+Measure the room with a container query, not a viewport breakpoint. The sidebar
+is 16rem and appears at 768px, so what a screen actually gets is not monotonic:
+735px of room at a 767px window, **480px at 768px**, back to 736px at 1024px. A
+`md:` rule therefore fires at the narrowest moment there is, and no viewport
+query can see that the sidebar is collapsed, which is a cookie the user toggles.
+`@container` on a screen's own root, with `@2xl:`/`@6xl:` variants, is the rule.
+Viewport breakpoints are still right for the thing they actually describe —
+`md:` for touch versus pointer, as the sidebar rows use it.
+
+A container query has to sit _outside_ the width it controls. `@container` and
+`max-w-*` on the same element measures the capped width, so the wide layout can
+never come true.
+
+Three widths, and no more: `max-w-2xl` reads and writes (chat, and an extension's
+editor), `max-w-5xl` holds a grid of things (the extension list), `max-w-6xl` is
+the editor beside what it produced. A form does not get more readable past about
+480px of control — that is the longest endpoint anyone writes plus slack — so
+Settings caps its cards rather than stretching, and the leftover reads as margin
+because the cards have edges. Whitespace around a bounded object is design;
+whitespace around an unbounded column is a missing section.
+
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`:
 colour, type, spacing, radius, elevation and motion, all of it, so restyling is
 one file. The values are beautifului.dev's own, read off its stylesheet. shadcn's

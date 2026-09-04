@@ -1,3 +1,4 @@
+import { cn } from '@tiny/ui/lib/utils'
 import type { ComponentProps } from 'react'
 
 /** A band of brighter ink sweeping across the words: something is happening. */
@@ -30,9 +31,16 @@ const PixelGrid = () => (
 export const Loading = ({
   label,
   seconds,
+  className,
   ...props
 }: { label: string; seconds?: number } & ComponentProps<'div'>) => (
-  <div role="status" className="flex w-fit items-center gap-2.5 text-sm" {...props}>
+  <div
+    role="status"
+    // Merged, not replaced: a caller placing this in a grid shouldn't have to
+    // restate how the row itself is laid out.
+    className={cn('flex w-fit items-center gap-2.5 text-sm', className)}
+    {...props}
+  >
     <PixelGrid />
     <Shimmer>{label}</Shimmer>
     {seconds !== undefined && (

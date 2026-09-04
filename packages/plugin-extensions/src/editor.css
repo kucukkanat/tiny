@@ -1,0 +1,112 @@
+/* prism-code-editor's layout, then its colours on our own tokens. An editor
+   that ships its own palette reads as a widget someone dropped into the app;
+   this way it is the same dark and the same blue as everything else, and it
+   follows the theme switch for free. */
+@import 'prism-code-editor/layout.css';
+@import 'prism-code-editor/autocomplete.css';
+
+.prism-code-editor {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color-scheme: inherit;
+
+  --pce-bg: transparent;
+  --pce-cursor: var(--brand);
+  --pce-selection: var(--brand-tint);
+  --pce-line-number: var(--ink-3);
+  --pce-bg-highlight: var(--hover);
+  --pce-guide-indent: var(--line);
+  --pce-scrollbar: 210, 10%, 32%;
+
+  /* The completion popup is a surface like any other in the app. */
+  --pce-widget-bg: var(--surface);
+  --pce-widget-border: var(--line);
+  --pce-widget-color: var(--ink-2);
+  --pce-widget-color-active: var(--ink);
+  --pce-widget-color-options: var(--ink-3);
+  --pce-widget-bg-hover: var(--hover);
+  --pce-widget-bg-active: var(--brand-tint);
+  --pce-widget-focus: var(--brand);
+}
+
+/* Prism's token names, pointed at the palette. Grouped the way the palette is:
+   quiet punctuation, one blue for what you call, green for text, orange for
+   values, and comments quietest of all. */
+[class*='language-'],
+.token.punctuation,
+.token.parameter,
+.token.property-access {
+  color: var(--ink);
+}
+
+.token.operator,
+.token.arrow,
+.token.spread {
+  color: var(--ink-2);
+}
+
+.token.comment,
+.token.doc-comment,
+.token.prolog {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.token.string,
+.token.template-string,
+.token.regex,
+.token.char {
+  color: var(--green);
+}
+
+.token.number,
+.token.boolean,
+.token.constant,
+.token.keyword-null,
+.token.unit {
+  color: var(--orange);
+}
+
+.token.keyword,
+.token.module,
+.token.control-flow,
+.token.keyword-this {
+  color: var(--brand-ink);
+}
+
+.token.function,
+.token.method,
+.token.class-name,
+.token.maybe-class-name {
+  color: var(--brand);
+}
+
+.token.property,
+.token.attr-name,
+.token.literal-property {
+  color: var(--ink);
+}
+
+.token.deleted {
+  color: var(--red);
+}
+
+/* Bracket pairs: enough difference to follow a nesting, not a rainbow. */
+.token.bracket-level-0,
+.token.bracket-level-3 {
+  color: var(--ink-2);
+}
+.token.bracket-level-1,
+.token.bracket-level-4 {
+  color: var(--brand);
+}
+.token.bracket-level-2,
+.token.bracket-level-5 {
+  color: var(--orange);
+}
+.token.bracket-error {
+  color: var(--red);
+}
+
+.active-bracket {
+  box-shadow: inset 0 0 0 1px var(--brand);
+}

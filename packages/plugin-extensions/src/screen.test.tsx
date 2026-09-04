@@ -21,8 +21,10 @@ const renderExtensions = (at = '/extensions') =>
     </MemoryRouter>,
   )
 
+// `input`, not `change`: it is what typing actually fires, and what both React
+// and the editor listen for.
 const type = (testid: string, value: string) =>
-  fireEvent.change(screen.getByTestId(testid), { target: { value } })
+  fireEvent.input(screen.getByTestId(testid), { target: { value } })
 
 /** Reading the store the way the screen does, so its cache is dropped after. */
 const stored = () => {

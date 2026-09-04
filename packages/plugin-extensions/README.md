@@ -92,6 +92,28 @@ Editing saves as you type, so a reload costs you nothing, but nothing runs until
 you press Run. Importing a module executes it, and a loop you are halfway through
 writing would take the tab with it.
 
+## The editor
+
+Syntax highlighting on the app's own palette, and completions that know what an
+extension can reach:
+
+- `tiny.` offers exactly what the host hands you, with signatures.
+- `z.` offers the builders a schema is made of.
+- Inside an import's quotes, only the five specifiers that resolve — anything
+  else is a module that fails before it runs.
+- At the top level, snippets for the shapes worth having whole: the module
+  itself, a tool, a screen, a question. Each stops where you have to type.
+- A path it knows nothing about gets nothing. An editor that answers `response.`
+  with the other words in your file is one that suggests code which does not
+  exist.
+
+Ctrl-Space asks explicitly. On a phone, the row of keys above the keyboard is
+the tab, the brackets and the quotes a virtual keyboard hasn't got; it appears
+when the keyboard does and never takes focus away from what you are typing.
+
+It is fetched the first time you open one, not shipped with the app, and the
+plain box is what you get until it lands — offline on a first visit, say.
+
 Pin a tag or a commit. jsDelivr serves a branch address with a week of browser
 cache, so an update would look like it did nothing.
 

@@ -26,6 +26,7 @@ import {
   type Installed,
 } from './installed'
 import { runningSource, useExtensions, type Entry } from './loaded'
+import { useRichEditor } from './rich'
 import { TEMPLATES } from './templates'
 import { refuse } from './url'
 
@@ -339,8 +340,10 @@ function Detail() {
           />
         </div>
 
+        {/* A grid item is min-width:auto by default, so without min-w-0 the
+            editor widens its own track and lands on the column beside it. */}
         <div className="grid items-start gap-5 @6xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-5">
+          <div className="flex min-w-0 flex-col gap-5">
             {written ? (
               <Editor one={one} stale={stale} />
             ) : (
@@ -373,7 +376,7 @@ function Detail() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-5">
+          <div className="flex min-w-0 flex-col gap-5">
             {one.enabled && (!entry || entry.status === 'loading') && (
               <Loading label="Starting" />
             )}
@@ -443,21 +446,28 @@ function Detail() {
  */
 function Editor({ one, stale }: { one: Installed; stale: boolean }) {
   const [full, setFull] = useState(false)
+  const rich = useRichEditor()
+  const save = (source: string) => setFull(!saveInstalled({ ...one, source }))
 
   return (
-    <fieldset className="flex flex-col gap-2">
-      <Textarea
-        data-testid="ext-source"
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        autoComplete="off"
-        className="max-h-[60svh] min-h-48 font-mono"
-        value={one.source ?? ''}
-        onChange={(event) =>
-          setFull(!saveInstalled({ ...one, source: event.target.value }))
-        }
-      />
+    <fieldset className="flex min-w-0 flex-col gap-2">
+      {/* The plain box is what's here until the editor arrives, and what stays
+          if it never does — offline on a first visit, say. Same testid either
+          way: it is a real textarea underneath the colour. */}
+      {rich ? (
+        <rich.RichEditor key={one.id} value={one.source ?? ''} onChange={save} />
+      ) : (
+        <Textarea
+          data-testid="ext-source"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          className="max-h-[60svh] min-h-48 font-mono"
+          value={one.source ?? ''}
+          onChange={(event) => save(event.target.value)}
+        />
+      )}
       <p className="text-muted-foreground text-sm" data-testid="ext-source-hint">
         {full
           ? 'There is no room left in storage, so this is not saved.'

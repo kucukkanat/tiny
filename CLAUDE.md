@@ -97,7 +97,7 @@ job; it is gone, and what it stored is carried across on first boot by
 it.
 
 Four ways to install: a URL, a file off the disk, one of three premades in
-`templates.ts`, or text typed into the screen. The last three are kept as source
+`templates.ts`, or text typed into the editor. The last three are kept as source
 and run from a `blob:` minted per version — so they work offline, survive a
 reload, and can be edited in place. Two things follow from there being no build
 step. A written extension cannot use JSX, so the premades use `createElement`;
@@ -161,6 +161,26 @@ for a JS change is the `index-*.js` line, not the precache total.
 `switch` is the only registry component added since; the tool list needs an
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
+
+The editor you write one in is `prism-code-editor`, fetched on the first press
+rather than shipped: **+141 B on first paint, 17,239 B gzipped when it arrives**
+(15,097 JS + 2,142 CSS). CodeMirror 6 with the same features measured 147,273 B
+gzipped — 8× — and is a contenteditable, so it re-implements the caret, the
+selection handles and the magnifier that a phone gives away free. prism is a
+real `<textarea>` under a highlighted `<pre>`, which is also why the screen tests
+still drive it with `fireEvent.input`. The plain box stays as the fallback: a
+chunk that fails to load is remembered as failed for the life of the document,
+so there is nothing to retry, and the box is the whole feature minus the colour.
+
+Completions are a table in `complete.ts`, not a language service. TypeScript in
+the browser measured 1.76 MB gzipped and would be worse here anyway — five
+overloads of `tool()` defeat its contextual typing, so it answers `tool({` with a
+thousand globals. The world an extension lives in is five importable modules and
+one object shape, which is small enough to know exactly: `Record<keyof Tiny, …>`
+means adding to the contract fails the build until the table catches up. One
+source, not several — prism merges whatever every source returns, and a list that
+offers `response.` the other words in your file is a list that suggests code
+which does not exist.
 
 Runtime extensions cost first paint +20,522 B raw / +11,425 B gzip when they
 landed, and deleting `plugin-tools` then took 176,833 B raw and 39,642 B gzip

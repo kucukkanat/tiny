@@ -1,3 +1,4 @@
+import { isToolName } from '@tiny/plugin-host'
 import { useSyncExternalStore } from 'react'
 import { z } from 'zod'
 import { newId } from './id'
@@ -12,8 +13,7 @@ export type UserTool = {
   readonly enabled: boolean
 }
 
-/** What a provider will accept as a tool name, and what the model will call. */
-export const isToolName = (name: string) => /^[a-zA-Z0-9_-]{1,64}$/.test(name)
+export { isToolName }
 
 export const newTool = (): UserTool => ({
   id: newId(),

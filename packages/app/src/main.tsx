@@ -1,4 +1,4 @@
-import '@tiny/ui/globals.css'
+import './app.css'
 import { applyTheme, readTheme, watchSystemTheme } from '@tiny/ui/lib/theme'
 import { StrictMode } from 'react'
 import { registerSW } from 'virtual:pwa-register'

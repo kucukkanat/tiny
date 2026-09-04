@@ -1,0 +1,9 @@
+/* The app ships only the utility classes it happens to use itself, so anything
+   this extension writes has to be generated here. `@reference` reads the app's
+   tokens without copying them, and the `utilities` layer is the one the app has
+   already ordered — so these land in the right place in the cascade. */
+@reference '@tiny/ui/globals.css';
+
+@layer utilities {
+  @tailwind utilities;
+}

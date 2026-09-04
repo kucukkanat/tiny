@@ -1,0 +1,7 @@
+@import '@tiny/ui/globals.css';
+
+/* Which files utilities are generated from. It lives here and not with the
+   tokens because `@reference` does not filter `@source`: an extension that
+   references the tokens to build its own utilities would otherwise inherit this
+   scan and ship a copy of the whole app's CSS. */
+@source '../../*/src/**/*.{ts,tsx}';

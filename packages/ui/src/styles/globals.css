@@ -4,7 +4,6 @@
 @import '@fontsource-variable/geist';
 
 @custom-variant dark (&:is(.dark *));
-@source "../../../*/src/**/*.{ts,tsx}";
 
 /* The palette, elevation and motion below are beautifului.dev's own, read off
    its stylesheet — it's the visual target and it ships no package. Everything

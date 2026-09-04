@@ -10,4 +10,6 @@ export const chat = (options: ChatOptions): Plugin => ({
   Sidebar: ChatSidebar,
 })
 
+export { useConversations } from './conversations'
+export { textOf } from './model'
 export type { ChatModel, ChatOptions } from './screen'

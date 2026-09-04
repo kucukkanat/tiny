@@ -1,7 +1,8 @@
+import type { ChatAction } from '@tiny/plugin-host'
 import { useEffect, useState } from 'react'
 
 /** What you can ask for once you've highlighted something. */
-const ACTIONS = [
+const ACTIONS: readonly ChatAction[] = [
   { label: 'Explain', ask: 'Explain this' },
   { label: 'Improve', ask: 'Improve this' },
   { label: 'Shorten', ask: 'Shorten this' },
@@ -18,7 +19,14 @@ const elementOf = (node: Node | null | undefined): Element | null =>
  * Highlight a passage in a reply and hand it to the model. Only replies:
  * selecting your own words is copying, not asking for another go at them.
  */
-export function SelectionActions({ onPick }: { onPick: (prompt: string) => void }) {
+export function SelectionActions({
+  onPick,
+  extra = [],
+}: {
+  onPick: (prompt: string) => void
+  /** Added by extensions, after the built-in five. */
+  extra?: readonly ChatAction[]
+}) {
   const [passage, setPassage] = useState<Passage | null>(null)
 
   useEffect(() => {
@@ -52,7 +60,7 @@ export function SelectionActions({ onPick }: { onPick: (prompt: string) => void 
       className="shadow-overlay bg-surface fixed inset-x-3 z-50 mx-auto flex h-9 w-fit max-w-[calc(100vw-1.5rem)] -translate-y-full items-center gap-0.5 overflow-x-auto rounded-full p-1"
       style={{ top: passage.top - 8 }}
     >
-      {ACTIONS.map(({ label, ask }) => (
+      {[...ACTIONS, ...extra].map(({ label, ask }) => (
         <button
           key={label}
           type="button"

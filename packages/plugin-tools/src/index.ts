@@ -7,6 +7,8 @@ export const tools: Plugin = {
   Screen: ToolsScreen,
 }
 
-// What chat needs to put these in front of the model. The rest stays internal.
+// What chat needs to put these in front of the model, and the question an
+// extension's tool asks with. The rest stays internal.
+export { askUser } from './ask'
 export { ToolQuestions } from './questions'
 export { useToolSet } from './toolset'

@@ -77,6 +77,41 @@ When one needs something another owns, it exports a factory that takes it and
 chat calls a model without knowing settings exists, and runs tools without
 knowing plugin-tools does. `plugins.test.ts` fails the build if that slips.
 
+### Plugins and extensions
+
+Two ways to add a feature, and the difference is _when_.
+
+A **plugin** is build time. It is a package in this repo, it ships in the bundle,
+and adding one is a commit and a deploy. Everything the app does itself is a
+plugin.
+
+An **extension** is run time. Whoever is using the app pastes a URL and it is
+live in the next message — no build, no deploy, nothing installed on a server.
+It is one ES module, `import()`ed in the tab. `packages/plugin-extensions` hosts
+them; `packages/extension-starter` is a real one that ships with the app.
+
+The contract for both lives in `plugin-host`, because both are features:
+`Extension` is a `Plugin` with an optional `Screen`, plus `tools`, `providers`,
+`actions`, `instructions` and `css`. The module default-exports a function of
+the host — the same "take what you don't own as an argument" rule plugins follow,
+applied to a module that arrives after the build.
+
+Extensions reach five bare specifiers through an import map in `index.html`:
+`react`, `react/jsx-runtime`, `react-router`, `zod`, `ai`. Only those, and only
+because a second copy of each genuinely breaks — React and the router carry
+context, and one zod is what keeps a `.describe()` in what the model is told.
+Everything else an extension bundles itself, so the cost lands on whoever
+installs it rather than on every first visit. The shims are
+`packages/app/src/sdk/*.ts`, they are named export by export, and
+`preserveEntrySignatures: 'allow-extension'` is what stops the build emptying
+them.
+
+An extension runs in the page with the API key in reach. There is no sandbox and
+no permission list, because a permission this app cannot enforce is theatre — and
+a Worker can't render a screen. What there is instead: the Extensions screen
+shows what an extension registers, and its `instructions` verbatim, before the
+switch is turned on, and an install link never turns itself on.
+
 ### Talking to models
 
 The Vercel AI SDK (`ai` + the `@ai-sdk/*` providers) is how this app talks to
@@ -110,6 +145,21 @@ for a JS change is the `index-*.js` line, not the precache total.
 `switch` is the only registry component added since; the tool list needs an
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
+
+Runtime extensions cost first paint +20,522 B raw / +11,425 B gzip, in two
+halves worth keeping apart. The feature itself — the host, the loader, the
+screen, the boundary — is +14,736 raw / +4,532 gz. The import map is the rest:
++5,786 raw / +6,893 gz, of which 1,728 B is not code at all but gzip context
+lost to splitting one chunk into eight. Exposing whole libraries instead of
+named exports was measured at +65 kB gz, nearly all of it `export * from 'ai'`
+and `export * from 'react-router'` — so the shims name every export, and
+`sdk.test.ts` fails if the react list drifts from what React has. `@tiny/ui` is
+deliberately not on the map: it has no barrel, and a barrel makes `message.tsx`
+reachable, which drags in streamdown and the 305 shiki chunks.
+
+The number to watch is no longer the `index-*.js` line on its own — first paint
+is now that chunk plus everything `index.html` preloads. `bun run measure` in
+`packages/app` prints it.
 
 beautifului.dev ships no code — no registry, no npm package, no per-component
 page, checked. So what it showcases gets written here from its rendered markup,

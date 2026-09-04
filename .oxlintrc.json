@@ -11,6 +11,7 @@
     "dist",
     "dev-dist",
     "packages/ui/src/components",
-    "packages/ui/src/hooks"
+    "packages/ui/src/hooks",
+    ".claude"
   ]
 }

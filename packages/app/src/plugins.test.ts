@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { plugins } from './plugins'
+import { SHARED } from './sdk/shared'
 
 const PACKAGES = new URL('../../', import.meta.url).pathname
 
@@ -24,4 +25,37 @@ test('every plugin has its own route segment', () => {
   const ids = plugins.map(({ id }) => id)
 
   expect(new Set(ids).size).toBe(ids.length)
+})
+
+// An extension is written against these names and nothing else, so adding one
+// is a promise and removing one breaks every extension that used it.
+test('the shared libraries an extension may import are the ones we said', () => {
+  expect(Object.keys(SHARED)).toEqual([
+    'react',
+    'react/jsx-runtime',
+    'react-router',
+    'zod',
+    'ai',
+  ])
+})
+
+// If the starter bundled its own React the hooks in its screen would throw, and
+// the failure would name neither the starter nor this list.
+test('the example extension leaves every shared library to the app', () => {
+  const config = readFileSync(`${PACKAGES}extension-starter/vite.config.ts`, 'utf8')
+  const external = /external:\s*\[([^\]]*)\]/.exec(config)?.[1] ?? ''
+
+  for (const specifier of Object.keys(SHARED))
+    expect([specifier, external.includes(specifier.split('/')[0] ?? '')]).toEqual([
+      specifier,
+      true,
+    ])
+})
+
+test('nothing an extension is handed comes from a plugin it cannot see', () => {
+  const contract = manifest('plugin-host').dependencies ?? {}
+
+  // plugin-host is where the extension contract lives, so it must stay the one
+  // package with no feature behind it.
+  expect(Object.keys(contract)).toEqual(['ai'])
 })

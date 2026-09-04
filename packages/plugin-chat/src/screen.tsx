@@ -6,6 +6,7 @@ import {
   ConversationScrollButton,
 } from '@tiny/ui/components/ai-elements/conversation'
 import { Message, MessageContent } from '@tiny/ui/components/ai-elements/message'
+import type { ChatAction } from '@tiny/plugin-host'
 import { DirectChatTransport, type LanguageModel, type ToolSet } from 'ai'
 import { useEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useParams } from 'react-router'
@@ -41,14 +42,21 @@ export type ChatOptions = {
   readonly unconfigured?: ReactNode
   /** The tools the model may call mid-answer. */
   readonly useTools?: () => ToolSet
+  /** Added to the model's system prompt. */
+  readonly useSystem?: () => string | undefined
+  /** Offered beside the built-in five when a passage is highlighted. */
+  readonly useActions?: () => readonly ChatAction[]
   /** Rendered between the thread and the composer. */
   readonly Panel?: ComponentType
 }
 
-// A shared empty set, so a chat given no tools doesn't rebuild its agent every
+// Shared empties, so a chat given none of these doesn't rebuild its agent every
 // render on a fresh `{}`.
 const NO_TOOLS: ToolSet = {}
 const noTools = () => NO_TOOLS
+const NO_ACTIONS: readonly ChatAction[] = []
+const noActions = () => NO_ACTIONS
+const noSystem = () => undefined
 
 /** `/#/chat/:id`. Anything else is a conversation that hasn't started yet. */
 export function ChatScreen(options: ChatOptions) {
@@ -60,12 +68,23 @@ export function ChatScreen(options: ChatOptions) {
   )
 }
 
-function Thread({ useModel, unconfigured, useTools = noTools, Panel }: ChatOptions) {
+function Thread({
+  useModel,
+  unconfigured,
+  useTools = noTools,
+  useSystem = noSystem,
+  useActions = noActions,
+  Panel,
+}: ChatOptions) {
   const { id = '' } = useParams()
   // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
   const chosen = useModel()
   // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
   const tools = useTools()
+  // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
+  const instructions = useSystem()
+  // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
+  const actions = useActions()
   const conversations = useConversations()
 
   if (!chosen) return unconfigured
@@ -82,6 +101,8 @@ function Thread({ useModel, unconfigured, useTools = noTools, Panel }: ChatOptio
       id={id}
       chosen={chosen}
       tools={tools}
+      instructions={instructions}
+      actions={actions}
       Panel={Panel}
       history={
         conversations.find((conversation) => conversation.id === id)?.messages ?? []
@@ -94,18 +115,22 @@ function Chat({
   id,
   chosen,
   tools,
+  instructions,
+  actions,
   Panel,
   history,
 }: {
   id: string
   chosen: ChatModel
   tools: ToolSet
+  instructions?: string
+  actions: readonly ChatAction[]
   Panel?: ComponentType
   history: readonly ChatMessage[]
 }) {
   const transport = useMemo(
-    () => new DirectChatTransport({ agent: agentFor(chosen.model, tools) }),
-    [chosen.model, tools],
+    () => new DirectChatTransport({ agent: agentFor(chosen.model, tools, instructions) }),
+    [chosen.model, tools, instructions],
   )
 
   const { messages, sendMessage, status, error, stop } = useChat<ChatMessage>({
@@ -166,7 +191,7 @@ function Chat({
 
       {Panel && <Panel />}
 
-      <SelectionActions onPick={(text) => void sendMessage({ text })} />
+      <SelectionActions extra={actions} onPick={(text) => void sendMessage({ text })} />
 
       <Composer
         draftKey={draftKey(id)}

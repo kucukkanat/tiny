@@ -7,8 +7,8 @@ import {
 
 // `stopWhen` already defaults to twenty steps, so a tool the model calls gets
 // answered and the reply carries on without anything else being said here.
-export const agentFor = (model: LanguageModel, tools: ToolSet) =>
-  new ToolLoopAgent({ model, tools })
+export const agentFor = (model: LanguageModel, tools: ToolSet, instructions?: string) =>
+  new ToolLoopAgent(instructions ? { model, tools, instructions } : { model, tools })
 
 export type ChatMessage = InferAgentUIMessage<ReturnType<typeof agentFor>>
 

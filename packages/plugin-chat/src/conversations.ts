@@ -51,6 +51,29 @@ const parse = (raw: string | null): unknown => {
   }
 }
 
+/**
+ * A tool call that never came back — a question nobody answered, a tool whose
+ * extension was switched off mid-call — would be sent as a call with no result,
+ * and every provider rejects that. The reply is over; drop what's still waiting.
+ */
+const settled = (message: { parts?: unknown }): unknown => {
+  const parts = Array.isArray(message.parts) ? message.parts : []
+  return {
+    ...message,
+    parts: parts.filter(
+      (part) =>
+        !(
+          typeof part === 'object' &&
+          part !== null &&
+          'type' in part &&
+          part.type === 'dynamic-tool' &&
+          'state' in part &&
+          (part.state === 'input-streaming' || part.state === 'input-available')
+        ),
+    ),
+  }
+}
+
 // Storage written by an older build is worth exactly nothing, so anything the
 // SDK won't vouch for is dropped rather than crashing the screen.
 const read = async (key: string): Promise<Conversation | null> => {
@@ -59,7 +82,9 @@ const read = async (key: string): Promise<Conversation | null> => {
 
   // The SDK owns the message shape, so let it say whether this is still one.
   const checked = await safeValidateUIMessages<ChatMessage>({
-    messages: stored.data.messages,
+    messages: stored.data.messages.map((message) =>
+      typeof message === 'object' && message !== null ? settled(message) : message,
+    ),
   })
   return checked.success ? { ...stored.data, messages: checked.data } : null
 }

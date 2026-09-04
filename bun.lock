@@ -20,13 +20,16 @@
       "version": "0.0.0",
       "dependencies": {
         "@tiny/plugin-chat": "workspace:*",
+        "@tiny/plugin-extensions": "workspace:*",
         "@tiny/plugin-host": "workspace:*",
         "@tiny/plugin-settings": "workspace:*",
         "@tiny/plugin-tools": "workspace:*",
         "@tiny/ui": "workspace:*",
+        "ai": "^7.0.77",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "react-router": "^7.13.0",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@tailwindcss/vite": "^4",
@@ -36,6 +39,23 @@
         "vite": "^8.2.0",
         "vite-plugin-pwa": "^1.0.3",
         "workbox-window": "^7.4.1",
+      },
+    },
+    "packages/extension-starter": {
+      "name": "@tiny/extension-starter",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ai-sdk/google": "^4.0.63",
+        "@tiny/plugin-host": "workspace:*",
+        "@tiny/ui": "workspace:*",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4",
+        "@vitejs/plugin-react": "^6.0.4",
+        "ai": "^7.0.77",
+        "react": "^19.2.8",
+        "vite": "^8.2.0",
+        "zod": "^4.4.3",
       },
     },
     "packages/plugin-chat": {
@@ -54,9 +74,27 @@
         "react": "^19",
       },
     },
+    "packages/plugin-extensions": {
+      "name": "@tiny/plugin-extensions",
+      "version": "0.0.0",
+      "dependencies": {
+        "@tiny/plugin-host": "workspace:*",
+        "@tiny/ui": "workspace:*",
+        "ai": "^7.0.77",
+        "lucide-react": "^1.33.0",
+        "react-router": "^7.13.0",
+        "zod": "^4.4.3",
+      },
+      "peerDependencies": {
+        "react": "^19",
+      },
+    },
     "packages/plugin-host": {
       "name": "@tiny/plugin-host",
       "version": "0.0.0",
+      "dependencies": {
+        "ai": "^7.0.77",
+      },
       "peerDependencies": {
         "react": "^19",
       },
@@ -123,6 +161,8 @@
     "@ai-sdk/anthropic": ["@ai-sdk/anthropic@4.0.41", "", { "dependencies": { "@ai-sdk/provider": "4.0.7", "@ai-sdk/provider-utils": "5.0.29" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-So62as8fexWMmXMIxvrWVaDLjLRe6EG2+5mmRc1KCPBoyyyFx6zbTcCvxJkViSUHhsGMBDryAm+mfs91n7Jl8g=="],
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@4.0.62", "", { "dependencies": { "@ai-sdk/provider": "4.0.7", "@ai-sdk/provider-utils": "5.0.29", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-zR3pustGWhw5eUZHG+fJZx/V/PBe+LxdDpc5hDFWxozG/3MB/+eY62jn+YiR+9uOH+Hx63e5zJoeKLfZfPktWQ=="],
+
+    "@ai-sdk/google": ["@ai-sdk/google@4.0.63", "", { "dependencies": { "@ai-sdk/provider": "4.0.10", "@ai-sdk/provider-utils": "5.0.36" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-SlKcqnN0oKC8JWahecs3IvFnIFgbrEE4i/bmom5xsPFUjkIVvXAJAhRzjfgfROSOOeyvouKUFPWJEjn11FWf3A=="],
 
     "@ai-sdk/mcp": ["@ai-sdk/mcp@2.0.36", "", { "dependencies": { "@ai-sdk/provider": "4.0.7", "@ai-sdk/provider-utils": "5.0.29", "cross-spawn": "^7.0.6", "pkce-challenge": "^5.0.1" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-0RB0THm8EcTjvgNYifsXV21O0IozTx2/uJmtIjzY4myET1iVsvUh07xVfwSRY7keBkJhmK2kaF99qFlrWZDLXQ=="],
 
@@ -694,7 +734,11 @@
 
     "@tiny/app": ["@tiny/app@workspace:packages/app"],
 
+    "@tiny/extension-starter": ["@tiny/extension-starter@workspace:packages/extension-starter"],
+
     "@tiny/plugin-chat": ["@tiny/plugin-chat@workspace:packages/plugin-chat"],
+
+    "@tiny/plugin-extensions": ["@tiny/plugin-extensions@workspace:packages/plugin-extensions"],
 
     "@tiny/plugin-host": ["@tiny/plugin-host@workspace:packages/plugin-host"],
 
@@ -2089,6 +2133,10 @@
     "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
 
     "zwitch": ["zwitch@2.0.4", "", {}, "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="],
+
+    "@ai-sdk/google/@ai-sdk/provider": ["@ai-sdk/provider@4.0.10", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-fX2ENAc7iDpZ+Wp4+Rk06Usn/Ys7dI9uAkGv0jlF6XVrW13NkRWx5Ou+U6lIM2E1fTLkCs16GGrUAaVvroag7A=="],
+
+    "@ai-sdk/google/@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@5.0.36", "", { "dependencies": { "@ai-sdk/provider": "4.0.10", "@standard-schema/spec": "^1.1.0", "@workflow/serde": "4.1.0", "eventsource-parser": "^3.0.8", "undici": "^7.29.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-MFXBn6XDyf37PNQAge/HTatPJE8Vmg/g/w4WPtjSV53jq8FKAzoaN5+43hsdQa9bqgN+/13jxug9ChvsG+godQ=="],
 
     "@dotenvx/dotenvx/commander": ["commander@11.1.0", "", {}, "sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ=="],
 

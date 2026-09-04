@@ -2,8 +2,9 @@
 
 [kucukkanat.github.io/tiny](https://kucukkanat.github.io/tiny/)
 
-A browser-only PWA. A thin shell that routes, lays out, and hosts plugins —
-every feature is a plugin.
+A browser-only PWA. A thin shell that routes, lays out, and hosts features.
+Features come two ways: **plugins** are built in, **extensions** are installed
+into the running app from a URL.
 
 ```sh
 bun install
@@ -16,14 +17,16 @@ bun run build  # static files in packages/app/dist
 
 ## Packages
 
-| Package                 | What it is                                          |
-| ----------------------- | --------------------------------------------------- |
-| `@tiny/app`             | The shell: routing, layout, plugin list             |
-| `@tiny/ui`              | Design tokens and components (shadcn + AI Elements) |
-| `@tiny/plugin-host`     | The `Plugin` contract, and nothing else             |
-| `@tiny/plugin-chat`     | Chat and its history, straight from the tab         |
-| `@tiny/plugin-tools`    | Tools you write in the app, for the model to call   |
-| `@tiny/plugin-settings` | Model endpoint, API key and theme, kept on device   |
+| Package                   | What it is                                              |
+| ------------------------- | ------------------------------------------------------- |
+| `@tiny/app`               | The shell: routing, layout, plugin list                 |
+| `@tiny/ui`                | Design tokens and components (shadcn + AI Elements)     |
+| `@tiny/plugin-host`       | The `Plugin` and `Extension` contracts, and little else |
+| `@tiny/plugin-chat`       | Chat and its history, straight from the tab             |
+| `@tiny/plugin-tools`      | Tools you write in the app, for the model to call       |
+| `@tiny/plugin-settings`   | Model endpoint, API key and theme, kept on device       |
+| `@tiny/plugin-extensions` | Extensions you install into the running app             |
+| `@tiny/extension-starter` | A working extension, and the one to copy                |
 
 ## Look
 
@@ -40,5 +43,42 @@ routing is hash-based — no server rewrite, no `base` to keep in sync.
 
 ## Adding a feature
 
-It's a plugin. Make `packages/plugin-<name>`, export a `Plugin`, add it to
-`packages/app/src/plugins.ts`. The shell doesn't change.
+Two ways, and the difference is when.
+
+**A plugin** is built in. Make `packages/plugin-<name>`, export a `Plugin`, add
+it to `packages/app/src/plugins.tsx`. The shell doesn't change. It ships when you
+deploy.
+
+**An extension** is installed by whoever is using the app — paste a URL on the
+Extensions screen and it is live in the next message. No build, no deploy. It can
+register tools for the model, add a screen and a sidebar section, register a
+model provider, read past conversations, add an action to a highlighted reply,
+and bring its own styles.
+
+```tsx
+import type { Extension, Tiny } from '@tiny/plugin-host'
+import { tool } from 'ai'
+import { z } from 'zod'
+
+export default (tiny: Tiny): Extension => ({
+  id: 'dice',
+  title: 'Dice',
+  tools: {
+    roll: tool({
+      description: 'Roll an n-sided die.',
+      inputSchema: z.object({ sides: z.number() }),
+      execute: ({ sides }) => 1 + Math.floor(Math.random() * sides),
+    }),
+  },
+})
+```
+
+`packages/extension-starter` is a real one using every slot, and it ships with
+the app — open Extensions and press "Try the example one". Its README is the
+guide: what you may import, how to run one against `bun dev`, how to publish it,
+and what each failure means.
+
+An extension runs in the page with the API key in reach, so the screen shows what
+one registers before you turn it on, and an install link never turns itself on.
+There is no sandbox; treat one the way you'd treat anything else you run on your
+own machine.

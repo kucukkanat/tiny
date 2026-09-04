@@ -27,6 +27,15 @@ jobs:
       - run: bun run lint
       - run: bun test
       - run: bun run build
+      # The example extension is served with the app, so the Extensions screen
+      # can offer it from the same origin — and every deploy proves the loader
+      # still works end to end.
+      - run: bun --filter @tiny/extension-starter build
+      # Extension authors get their types from here: the @tiny scope on npm
+      # belongs to someone else. Versioned names, never overwritten — a reused
+      # name fails a cold install with an integrity error.
+      - run: bun pm pack --destination ../app/dist/pkg
+        working-directory: packages/plugin-host
       - uses: actions/upload-pages-artifact@v5
         with:
           path: packages/app/dist

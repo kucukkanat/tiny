@@ -1,6 +1,6 @@
 {
   "name": "@tiny/plugin-host",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -8,5 +8,11 @@
   },
   "peerDependencies": {
     "react": "^19"
-  }
+  },
+  "dependencies": {
+    "ai": "^7.0.77"
+  },
+  "files": [
+    "src"
+  ]
 }

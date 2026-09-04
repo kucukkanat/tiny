@@ -11,8 +11,10 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@tiny/ui/components/sidebar'
+import { Safely } from '@tiny/plugin-host'
+import { Loading } from '@tiny/ui/components/loading'
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
-import { home, plugins } from './plugins'
+import { home, usePlugins } from './plugins'
 
 // The sidebar writes its own cookie; reading it back is what survives a reload.
 const openOnLoad = () => !document.cookie.includes('sidebar_state=false')
@@ -34,7 +36,12 @@ export function App() {
 function Shell() {
   const { pathname } = useLocation()
   const { setOpenMobile } = useSidebar()
-  const active = plugins.find(({ id }) => pathname.startsWith(`/${id}`))
+  const { plugins, ready } = usePlugins()
+  // On the segment, not the string: `/chat-plus` is not `/chat`, and an
+  // extension picks its own id.
+  const active = plugins.find(
+    ({ id }) => pathname === `/${id}` || pathname.startsWith(`/${id}/`),
+  )
 
   return (
     <>
@@ -44,7 +51,14 @@ function Shell() {
         </SidebarHeader>
 
         <SidebarContent>
-          {plugins.map(({ id, Sidebar: Section }) => Section && <Section key={id} />)}
+          {plugins.map(
+            ({ id, title, Sidebar: Section }) =>
+              Section && (
+                <Safely key={id} name={title} resetKey={pathname}>
+                  <Section />
+                </Safely>
+              ),
+          )}
         </SidebarContent>
 
         <SidebarFooter>
@@ -82,10 +96,24 @@ function Shell() {
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="screen">
           <Routes>
-            {plugins.map(({ id, Screen }) => (
-              <Route key={id} path={`/${id}/*`} element={<Screen />} />
+            {plugins.map(({ id, title, Screen }) => (
+              <Route
+                key={id}
+                path={`/${id}/*`}
+                element={
+                  <Safely name={title}>
+                    <Screen />
+                  </Safely>
+                }
+              />
             ))}
-            <Route path="*" element={<Navigate to={home} replace />} />
+            {/* Nowhere to send you while a route might still be arriving. */}
+            <Route
+              path="*"
+              element={
+                ready ? <Navigate to={home} replace /> : <Loading label="Loading" />
+              }
+            />
           </Routes>
         </main>
       </SidebarInset>

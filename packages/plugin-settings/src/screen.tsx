@@ -11,23 +11,19 @@ import {
 } from '@tiny/ui/components/select'
 import { ToggleGroup, ToggleGroupItem } from '@tiny/ui/components/toggle-group'
 import { THEMES, isTheme, useTheme, type Theme } from '@tiny/ui/lib/theme'
+import type { Provider } from '@tiny/plugin-host'
 import { useState } from 'react'
-import { fetchModels } from './models'
 import {
-  DEFAULT_BASE_URL,
-  PROVIDER_KINDS,
   hasCredentials,
-  isProviderKind,
   readModels,
   useProvider,
   writeModels,
-  type Provider,
-  type ProviderKind,
+  type Registry,
 } from './provider'
 
-const LABEL: Readonly<Record<ProviderKind, string>> = {
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
+/** Settings is handed the dialects on offer; it doesn't know where they came from. */
+export type SettingsOptions = {
+  readonly useProviders: () => Registry
 }
 
 const THEME_LABEL: Readonly<Record<Theme, string>> = {
@@ -36,12 +32,16 @@ const THEME_LABEL: Readonly<Record<Theme, string>> = {
   system: 'System',
 }
 
-export function SettingsScreen() {
-  const [provider, setProvider] = useProvider()
+export function SettingsScreen({ useProviders }: SettingsOptions) {
+  // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
+  const specs = useProviders()
+  const [provider, setProvider] = useProvider(specs)
   const [theme, setTheme] = useTheme()
   const [models, setModels] = useState(readModels)
   const [modelsError, setModelsError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const spec = specs[provider.kind]
   const endpointIsBad = provider.baseUrl.length > 0 && !URL.canParse(provider.baseUrl)
 
   // A loaded list describes the endpoint it came from, so touching the endpoint,
@@ -54,11 +54,18 @@ export function SettingsScreen() {
   }
 
   const loadModels = async (from: Provider) => {
+    if (!spec) return
     setLoading(true)
-    const result = await fetchModels(from)
-    setModels(result.ok ? result.models : [])
-    writeModels(result.ok ? result.models : [])
-    setModelsError(result.ok ? '' : result.error)
+    const result = await spec.models(from).then(
+      (list) => ({ models: list, error: '' }),
+      (cause: unknown) => ({
+        models: [],
+        error: cause instanceof Error ? cause.message : String(cause),
+      }),
+    )
+    setModels([...result.models])
+    writeModels(result.models)
+    setModelsError(result.error)
     setLoading(false)
   }
 
@@ -72,20 +79,31 @@ export function SettingsScreen() {
           aria-labelledby="api-label"
           value={provider.kind}
           onValueChange={(kind) => {
-            if (isProviderKind(kind)) change({ kind })
+            if (specs[kind]) change({ kind })
           }}
           className="w-full"
         >
-          {PROVIDER_KINDS.map((kind) => (
+          {Object.entries(specs).map(([kind, { label }]) => (
             <ToggleGroupItem
               key={kind}
               value={kind}
               data-testid={`settings-kind-${kind}`}
               className="h-control flex-1"
             >
-              {LABEL[kind]} compatible
+              {label} compatible
             </ToggleGroupItem>
           ))}
+          {/* What you chose is still what you chose, even with nothing to run it. */}
+          {!spec && (
+            <ToggleGroupItem
+              value={provider.kind}
+              disabled
+              data-testid={`settings-kind-${provider.kind}`}
+              className="h-control flex-1"
+            >
+              {provider.kind} (not loaded)
+            </ToggleGroupItem>
+          )}
         </ToggleGroup>
       </fieldset>
 
@@ -98,7 +116,7 @@ export function SettingsScreen() {
           inputMode="url"
           autoComplete="off"
           spellCheck={false}
-          placeholder={DEFAULT_BASE_URL[provider.kind]}
+          placeholder={spec?.baseUrl}
           className="h-control"
           aria-invalid={endpointIsBad}
           value={provider.baseUrl}
@@ -107,7 +125,9 @@ export function SettingsScreen() {
         <p className="text-muted-foreground text-sm" data-testid="settings-base-url-hint">
           {endpointIsBad
             ? 'That is not a URL.'
-            : `Any ${LABEL[provider.kind]}-compatible server. Blank uses the default.`}
+            : spec
+              ? `Any ${spec.label}-compatible server. Blank uses the default.`
+              : `Nothing here answers to ${provider.kind}. Its extension is off or still loading.`}
         </p>
       </fieldset>
 
@@ -160,7 +180,7 @@ export function SettingsScreen() {
             variant="outline"
             data-testid="settings-load-models"
             className="h-control px-4"
-            disabled={loading || !hasCredentials(provider)}
+            disabled={loading || !spec || !hasCredentials(provider)}
             onClick={() => void loadModels(provider)}
           >
             Load

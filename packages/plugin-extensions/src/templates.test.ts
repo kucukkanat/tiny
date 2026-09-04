@@ -1,11 +1,14 @@
 import { expect, test } from 'bun:test'
 import { SHARED } from '../../app/src/sdk/shared'
+import { transformJsx } from './jsx'
 import { TEMPLATES } from './templates'
 
 // A template can't be checked by importing it: bare specifiers resolve through
 // the page's import map, which doesn't exist under Bun. The transpiler reads
-// the same source the browser would without running any of it.
-const scan = (source: string) => new Bun.Transpiler({ loader: 'js' }).scan(source)
+// what the browser will actually be handed — the compiled output — without
+// running any of it.
+const scan = (source: string) =>
+  new Bun.Transpiler({ loader: 'js' }).scan(transformJsx(source))
 
 test.each(TEMPLATES.map(({ label, source }) => [label, source] as const))(
   '%s parses, and says how it is used',
@@ -25,9 +28,14 @@ test.each(TEMPLATES.map(({ label, source }) => [label, source] as const))(
   },
 )
 
-test('a template written with JSX would fail here rather than in the browser', () => {
-  // Nothing compiles a template, so JSX in one is a syntax error at import.
-  expect(() => scan('export default () => <p>no</p>')).toThrow()
+test('a template may use JSX, because it is compiled on the way to the blob', () => {
+  expect(scan('export default () => <p>yes</p>').imports.map(({ path }) => path)).toEqual(
+    ['react/jsx-runtime'],
+  )
+})
+
+test('a tag left open is caught here rather than in the browser', () => {
+  expect(() => scan('export default () => <p>no')).toThrow()
 })
 
 test('a template that will not parse is caught', () => {

@@ -16,6 +16,7 @@ import {
   subscribeInstalled,
   type Installed,
 } from './installed'
+import { transformJsx } from './jsx'
 
 /** Where one installed extension has got to. */
 export type Entry = {
@@ -69,12 +70,29 @@ const blobs = new Map<string, { readonly url: string; readonly source: string }>
 
 const keyOf = (one: Installed) => `${one.id}\n${one.version}`
 
+/**
+ * `sourceOf` runs during render, so a bad tag must not throw out of here. A
+ * module that throws on evaluation lands in `load`'s catch instead, which is
+ * where every other reason an extension didn't start already shows up.
+ */
+const compile = (source: string) => {
+  try {
+    return transformJsx(source)
+  } catch (cause) {
+    return `throw new SyntaxError(${JSON.stringify(said(cause))})`
+  }
+}
+
 const blobFor = (one: Installed, source: string) => {
   const key = keyOf(one)
   const made = blobs.get(key)
   if (made) return made.url
 
-  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }))
+  const url = URL.createObjectURL(
+    new Blob([compile(source)], { type: 'text/javascript' }),
+  )
+  // What's remembered is what you wrote, not what ran: the screen compares it
+  // against the box to know whether Run is behind.
   blobs.set(key, { url, source })
   return url
 }

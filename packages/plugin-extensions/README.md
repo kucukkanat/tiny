@@ -83,8 +83,11 @@ A written extension is kept as source and run from a `blob:` URL minted fresh
 each time the page loads, so it works offline and survives a reload. Two things
 follow from nothing compiling it:
 
-- **No JSX.** `createElement`, usually aliased to `h`, is what JSX turns into
-  anyway and reads the same way. The Recap premade shows it.
+- **JSX works**, and only here. It is compiled on the way to being run, so what
+  you write in the box can use tags. An extension installed from a **URL** is
+  not compiled — it is fetched and imported as it is — so JSX in one fails with
+  `Unexpected token '<'`. Put JSX through your own build before you publish it.
+- **No TypeScript.** Types are not stripped, so a `: string` is a syntax error.
 - **No imports beyond the five below** — not even a file sitting next to it, since
   a blob URL has no base to resolve a relative path against.
 

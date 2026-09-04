@@ -3,11 +3,10 @@
  * Two tools and a screen — a tool that reaches the network, one that asks you,
  * and something with a face on it.
  *
- * They are modules, not files: nothing compiles them, so there is no JSX and no
- * TypeScript here. `h(tag, props, ...children)` is what JSX turns into anyway,
- * and it reads in the same order. Only `react`, `react/jsx-runtime`,
- * `react-router`, `zod` and `ai` can be imported — anything else has to come
- * from an extension you build and host yourself.
+ * They are modules, not files. JSX works — it is compiled on the way to being
+ * run — but TypeScript is not, and only `react`, `react/jsx-runtime`,
+ * `react-router`, `zod` and `ai` can be imported. Anything else has to come from
+ * an extension you build and host yourself.
  */
 export const TEMPLATES = [
   {
@@ -64,7 +63,7 @@ export default (tiny) => ({
   {
     label: 'Recap',
     title: 'Recap',
-    source: `import { createElement as h, useState } from 'react'
+    source: `import { useState } from 'react'
 
 export default (tiny) => ({
   id: 'recap',
@@ -73,31 +72,24 @@ export default (tiny) => ({
     const chats = tiny.useChats()
     const [shown, setShown] = useState(5)
 
-    return h(
-      'div',
-      { className: 'mx-auto flex w-full max-w-md flex-col gap-3' },
-      h(
-        'p',
-        { className: 'text-ink-2 text-sm' },
-        chats.length + ' conversations so far.',
-      ),
-      ...chats.slice(0, shown).map((chat) =>
-        h(
-          'p',
-          { key: chat.id, className: 'bg-surface rounded-card p-3 text-sm' },
-          chat.title,
-        ),
-      ),
-      chats.length > shown &&
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'border-line rounded-control h-control border px-4 text-sm',
-            onClick: () => setShown(shown + 5),
-          },
-          'Show more',
-        ),
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3">
+        <p className="text-ink-2 text-sm">{chats.length} conversations so far.</p>
+        {chats.slice(0, shown).map((chat) => (
+          <p key={chat.id} className="bg-surface rounded-card p-3 text-sm">
+            {chat.title}
+          </p>
+        ))}
+        {chats.length > shown && (
+          <button
+            type="button"
+            className="border-line rounded-control h-control border px-4 text-sm"
+            onClick={() => setShown(shown + 5)}
+          >
+            Show more
+          </button>
+        )}
+      </div>
     )
   },
 })

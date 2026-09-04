@@ -473,7 +473,7 @@ function Editor({ one, stale }: { one: Installed; stale: boolean }) {
           ? 'There is no room left in storage, so this is not saved.'
           : stale
             ? 'Edited. Press Run to use it.'
-            : 'Only these can be imported: react, react/jsx-runtime, react-router, zod, ai. No JSX — nothing compiles this.'}
+            : 'JSX works. Only these can be imported: react, react/jsx-runtime, react-router, zod, ai.'}
       </p>
     </fieldset>
   )

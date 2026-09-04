@@ -9,12 +9,15 @@ import {
   completeIdentifiers,
   completeKeywords,
   jsContext,
+  globalReactAttributes,
+  jsxTagCompletion,
+  reactTags,
   type JSContext,
 } from 'prism-code-editor/autocomplete/javascript'
 import { defaultCommands, editHistory } from 'prism-code-editor/commands'
 import { cursorPosition } from 'prism-code-editor/cursor'
 import { matchBrackets } from 'prism-code-editor/match-brackets'
-import 'prism-code-editor/prism/languages/javascript'
+import 'prism-code-editor/prism/languages/jsx'
 import { useEffect, useRef, useState } from 'react'
 import { completionsFor } from './complete'
 import './editor.css'
@@ -28,7 +31,7 @@ import type { RichEditorProps } from './rich'
  * them in the same list — and a suggestion that doesn't exist is worse than no
  * suggestion. Everything the list may contain is decided here.
  */
-registerCompletions(['javascript'], {
+registerCompletions(['jsx'], {
   context: jsContext,
   sources: [
     ((context, editor) => {
@@ -51,6 +54,9 @@ registerCompletions(['javascript'], {
         options: [...found.options, ...language],
       }
     }) satisfies CompletionSource<JSContext>,
+    // Inside a tag `jsContext` sets `path` to null, so the source above has
+    // already declined — these two never both answer.
+    jsxTagCompletion(reactTags, globalReactAttributes),
   ],
 })
 
@@ -66,7 +72,7 @@ export function RichEditor({ value, onChange, onReady }: RichEditorProps) {
     if (!host.current) return
     const made = createEditor(
       host.current,
-      { language: 'javascript', value, tabSize: 2, lineNumbers: true },
+      { language: 'jsx', value, tabSize: 2, lineNumbers: true },
       defaultCommands(),
       editHistory(),
       cursorPosition(),

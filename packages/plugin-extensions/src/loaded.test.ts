@@ -291,3 +291,23 @@ test('source that will not parse is an error on its own row', async () => {
     'ready',
   ])
 })
+
+test('a tag left open is an error on the row, not a broken screen', async () => {
+  // JSX is compiled on the way to the blob, so a syntax error has to arrive
+  // where every other reason an extension didn't start already shows up.
+  write('1', `export default () => ({ id: 'a', title: 'A', Screen: () => <div> })`)
+  const { result } = watch()
+
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(result.current.entries[0]?.status).toBe('error')
+  expect(result.current.entries[0]?.error).toContain('unclosed <div>')
+})
+
+test('a broken tag in one extension leaves the others running', async () => {
+  write('1', `export default () => ({ id: 'a', title: 'A', Screen: () => <p> })`)
+  write('2', DICE_SOURCE)
+  const { result } = watch()
+
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(Object.keys(result.current.tools)).toEqual(['roll'])
+})

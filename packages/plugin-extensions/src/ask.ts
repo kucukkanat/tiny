@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { newId } from './id'
+import { newId } from './installed'
 
 /** A tool waiting on you to answer it, and what it offered to choose from. */
 export type Question = {
@@ -18,11 +18,13 @@ const publish = (next: readonly Question[]) => {
 }
 
 /**
- * The `ask` a tool is given. The call parks here until the chat screen hands an
- * answer back — the agent loop runs in this tab, so nothing times out waiting.
+ * The `ask` every extension is handed as `tiny.ask`. The call parks here until
+ * the chat screen hands an answer back — the agent loop runs in this tab, so
+ * nothing times out waiting.
  *
- * Both arguments come from source you wrote in the app, so neither is trusted
- * to be the shape it should be: whatever arrives is coerced, not validated.
+ * Both arguments come from an extension, which is somebody else's code, so
+ * neither is trusted to be the shape it should be: whatever arrives is coerced,
+ * not validated.
  */
 export const askUser = (question: string, options?: unknown): Promise<string> =>
   new Promise((resolve) => {

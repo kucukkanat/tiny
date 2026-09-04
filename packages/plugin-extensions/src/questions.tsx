@@ -3,7 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { answerQuestion, useQuestions, type Question } from './ask'
 
-/** Whatever a tool that called `ask` is still waiting for. Chat renders this. */
+/** Whatever an extension's tool that called `ask` is waiting for. Chat renders this. */
 export function ToolQuestions() {
   const questions = useQuestions()
   const [at, setAt] = useState(0)

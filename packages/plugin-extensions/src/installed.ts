@@ -20,7 +20,8 @@ export type Installed = {
 // Unique enough to name a row, and available outside a secure context —
 // `crypto.randomUUID` is not, which bites the moment you open the dev server on
 // a phone over plain http.
-const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+export const newId = () =>
+  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 
 /** Named after its file until it loads and says what it calls itself. */
 export const newInstall = (url: string): Installed => ({

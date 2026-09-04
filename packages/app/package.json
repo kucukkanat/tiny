@@ -14,7 +14,6 @@
     "@tiny/plugin-extensions": "workspace:*",
     "@tiny/plugin-host": "workspace:*",
     "@tiny/plugin-settings": "workspace:*",
-    "@tiny/plugin-tools": "workspace:*",
     "@tiny/ui": "workspace:*",
     "ai": "^7.0.77",
     "react": "^19.2.8",

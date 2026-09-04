@@ -1,5 +1,10 @@
 import { chat, textOf, useConversations, type ChatModel } from '@tiny/plugin-chat'
-import { extensions, useExtensions } from '@tiny/plugin-extensions'
+import {
+  ToolQuestions,
+  askUser,
+  extensions,
+  useExtensions,
+} from '@tiny/plugin-extensions'
 import type { Chat, Plugin, Tiny } from '@tiny/plugin-host'
 import {
   isUsable,
@@ -9,7 +14,6 @@ import {
   useProvider,
   type Registry,
 } from '@tiny/plugin-settings'
-import { ToolQuestions, askUser, tools, useToolSet } from '@tiny/plugin-tools'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 
@@ -45,13 +49,7 @@ const useModel = (): ChatModel | undefined => {
     : undefined
 }
 
-/** Your tools and every extension's. Yours wins a shared name. */
-const useTools = () => {
-  const own = useToolSet()
-  const { tools: added } = useExtensions()
-  return useMemo(() => ({ ...added, ...own }), [own, added])
-}
-
+const useTools = () => useExtensions().tools
 const useSystem = () => useExtensions().instructions
 const useActions = () => useExtensions().actions
 
@@ -99,7 +97,6 @@ const unconfigured = (
 /** What ships in the build, in sidebar order. */
 const BUILT_IN = [
   chat({ useModel, unconfigured, useTools, useSystem, useActions, Panel: ToolQuestions }),
-  tools,
   settings({ useProviders }),
 ] as const satisfies readonly Plugin[]
 

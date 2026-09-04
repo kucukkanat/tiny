@@ -17,4 +17,8 @@ export const extensions = ({ tiny, reserved }: ExtensionsOptions): Plugin => {
   return { id: ID, title: 'Extensions', Screen: ExtensionsScreen }
 }
 
+// The question an extension's tool asks with, and where the answer is given.
+// Chat renders the card without knowing extensions exist.
+export { askUser } from './ask'
+export { ToolQuestions } from './questions'
 export { useExtensions } from './loaded'

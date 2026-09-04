@@ -181,3 +181,18 @@ test('an address next to the app is one next to the app, not next to a chunk', a
   expect(result.current.entries[0]?.error).toContain('/extensions/starter.js')
   expect(result.current.entries[0]?.error).not.toContain('/assets/')
 })
+
+test('two extensions wanting one tool name: one gets it, and both are loaded', async () => {
+  const dice = (id: string) =>
+    module(`export default () => ({
+      id: '${id}', title: '${id}',
+      tools: { roll: { description: 'Roll.', execute: () => '${id}' } },
+    })`)
+  install('1', dice('one'))
+  install('2', dice('two'))
+  const { result } = watch()
+
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(result.current.entries.every(({ status }) => status === 'ready')).toBe(true)
+  expect(Object.keys(result.current.tools)).toEqual(['roll'])
+})

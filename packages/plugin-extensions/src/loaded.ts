@@ -171,6 +171,9 @@ const answerFor = (one: Installed) => {
   return entry?.source === sourceOf(one) ? entry : undefined
 }
 
+/** A sidebar-only extension still needs something at its route. */
+const Nothing = () => null
+
 const collect = (): Loaded => {
   const on = readInstalled().filter((one) => one.enabled)
   const rows: readonly Entry[] = on.map(
@@ -190,7 +193,7 @@ const collect = (): Loaded => {
     }),
     entries: rows,
     screens: live.flatMap(({ id, title, Screen, Sidebar }) =>
-      Screen || Sidebar ? [{ id, title, Screen: Screen ?? (() => null), Sidebar }] : [],
+      Screen || Sidebar ? [{ id, title, Screen: Screen ?? Nothing, Sidebar }] : [],
     ),
     tools: Object.fromEntries(
       live.flatMap(({ tools }) =>
@@ -244,7 +247,7 @@ const sync = (notify = true) => {
   }
 
   loaded = undefined
-  if (notify) for (const listener of listeners) listener()
+  if (notify) publish()
 }
 
 let unwatch: (() => void) | undefined

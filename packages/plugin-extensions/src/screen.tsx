@@ -258,6 +258,14 @@ function Detail() {
   const entry = entries.find((other) => other.id === id)
   const extension = entry?.extension
 
+  // The tool set is one object, so a shared name is a quiet overwrite rather
+  // than an error. Name it here, where it can be acted on.
+  const elsewhere = new Set(
+    entries
+      .filter((other) => other.id !== id)
+      .flatMap((other) => Object.keys(other.extension?.tools ?? {})),
+  )
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5">
       <div className="flex items-center gap-3">
@@ -297,6 +305,12 @@ function Detail() {
               <li key={name} data-testid={`ext-tool-${name}`}>
                 <code>{name}</code> — {describe(tool)} Takes{' '}
                 {parameters(tool.inputSchema)}.
+                {elsewhere.has(name) && (
+                  <span className="text-orange" data-testid={`ext-tool-clash-${name}`}>
+                    {' '}
+                    Another extension answers to this name too.
+                  </span>
+                )}
               </li>
             ))}
             {Object.entries(extension.providers ?? {}).map(([kind, spec]) => (

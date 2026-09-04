@@ -23,7 +23,6 @@ bun run build  # static files in packages/app/dist
 | `@tiny/ui`                | Design tokens and components (shadcn + AI Elements)     |
 | `@tiny/plugin-host`       | The `Plugin` and `Extension` contracts, and little else |
 | `@tiny/plugin-chat`       | Chat and its history, straight from the tab             |
-| `@tiny/plugin-tools`      | Tools you write in the app, for the model to call       |
 | `@tiny/plugin-settings`   | Model endpoint, API key and theme, kept on device       |
 | `@tiny/plugin-extensions` | Extensions you install into the running app             |
 | `@tiny/extension-starter` | A working extension, and the one to copy                |
@@ -49,11 +48,15 @@ Two ways, and the difference is when.
 it to `packages/app/src/plugins.tsx`. The shell doesn't change. It ships when you
 deploy.
 
-**An extension** is installed by whoever is using the app — paste a URL on the
-Extensions screen and it is live in the next message. No build, no deploy. It can
-register tools for the model, add a screen and a sidebar section, register a
-model provider, read past conversations, add an action to a highlighted reply,
-and bring its own styles.
+**An extension** is installed by whoever is using the app, and is live in the
+next message. No build, no deploy. It can register tools for the model, add a
+screen and a sidebar section, register a model provider, read past conversations,
+add an action to a highlighted reply, and bring its own styles. Tools are
+extensions too — it is the only way to give the model one.
+
+Four ways in, on the Extensions screen: paste a URL, pick a file, start from one
+of three premades and edit it, or write one from scratch. The last three are
+kept as text and run from it, so they work offline and survive a reload.
 
 ```tsx
 import type { Extension, Tiny } from '@tiny/plugin-host'

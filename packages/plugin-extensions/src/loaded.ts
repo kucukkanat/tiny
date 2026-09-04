@@ -20,7 +20,6 @@ import {
 /** Where one installed extension has got to. */
 export type Entry = {
   readonly id: string
-  readonly url: string
   readonly status: 'loading' | 'ready' | 'error'
   readonly error?: string
   readonly extension?: Extension
@@ -57,9 +56,42 @@ export const attach = (tiny: Tiny, builtIn: readonly string[]) => {
  * to a week; and our own service worker's. A counter in the query beats all
  * three, and holding still between reloads is what keeps offline working.
  */
+/**
+ * A blob per version of a written extension, and the text it was made from.
+ *
+ * Keyed on the version and not on the text, for two reasons. `sourceOf` is asked
+ * on every render, so it has to answer the same thing every time or no entry
+ * would ever match its own source and the loader would re-import forever. And
+ * importing a module runs it, so text alone must not be the trigger — a half
+ * typed loop would freeze the tab. Run bumps the version; that is the trigger.
+ */
+const blobs = new Map<string, { readonly url: string; readonly source: string }>()
+
+const keyOf = (one: Installed) => `${one.id}\n${one.version}`
+
+const blobFor = (one: Installed, source: string) => {
+  const key = keyOf(one)
+  const made = blobs.get(key)
+  if (made) return made.url
+
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }))
+  blobs.set(key, { url, source })
+  return url
+}
+
+/** The text that is actually running, which is not always the text on screen. */
+export const runningSource = (one: Installed): string | undefined =>
+  blobs.get(keyOf(one))?.source
+
 const sourceOf = (one: Installed) => {
-  // A `data:` or `blob:` URL is its own content — there is nothing between it
-  // and you to cache, and a query on the end would land inside the module body.
+  // Written here, so there is nothing to fetch. A blob url dies with the page,
+  // which is exactly right: the text is what's stored, and each boot makes a
+  // fresh module out of it.
+  if (one.source !== undefined) return blobFor(one, one.source)
+  if (one.url === undefined) return ''
+
+  // A `data:` URL is its own content — there is nothing between it and you to
+  // cache, and a query on the end would land inside the module body.
   if (one.url.startsWith('data:') || one.url.startsWith('blob:')) return one.url
 
   // Against the page, not against whichever chunk happens to be running this:
@@ -177,7 +209,7 @@ const Nothing = () => null
 const collect = (): Loaded => {
   const on = readInstalled().filter((one) => one.enabled)
   const rows: readonly Entry[] = on.map(
-    (one) => answerFor(one) ?? { id: one.id, url: one.url, status: 'loading' },
+    (one) => answerFor(one) ?? { id: one.id, status: 'loading' },
   )
   const live = rows.flatMap(({ extension }) => (extension ? [extension] : []))
   const instructions = live
@@ -232,11 +264,11 @@ const sync = (notify = true) => {
     const source = sourceOf(one)
     if (!one.enabled || entries.get(one.id)?.source === source) continue
 
-    entries.set(one.id, { id: one.id, url: one.url, source, status: 'loading' })
+    entries.set(one.id, { id: one.id, source, status: 'loading' })
     void load(one).then((outcome) => {
       // Edited or turned off while this was in flight: that answer is older.
       if (entries.get(one.id)?.source !== source) return
-      entries.set(one.id, { id: one.id, url: one.url, source, ...outcome })
+      entries.set(one.id, { id: one.id, source, ...outcome })
       style(one.id, outcome.extension?.css)
 
       // Remember what it calls itself, so the row has a name before it loads.
@@ -265,8 +297,11 @@ const subscribe = (listener: () => void) => {
       unwatch = undefined
       // What is loaded stays loaded — the module map holds it either way — but
       // what was made of it is recomputed, so the next watcher sees the store
-      // as it is now rather than as it was.
+      // as it is now rather than as it was. The blobs go with it: one already
+      // imported stays good in the module map, and the next watcher mints what
+      // it needs, so holding them would only grow.
       loaded = undefined
+      blobs.clear()
     }
   }
 }

@@ -75,7 +75,7 @@ When one needs something another owns, it exports a factory that takes it and
 `packages/app/src/plugins.tsx` fills it in — that file is where features meet.
 `chat({ useModel, unconfigured, useTools, Panel })` is the whole of it today:
 chat calls a model without knowing settings exists, and runs tools without
-knowing plugin-tools does. `plugins.test.ts` fails the build if that slips.
+knowing plugin-extensions does. `plugins.test.ts` fails the build if that slips.
 
 ### Plugins and extensions
 
@@ -85,10 +85,26 @@ A **plugin** is build time. It is a package in this repo, it ships in the bundle
 and adding one is a commit and a deploy. Everything the app does itself is a
 plugin.
 
-An **extension** is run time. Whoever is using the app pastes a URL and it is
+An **extension** is run time. Whoever is using the app installs one and it is
 live in the next message — no build, no deploy, nothing installed on a server.
 It is one ES module, `import()`ed in the tab. `packages/plugin-extensions` hosts
 them; `packages/extension-starter` is a real one that ships with the app.
+
+There is no other way to give the model a tool. There used to be a `plugin-tools`
+that let you write one in a textarea, which was a second mechanism for the same
+job; it is gone, and what it stored is carried across on first boot by
+`migrate.ts`, which can be deleted once nobody is upgrading from a build that had
+it.
+
+Four ways to install: a URL, a file off the disk, one of three premades in
+`templates.ts`, or text typed into the screen. The last three are kept as source
+and run from a `blob:` minted per version — so they work offline, survive a
+reload, and can be edited in place. Two things follow from there being no build
+step. A written extension cannot use JSX, so the premades use `createElement`;
+and it cannot import anything the map does not carry, not even a file beside it,
+because a blob has no base to resolve against. Editing saves but does not run:
+importing a module executes it, and a loop you are halfway through writing would
+take the tab with it, so Run is a button.
 
 The contract for both lives in `plugin-host`, because both are features:
 `Extension` is a `Plugin` with an optional `Screen`, plus `tools`, `providers`,
@@ -146,13 +162,14 @@ for a JS change is the `index-*.js` line, not the precache total.
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
 
-Runtime extensions cost first paint +20,522 B raw / +11,425 B gzip, in two
-halves worth keeping apart. The feature itself — the host, the loader, the
-screen, the boundary — is +14,736 raw / +4,532 gz. The import map is the rest:
-+5,786 raw / +6,893 gz, of which 1,728 B is not code at all but gzip context
-lost to splitting one chunk into eight. Exposing whole libraries instead of
-named exports was measured at +65 kB gz, nearly all of it `export * from 'ai'`
-and `export * from 'react-router'` — so the shims name every export, and
+Runtime extensions cost first paint +20,522 B raw / +11,425 B gzip when they
+landed, and deleting `plugin-tools` then took 176,833 B raw and 39,642 B gzip
+back off it — so the whole of it, tools included, is now smaller than what it
+replaced. Of what the extensions themselves cost, the import map was +5,786 raw
+/ +6,893 gz, and 1,728 B of that is not code at all but gzip context lost to
+splitting one chunk into eight. Exposing whole libraries instead of named
+exports was measured at +65 kB gz, nearly all of it `export * from 'ai'` and
+`export * from 'react-router'` — so the shims name every export, and
 `sdk.test.ts` fails if the react list drifts from what React has. `@tiny/ui` is
 deliberately not on the map: it has no barrel, and a barrel makes `message.tsx`
 reachable, which drags in streamdown and the 305 shiki chunks.
@@ -165,7 +182,7 @@ beautifului.dev ships no code — no registry, no npm package, no per-component
 page, checked. So what it showcases gets written here from its rendered markup,
 on our tokens, and only where the app already has the data to fill it: its
 loading state and code block are in `packages/ui`, its tool chips and selection
-actions in `plugin-chat`, its approval card in `plugin-tools`. Together they
+actions in `plugin-chat`, its approval card in `plugin-extensions`. Together they
 cost 1.5 kB gzipped, because none of them pull a dependency.
 
 The other twelve it showcases aren't built and shouldn't be until something
@@ -173,11 +190,14 @@ produces what they display: task rows, recommendation, context cards, three
 tables, insight cards and the fine-tune inspector have no data behind them here,
 and the flowchart needs mermaid, which was removed on purpose for its weight.
 
-`plugin-tools` costs 42 kB gzipped, and all of it is zod. Handing `z` to
-`new Function` makes it opaque, so the whole library is retained where the
-storage schemas alone shake it down to a handful of members. That is the feature
-— you can't write `z.enum` in a tool if `z.enum` was shaken out — but it is the
-first thing to look at if the payload ever needs to come back down.
+Zod is whole in the build, and has to be: you can't write `z.enum` in an
+extension if `z.enum` was shaken out. It used to be whole _and_ on the first
+paint path, because `plugin-tools` handed `z` to `new Function` and rolldown
+could not see through that. With tools gone, the app's own use shakes down to a
+handful of members in the entry, and the full surface sits in `sdk/zod.js` —
+173 kB that only a page loading an extension ever fetches. Deleting that plugin
+took 176,833 B raw and 39,642 B gzipped off first paint, and a whole chunk with
+it.
 
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`:
 colour, type, spacing, radius, elevation and motion, all of it, so restyling is

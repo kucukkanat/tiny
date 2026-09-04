@@ -4,8 +4,9 @@ import { CodeBlock } from '@tiny/ui/components/code-block'
 import { Input } from '@tiny/ui/components/input'
 import { Loading } from '@tiny/ui/components/loading'
 import { Switch } from '@tiny/ui/components/switch'
+import { Textarea } from '@tiny/ui/components/textarea'
 import { asSchema, type Tool } from 'ai'
-import { RotateCwIcon, Trash2Icon } from 'lucide-react'
+import { PlayIcon, RotateCwIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import {
   Link,
@@ -18,15 +19,17 @@ import {
 } from 'react-router'
 import {
   newInstall,
+  newSource,
   removeInstalled,
   saveInstalled,
   useInstalled,
   type Installed,
 } from './installed'
-import { useExtensions, type Entry } from './loaded'
+import { runningSource, useExtensions, type Entry } from './loaded'
+import { TEMPLATES } from './templates'
 import { refuse } from './url'
 
-/** One example, so an empty screen has something to try. */
+/** One that ships with the app, so an empty screen has something to try. */
 const EXAMPLE = './extensions/starter.js'
 
 /** `/#/extensions` is the list; a row opens on its own page before it runs. */
@@ -41,17 +44,20 @@ export function ExtensionsScreen() {
   )
 }
 
-const add = (url: string, navigate: (to: string) => void) => {
-  const one = newInstall(url.trim())
-  saveInstalled(one)
-  navigate(`/extensions/${one.id}`)
+/** Saved and opened, or a reason it couldn't be saved. */
+const add = (one: Installed, go: (to: string) => void): string | undefined => {
+  if (!saveInstalled(one)) return 'There is no room left in storage for this.'
+  go(`/extensions/${one.id}`)
+  return undefined
 }
 
 function ExtensionList() {
   const installed = useInstalled()
   const { entries } = useExtensions()
   const [url, setUrl] = useState('')
+  const [full, setFull] = useState('')
   const navigate = useNavigate()
+  const go = (to: string) => void navigate(to)
   const problem = url.trim().length > 0 ? refuse(url) : undefined
 
   return (
@@ -60,7 +66,7 @@ function ExtensionList() {
         className="flex flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault()
-          if (!problem) add(url, (to) => void navigate(to))
+          if (!problem) setFull(add(newInstall(url.trim()), go) ?? '')
         }}
       >
         <div className="flex items-stretch gap-2">
@@ -85,25 +91,65 @@ function ExtensionList() {
             Add
           </Button>
         </div>
-        {problem && (
+        {(problem ?? full) && (
           <p className="text-destructive text-sm" data-testid="ext-url-hint">
-            {problem}
+            {problem ?? full}
           </p>
         )}
       </form>
 
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-sm">Or open one you have written:</p>
+        <div className="flex flex-wrap gap-2">
+          {/* A label is the only way to make a file input look like anything. */}
+          <label
+            className="border-line rounded-control hover:bg-hover flex h-9 cursor-pointer items-center border px-3 text-sm"
+            data-testid="ext-file-label"
+          >
+            Pick a file
+            <input
+              type="file"
+              data-testid="ext-file"
+              // iOS matches `accept` against types it knows, and greys out the
+              // rest — a list this broad is what keeps a .js file pickable.
+              accept=".js,.mjs,.txt,text/javascript,text/plain"
+              className="sr-only"
+              onChange={async (event) => {
+                const file = event.target.files?.[0]
+                // Reset, or choosing the same file twice is silence.
+                event.target.value = ''
+                if (file) setFull(add(newSource(await file.text(), file.name), go) ?? '')
+              }}
+            />
+          </label>
+          {TEMPLATES.map(({ label, title, source }) => (
+            <Button
+              key={label}
+              type="button"
+              variant="outline"
+              data-testid={`ext-template-${label.toLowerCase().replace(' ', '-')}`}
+              className="h-9"
+              onClick={() => setFull(add(newSource(source, title), go) ?? '')}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {installed.length === 0 ? (
         <div className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm text-balance">
-            An extension is a feature someone else wrote — tools for the model, a screen,
-            another model provider. It is fetched and run when you turn it on.
+            An extension is a feature someone else wrote, or one you write here — tools
+            for the model, a screen, another model provider. It is run when you turn it
+            on.
           </p>
           <Button
             type="button"
             variant="outline"
             data-testid="ext-example"
             className="h-control"
-            onClick={() => add(EXAMPLE, (to) => void navigate(to))}
+            onClick={() => setFull(add(newInstall(EXAMPLE), go) ?? '')}
           >
             Try the example one
           </Button>
@@ -171,7 +217,7 @@ function Install() {
   const installed = useInstalled()
   const navigate = useNavigate()
   const problem = refuse(url)
-  const already = installed.find((one) => one.url === url)
+  const already = installed.find((one) => one.url !== undefined && one.url === url)
 
   if (already) return <Navigate to={`/extensions/${already.id}`} replace />
 
@@ -192,7 +238,7 @@ function Install() {
           data-testid="ext-install-confirm"
           className="h-control flex-1"
           disabled={problem !== undefined}
-          onClick={() => add(url, (to) => void navigate(to))}
+          onClick={() => add(newInstall(url), (to) => void navigate(to))}
         >
           Add it, switched off
         </Button>
@@ -257,6 +303,10 @@ function Detail() {
 
   const entry = entries.find((other) => other.id === id)
   const extension = entry?.extension
+  const written = one.source !== undefined
+  // What is running is the text the current version was made from, which is not
+  // always the text on screen.
+  const stale = written && one.enabled && runningSource(one) !== one.source
 
   // The tool set is one object, so a shared name is a quiet overwrite rather
   // than an error. Name it here, where it can be acted on.
@@ -272,7 +322,7 @@ function Detail() {
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-medium">{one.title}</h2>
           <p className="text-ink-3 truncate text-sm" data-testid="ext-origin">
-            {new URL(one.url, location.href).origin}
+            {written ? 'Written here' : new URL(one.url ?? '', location.href).origin}
           </p>
         </div>
         <Switch
@@ -282,10 +332,15 @@ function Detail() {
         />
       </div>
 
-      <CodeBlock label="From" code={one.url} />
+      {written ? (
+        <Editor one={one} stale={stale} />
+      ) : (
+        <CodeBlock label="From" code={one.url ?? ''} />
+      )}
 
-      {one.enabled && !entry && <Loading label="Fetching" />}
-      {entry?.status === 'loading' && <Loading label="Fetching" />}
+      {one.enabled && (!entry || entry.status === 'loading') && (
+        <Loading label="Starting" />
+      )}
       {entry?.status === 'error' && (
         <p className="text-destructive text-sm" data-testid={`ext-error-${one.id}`}>
           {entry.error}
@@ -339,12 +394,13 @@ function Detail() {
       <div className="flex gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant={stale ? 'default' : 'outline'}
           data-testid={`ext-reload-${one.id}`}
           className="h-control flex-1"
           onClick={() => saveInstalled({ ...one, version: one.version + 1 })}
         >
-          <RotateCwIcon /> Reload
+          {written ? <PlayIcon /> : <RotateCwIcon />}
+          {written ? 'Run' : 'Reload'}
         </Button>
         <Button
           type="button"
@@ -360,5 +416,38 @@ function Detail() {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Every keystroke is saved, so a reload doesn't cost you what you typed — but
+ * nothing runs until you say so. Importing a module executes it, and a loop you
+ * are halfway through writing would take the tab with it.
+ */
+function Editor({ one, stale }: { one: Installed; stale: boolean }) {
+  const [full, setFull] = useState(false)
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <Textarea
+        data-testid="ext-source"
+        spellCheck={false}
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        className="min-h-72 font-mono text-sm"
+        value={one.source ?? ''}
+        onChange={(event) =>
+          setFull(!saveInstalled({ ...one, source: event.target.value }))
+        }
+      />
+      <p className="text-muted-foreground text-sm" data-testid="ext-source-hint">
+        {full
+          ? 'There is no room left in storage, so this is not saved.'
+          : stale
+            ? 'Edited. Press Run to use it.'
+            : 'Only these can be imported: react, react/jsx-runtime, react-router, zod, ai. No JSX — nothing compiles this.'}
+      </p>
+    </fieldset>
   )
 }

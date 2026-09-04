@@ -3,16 +3,23 @@ import { useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
 /**
- * An extension as it sits in storage: where to get it, and whether it's on.
- * `title` is remembered from the last time it loaded, so a row still has a name
- * before anything is fetched. Everything else about it lives in the module.
+ * An extension as it sits in storage. Either it says where to fetch it or it
+ * carries its own source — one or the other, never both. `title` is remembered
+ * from the last time it loaded, so a row still has a name before anything runs.
  */
 export type Installed = {
   /** Ours, not the extension's — its own id isn't known until it loads. */
   readonly id: string
-  readonly url: string
+  /** Where to fetch it, for one that came from somewhere else. */
+  readonly url?: string
+  /** The module itself, for one written or picked here. */
+  readonly source?: string
   readonly title: string
-  /** Bumped by Reload. Rides along as `?v=`, which is what beats the caches. */
+  /**
+   * Bumped by Reload, and by Run in the editor. For a URL it rides along as
+   * `?v=` and beats the caches; for source it is what makes a fresh module out
+   * of text that hasn't changed.
+   */
   readonly version: number
   readonly enabled: boolean
 }
@@ -32,16 +39,30 @@ export const newInstall = (url: string): Installed => ({
   enabled: false,
 })
 
+/** One written here, or picked off the disk. There is no address to name it by. */
+export const newSource = (source: string, title: string): Installed => ({
+  id: newId(),
+  source,
+  title,
+  version: 1,
+  enabled: false,
+})
+
 // One key per extension, so saving one doesn't reserialize the rest.
 const PREFIX = 'tiny.extension.'
 
-const Stored = z.object({
-  id: z.string(),
-  url: z.string(),
-  title: z.string(),
-  version: z.number(),
-  enabled: z.boolean(),
-})
+// A row is one or the other. Refusing both here is what keeps every reader
+// from having to wonder, and a half-written row still drops quietly.
+const Stored = z
+  .object({
+    id: z.string(),
+    url: z.string().optional(),
+    source: z.string().optional(),
+    title: z.string(),
+    version: z.number(),
+    enabled: z.boolean(),
+  })
+  .refine((one) => (one.url === undefined) !== (one.source === undefined))
 
 // A missing key and unparseable JSON are the same answer: nothing usable.
 const parse = (raw: string | null): unknown => {
@@ -85,9 +106,14 @@ export const subscribeInstalled = (listener: () => void) => {
   }
 }
 
+/**
+ * Stored first, shown second. The other way round puts a row on screen that
+ * isn't in storage, and it vanishes on the next reload with nothing said.
+ */
 export const saveInstalled = (one: Installed): boolean => {
+  if (!write(PREFIX + one.id, JSON.stringify(one))) return false
   publish([one, ...readInstalled().filter((other) => other.id !== one.id)])
-  return write(PREFIX + one.id, JSON.stringify(one))
+  return true
 }
 
 export const removeInstalled = (id: string) => {

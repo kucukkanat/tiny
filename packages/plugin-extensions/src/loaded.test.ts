@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { saveInstalled } from './installed'
-import { attach, useExtensions } from './loaded'
+import { attach, runningSource, useExtensions } from './loaded'
 
 /**
  * Fixtures are blob: URL modules with no bare imports. No bare imports because
@@ -195,4 +195,99 @@ test('two extensions wanting one tool name: one gets it, and both are loaded', a
   await waitFor(() => expect(result.current.ready).toBe(true))
   expect(result.current.entries.every(({ status }) => status === 'ready')).toBe(true)
   expect(Object.keys(result.current.tools)).toEqual(['roll'])
+})
+
+/** One written in the app: the text is what's stored, not an address. */
+const write = (id: string, source: string, version = 1, enabled = true) =>
+  localStorage.setItem(
+    `tiny.extension.${id}`,
+    JSON.stringify({ id, source, title: id, version, enabled }),
+  )
+
+const DICE_SOURCE = `export default () => ({
+  id: 'dice',
+  title: 'Dice',
+  tools: { roll: { description: 'Roll.', execute: () => 4 } },
+})`
+
+test('one written here runs from its text, with no address to fetch', async () => {
+  write('1', DICE_SOURCE)
+  const { result } = watch()
+
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(Object.keys(result.current.tools)).toEqual(['roll'])
+})
+
+test('the text is what survives a reload, and a fresh module is made of it', async () => {
+  write('1', DICE_SOURCE)
+  const first = watch()
+  await waitFor(() => expect(first.result.current.ready).toBe(true))
+  first.unmount()
+
+  // A blob url dies with the page. Nothing of it is stored, so this is the
+  // same path a returning visitor takes.
+  const { result } = watch()
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(Object.keys(result.current.tools)).toEqual(['roll'])
+})
+
+test('typing does not run it — importing a module is running it', async () => {
+  write('1', DICE_SOURCE)
+  const { result } = watch()
+  await waitFor(() => expect(result.current.ready).toBe(true))
+
+  // A half-written loop would take the tab with it, so text alone is not a
+  // trigger. The version is. If this ever regresses, this test hangs rather
+  // than fails, which is rather the point.
+  const edited = `${DICE_SOURCE}\nwhile (true) {}`
+  act(() =>
+    saveInstalled({ id: '1', source: edited, title: '1', version: 1, enabled: true }),
+  )
+
+  expect(
+    runningSource({ id: '1', source: edited, title: '1', version: 1, enabled: true }),
+  ).toBe(DICE_SOURCE)
+  expect(result.current.ready).toBe(true)
+})
+
+test('Run picks up an edit, and runs again even when nothing changed', async () => {
+  write('1', DICE_SOURCE)
+  const { result } = watch()
+  await waitFor(() => expect(result.current.ready).toBe(true))
+
+  const edited = DICE_SOURCE.replace("'Roll.'", "'Roll two.'").replace('=> 4', '=> 7')
+  act(() =>
+    saveInstalled({ id: '1', source: edited, title: '1', version: 2, enabled: true }),
+  )
+
+  await waitFor(() =>
+    expect(result.current.entries[0]?.extension?.tools?.roll?.description).toBe(
+      'Roll two.',
+    ),
+  )
+})
+
+test('what is running is what Run last took, not what is on screen', async () => {
+  const one = { id: '1', source: DICE_SOURCE, title: '1', version: 1, enabled: true }
+  write('1', DICE_SOURCE)
+  const { result } = watch()
+  await waitFor(() => expect(result.current.ready).toBe(true))
+
+  expect(runningSource(one)).toBe(DICE_SOURCE)
+  expect(runningSource({ ...one, source: 'edited' })).toBe(DICE_SOURCE)
+  // A version nothing has run yet is running nothing.
+  expect(runningSource({ ...one, version: 2 })).toBeUndefined()
+})
+
+test('source that will not parse is an error on its own row', async () => {
+  write('1', 'export default () => { const = 1 }')
+  write('2', DICE_SOURCE)
+  const { result } = watch()
+
+  await waitFor(() => expect(result.current.ready).toBe(true))
+  expect(Object.keys(result.current.tools)).toEqual(['roll'])
+  expect(result.current.entries.map(({ status }) => status).sort()).toEqual([
+    'error',
+    'ready',
+  ])
 })

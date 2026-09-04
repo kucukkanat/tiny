@@ -12,13 +12,27 @@ import { SHARED, importmap } from './src/sdk/shared'
 const sharedLibraries = (): Plugin => ({
   name: 'tiny-importmap',
   transformIndexHtml: {
-    order: 'pre',
+    // Post, because the shims' hashed names are only known once the bundle is
+    // generated. `head-prepend` still puts the map ahead of the module script,
+    // which is the one thing that has to be true.
+    order: 'post',
     handler: (_html, ctx) => [
       {
         tag: 'script',
         attrs: { type: 'importmap' },
         injectTo: 'head-prepend',
-        children: JSON.stringify(importmap(ctx.server !== undefined), null, 2),
+        children: JSON.stringify(
+          importmap((entry) => {
+            if (ctx.server) return `/src/sdk/${entry}.ts`
+            const chunk = Object.values(ctx.bundle ?? {}).find(
+              (one) => one.type === 'chunk' && one.name === `sdk/${entry}`,
+            )
+            if (!chunk) throw new Error(`No chunk emitted for sdk/${entry}`)
+            return `./${chunk.fileName}`
+          }),
+          null,
+          2,
+        ),
       },
     ],
   },
@@ -49,12 +63,7 @@ export default defineConfig({
         // type — some 380 chunks the app fetches only when a message actually
         // contains one. Precaching them charged every first visit 13 MB on a
         // phone. Precache the shell; cache a chunk the first time it's wanted.
-        //
-        // `assets/sdk/*.js` is the exception, and has to be: those names carry
-        // no hash, so stale-while-revalidate would hand an extension the last
-        // deploy's React while the app runs this one's. Three small files,
-        // revised with index.html, and scoped so the 305 shiki chunks stay out.
-        globPatterns: ['**/*.{html,css,svg,woff2,webmanifest}', 'assets/sdk/*.js'],
+        globPatterns: ['**/*.{html,css,svg,woff2,webmanifest}'],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'script',
@@ -80,11 +89,6 @@ export default defineConfig({
         ...Object.fromEntries(
           Object.values(SHARED).map((file) => [`sdk/${file}`, `src/sdk/${file}.ts`]),
         ),
-      },
-      output: {
-        // The shims are named in the import map, so their names can't move.
-        entryFileNames: (chunk: { name: string }) =>
-          chunk.name.startsWith('sdk/') ? 'assets/[name].js' : 'assets/[name]-[hash].js',
       },
     },
   },

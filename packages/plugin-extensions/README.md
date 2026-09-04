@@ -64,10 +64,33 @@ copy of React you ship will throw `Invalid hook call` on its first render.
 
 ## Installing one
 
-Paste a URL. It has to be a real ES module served with a JavaScript MIME type and
+Four ways, and three of them keep the source rather than an address.
+
+**A URL.** It has to be a real ES module served with a JavaScript MIME type and
 `Access-Control-Allow-Origin`, which in practice means jsDelivr, esm.sh, or
 GitHub Pages. Two addresses that look right and are not: `raw.githubusercontent.com`
 and gist raw URLs both send `text/plain`, and no browser will run that.
+
+**A file**, picked off the disk. Its text is what gets stored, so nothing has to
+still be there tomorrow.
+
+**One of three premades** — a tool that fetches, a tool that asks you something,
+and a screen. Pick one and it opens in the editor, yours to change.
+
+**Text you write in the app**, in the box on any extension you own.
+
+A written extension is kept as source and run from a `blob:` URL minted fresh
+each time the page loads, so it works offline and survives a reload. Two things
+follow from nothing compiling it:
+
+- **No JSX.** `createElement`, usually aliased to `h`, is what JSX turns into
+  anyway and reads the same way. The Recap premade shows it.
+- **No imports beyond the five below** — not even a file sitting next to it, since
+  a blob URL has no base to resolve a relative path against.
+
+Editing saves as you type, so a reload costs you nothing, but nothing runs until
+you press Run. Importing a module executes it, and a loop you are halfway through
+writing would take the tab with it.
 
 Pin a tag or a commit. jsDelivr serves a branch address with a week of browser
 cache, so an update would look like it did nothing.
@@ -101,6 +124,16 @@ press Reload, so an extension you already have keeps working offline.
 ## Storage
 
 One `localStorage` key per extension, `tiny.extension.<id>`, holding
-`{ id, url, title, version, enabled }`. `title` is remembered from the last
-successful load so a row has a name before anything is fetched. Anything zod
-won't vouch for on read is dropped rather than crashing the list.
+`{ id, title, version, enabled }` and then either a `url` or a `source` — one or
+the other, never both, which is the only thing every reader has to know. `title`
+is remembered from the last successful load so a row has a name before anything
+is fetched. Anything zod won't vouch for on read is dropped rather than crashing
+the list.
+
+A store with no room left is a real answer here, because for a written extension
+the source _is_ the extension. Nothing is shown as saved until it is: the write
+happens first, and the editor says so when there is no room.
+
+Tools used to live under `tiny.tool.<id>` and be their own screen. `migrate.ts`
+turns whatever is left of that into one extension each, on first boot, and can be
+deleted once nobody is arriving from a build that had them.

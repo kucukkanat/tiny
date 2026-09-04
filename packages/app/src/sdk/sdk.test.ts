@@ -37,13 +37,19 @@ test('the jsx shim is the runtime a build actually uses', () => {
 })
 
 test('the map names a file for every shared library, and nothing else', () => {
-  expect(Object.keys(importmap(false))).toEqual(['imports'])
-  expect(Object.keys(importmap(false).imports)).toEqual(Object.keys(SHARED))
+  const map = importmap((entry) => `/${entry}.js`)
+
+  expect(Object.keys(map)).toEqual(['imports'])
+  expect(Object.keys(map.imports)).toEqual(Object.keys(SHARED))
 })
 
-test('dev and a build look in different places for the same specifiers', () => {
-  expect(importmap(true).imports.react).toBe('/src/sdk/react.ts')
-  expect(importmap(false).imports.react).toBe('./assets/sdk/react.js')
+test('a specifier with a subpath still resolves to its own file', () => {
+  // `react/jsx-runtime` is a different module from `react`, and a map does
+  // prefix substitution only — it would never append the rest for us.
+  const map = importmap((entry) => `/${entry}.js`)
+
+  expect(map.imports['react/jsx-runtime']).toBe('/jsx-runtime.js')
+  expect(map.imports.react).toBe('/react.js')
 })
 
 /**

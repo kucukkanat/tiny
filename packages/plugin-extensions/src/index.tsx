@@ -1,5 +1,6 @@
 import type { Plugin, Tiny } from '@tiny/plugin-host'
 import { attach } from './loaded'
+import { migrateTools } from './migrate'
 import { ExtensionsScreen } from './screen'
 
 export type ExtensionsOptions = {
@@ -14,6 +15,9 @@ const ID = 'extensions'
 
 export const extensions = ({ tiny, reserved }: ExtensionsOptions): Plugin => {
   attach(tiny, [...reserved, ID])
+  // Tools used to be their own screen. Whatever is left from that becomes an
+  // extension here, once, and the old keys go.
+  migrateTools()
   return { id: ID, title: 'Extensions', Screen: ExtensionsScreen }
 }
 

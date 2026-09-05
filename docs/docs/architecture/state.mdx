@@ -6,20 +6,20 @@ description: What survives a reload, and which key holds it.
 The rule: hit reload, and if anything the user would care about is gone, that is
 a bug.
 
-| What                     | Where it lives                      |
-| ------------------------ | ----------------------------------- |
-| Which screen, which chat | the URL — route and params          |
-| What was typed or picked | `localStorage`, restored on mount   |
-| An open menu, a hover    | memory, and nobody misses it        |
+| What                     | Where it lives                    |
+| ------------------------ | --------------------------------- |
+| Which screen, which chat | the URL — route and params        |
+| What was typed or picked | `localStorage`, restored on mount |
+| An open menu, a hover    | memory, and nobody misses it      |
 
 ## The keys
 
-| Key                       | Holds                                                        |
-| ------------------------- | ------------------------------------------------------------ |
-| `tiny.chat.<id>`          | one conversation — messages, title, `updatedAt`               |
-| `tiny.draft.<id>`         | an unsent message for that conversation                       |
-| `tiny.extension.<id>`     | `{ id, title, version, enabled }` plus a `url` **or** `source` |
-| the provider and theme    | endpoint, key, model, and light/dark, written by settings      |
+| Key                    | Holds                                                          |
+| ---------------------- | -------------------------------------------------------------- |
+| `tiny.chat.<id>`       | one conversation — messages, title, `updatedAt`                |
+| `tiny.draft.<id>`      | an unsent message for that conversation                        |
+| `tiny.extension.<id>`  | `{ id, title, version, enabled }` plus a `url` **or** `source` |
+| the provider and theme | endpoint, key, model, and light/dark, written by settings      |
 
 One key per conversation rather than one big list: saving one chat does not
 re-serialise the whole history, and two open tabs writing different
@@ -33,7 +33,7 @@ A transcript or a record from an older build gets dropped, not rendered into a
 crash.
 
 ```ts
-import { write } from '@tiny/plugin-host'
+import { write } from '@tiny/host'
 
 write('tiny.thing', json) // false when storage is full, never a throw
 ```
@@ -62,6 +62,6 @@ list. Deleting it takes its draft with it.
 ## Migrations
 
 `plugin-tools` used to store one tool per key under `tiny.tool.<id>`. It is gone,
-and `packages/plugin-extensions/src/migrate.ts` turns whatever is left of it into
+and `packages/extension-manager/src/migrate.ts` turns whatever is left of it into
 one extension each on first boot. It can be deleted once nobody is upgrading
 from a build that had it — which is the point of keeping it in its own file.

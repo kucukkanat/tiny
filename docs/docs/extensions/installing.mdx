@@ -54,11 +54,11 @@ running code against their API key.
 Each install carries a version counter, and the loader puts it in the query.
 That counter is what gets past the three caches between an author and you:
 
-| Cache               | Why it would otherwise hold you back                  |
-| ------------------- | ----------------------------------------------------- |
-| the module map      | never re-fetches a URL it has already seen            |
-| the browser         | holds a CDN answer for up to a week                   |
-| the service worker  | the app is a PWA, and offline is the point            |
+| Cache              | Why it would otherwise hold you back       |
+| ------------------ | ------------------------------------------ |
+| the module map     | never re-fetches a URL it has already seen |
+| the browser        | holds a CDN answer for up to a week        |
+| the service worker | the app is a PWA, and offline is the point |
 
 It only moves when you press **Reload**, so an extension you already have keeps
 working offline.

@@ -22,21 +22,21 @@ feature looks like from the other side.
 
 ```
 packages/
-├─ app/                 the shell — routing, layout, the plugin list
-├─ ui/                  design tokens and components
-├─ plugin-host/         the contracts
-├─ plugin-chat/
-├─ plugin-settings/
-├─ plugin-extensions/
-└─ extension-starter/   a working extension, and the one to copy
+├─ app/                    the shell — routing, layout, the list of what ships
+├─ ui/                     design tokens and components
+├─ host/                   the contract
+├─ extension-chat/
+├─ extension-settings/
+├─ extension-manager/      the registry, and the screen you install one on
+└─ extension-starter/      a working extension, and the one to copy
 
 docs/                   this site — its own install, `cd docs && bun dev`
 ```
 
 ## The one file that matters
 
-`packages/app/src/plugins.tsx`. Every feature in the app and every wire between
-them is in it — about 120 lines. Read it before anything else.
+`packages/app/src/extensions.tsx`. What the app hands an extension, and the list
+of what ships — about 60 lines. Read it before anything else.
 
 ## Two laws
 
@@ -57,10 +57,10 @@ rather than three.
 ## Adding something
 
 <CardGroup cols={2}>
-  <Card title="A plugin" icon="package" href="/plugins/building">
-    Ships in the bundle. A package, a `Plugin` export, one line in the app.
+  <Card title="In the build" icon="package" href="/extensions/bundling">
+    A package, a default export, one line in `extensions.tsx`.
   </Card>
-  <Card title="An extension" icon="puzzle" href="/extensions/building">
-    Installed at runtime. One module that default-exports a function of the host.
+  <Card title="At runtime" icon="puzzle" href="/extensions/building">
+    The same module, installed by whoever is using the app.
   </Card>
 </CardGroup>

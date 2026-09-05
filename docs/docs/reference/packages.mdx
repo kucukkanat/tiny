@@ -3,15 +3,15 @@ title: Packages
 description: What is in the monorepo and what each package is for.
 ---
 
-| Package                   | What it is                                              |
-| ------------------------- | ------------------------------------------------------- |
-| `@tiny/app`               | the shell: routing, layout, plugin list                 |
-| `@tiny/ui`                | design tokens and components (shadcn + AI Elements)     |
-| `@tiny/plugin-host`       | the `Plugin` and `Extension` contracts, and little else |
-| `@tiny/plugin-chat`       | chat and its history, straight from the tab             |
-| `@tiny/plugin-settings`   | model endpoint, API key and theme, kept on device       |
-| `@tiny/plugin-extensions` | extensions you install into the running app             |
-| `@tiny/extension-starter` | a working extension, and the one to copy                |
+| Package                    | What it is                                          |
+| -------------------------- | --------------------------------------------------- |
+| `@tiny/app`                | the shell: routing, layout, the list of what ships  |
+| `@tiny/ui`                 | design tokens and components (shadcn + AI Elements) |
+| `@tiny/host`               | the `Extension` contract, and little else           |
+| `@tiny/extension-chat`     | chat and its history, straight from the tab         |
+| `@tiny/extension-settings` | model endpoint, API key and theme, kept on device   |
+| `@tiny/extension-manager`  | the registry, and the screen you install one on     |
+| `@tiny/extension-starter`  | a working extension, and the one to copy            |
 
 The docs site is the one thing that is not in `packages/`. It sits in `docs/`
 with its own install, because Blume's `shiki@4` hoists over the `shiki@3`
@@ -19,27 +19,30 @@ with its own install, because Blume's `shiki@4` hoists over the `shiki@3`
 dependency graph.
 
 Each package does one thing, has a README that shows what it does, and ships
-runnable example code where an example helps. Plugins are named
-`plugin-<name>`, one per package — a plugin that needs a second plugin is two
-packages.
+runnable example code where an example helps. Extensions are named
+`extension-<name>`, one per package — one that needs a second is two packages.
+`@tiny/host` is deliberately outside that namespace: it is not an extension, it
+is what they are extensions to.
 
 ## The dependency rule
 
 ```mermaid
 flowchart LR
-  app["@tiny/app"] --> chat["plugin-chat"]
-  app --> settings["plugin-settings"]
-  app --> exts["plugin-extensions"]
-  chat --> host["plugin-host"]
+  app["@tiny/app"] --> chat["extension-chat"]
+  app --> settings["extension-settings"]
+  app --> mgr["extension-manager"]
+  chat --> host["@tiny/host"]
   settings --> host
-  exts --> host
+  mgr --> host
   chat --> ui["@tiny/ui"]
   settings --> ui
-  exts --> ui
+  mgr --> ui
 ```
 
-No arrow between two `plugin-` packages, ever. `packages/app/src/plugins.tsx` is
-where they meet, and `plugins.test.ts` fails the build if that slips.
+No arrow between two `extension-` packages, ever. What one needs from another it
+takes off `tiny`, and `extensions.test.ts` fails the build if that slips. The
+rule is one predicate, which is why the host is not in the namespace — and why it
+now covers `extension-starter` too.
 
 ## @tiny/ui is not on the import map
 

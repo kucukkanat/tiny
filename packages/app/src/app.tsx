@@ -11,10 +11,20 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@tiny/ui/components/sidebar'
-import { Safely } from '@tiny/plugin-host'
+import { attach, migrateTools, useExtensions } from '@tiny/extension-manager'
+import { Safely } from '@tiny/host'
 import { Loading } from '@tiny/ui/components/loading'
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
-import { home, usePlugins } from './plugins'
+import { BUNDLED, tiny } from './extensions'
+
+// What ships, handed to the registry before the first render asks it for a
+// route. This is also the only thing that evaluates `extensions.tsx` — drop the
+// import and the app boots with no routes at all.
+attach(tiny, BUNDLED)
+
+// Tools were their own screen once. Whatever is left of that becomes an
+// extension, on the first boot that has this.
+migrateTools()
 
 // The sidebar writes its own cookie; reading it back is what survives a reload.
 const openOnLoad = () => !document.cookie.includes('sidebar_state=false')
@@ -36,12 +46,16 @@ export function App() {
 function Shell() {
   const { pathname } = useLocation()
   const { setOpenMobile } = useSidebar()
-  const { plugins, ready } = usePlugins()
+  const { screens, ready } = useExtensions()
   // On the segment, not the string: `/chat-plus` is not `/chat`, and an
   // extension picks its own id.
-  const active = plugins.find(
+  const active = screens.find(
     ({ id }) => pathname === `/${id}` || pathname.startsWith(`/${id}/`),
   )
+  // Where an unknown route lands. Not a constant: what ships can be switched
+  // off, and redirecting to a route with no `<Route>` matches the catch-all
+  // again. The manager can't be switched off, so there is normally one.
+  const home = screens[0]
 
   return (
     <>
@@ -51,7 +65,7 @@ function Shell() {
         </SidebarHeader>
 
         <SidebarContent>
-          {plugins.map(
+          {screens.map(
             ({ id, title, Sidebar: Section }) =>
               Section && (
                 <Safely key={id} name={title} resetKey={pathname}>
@@ -63,12 +77,12 @@ function Shell() {
 
         <SidebarFooter>
           <SidebarMenu>
-            {plugins
-              // A plugin with its own section up there is already reachable from it.
+            {screens
+              // One with its own section up there is already reachable from it.
               .filter(({ Sidebar: Section }) => !Section)
               .map(({ id, title }) => (
                 <SidebarMenuItem key={id}>
-                  {/* Matches the plugin rows: thumb-sized on touch, tight on a pointer. */}
+                  {/* Matches the sidebar rows: thumb-sized on touch, tight on a pointer. */}
                   <SidebarMenuButton
                     asChild
                     isActive={active?.id === id}
@@ -96,7 +110,7 @@ function Shell() {
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="screen">
           <Routes>
-            {plugins.map(({ id, title, Screen }) => (
+            {screens.map(({ id, title, Screen }) => (
               <Route
                 key={id}
                 path={`/${id}/*`}
@@ -111,7 +125,13 @@ function Shell() {
             <Route
               path="*"
               element={
-                ready ? <Navigate to={home} replace /> : <Loading label="Loading" />
+                ready ? (
+                  home ? (
+                    <Navigate to={`/${home.id}`} replace />
+                  ) : null
+                ) : (
+                  <Loading label="Loading" />
+                )
               }
             />
           </Routes>

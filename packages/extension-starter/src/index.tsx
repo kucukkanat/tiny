@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import type { Extension, Tiny } from '@tiny/plugin-host'
+import type { Extension, Tiny } from '@tiny/host'
 import { generateText, tool } from 'ai'
 import { useState } from 'react'
 import { z } from 'zod'
@@ -73,9 +73,9 @@ export default (tiny: Tiny): Extension => ({
  * an import would be — which is what the rule wants and can't see from here.
  */
 function Recap({ tiny }: { tiny: Tiny }) {
-  // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
+  // oxlint-disable-next-line react/hooks -- bound once, in the app
   const chats = tiny.useChats()
-  // oxlint-disable-next-line react/rules-of-hooks -- bound once, in the app
+  // oxlint-disable-next-line react/hooks -- bound once, in the app
   const model = tiny.useModel()
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)

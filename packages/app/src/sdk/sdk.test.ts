@@ -70,10 +70,10 @@ test('what an author writes about a parameter reaches the model', () => {
   expect(properties.city.description).toBe('City name, e.g. Istanbul')
 })
 
-test('the app resolves the same ai as the plugins that hand it tools', () => {
+test('the app resolves the same ai as the features that hand it tools', () => {
   const variant = (pkg: string) =>
     readlinkSync(`${PACKAGES}${pkg}/node_modules/ai`).replace(/^.*\/\.bun\//, '')
 
-  expect(variant('app')).toBe(variant('plugin-chat'))
-  expect(variant('plugin-extensions')).toBe(variant('plugin-chat'))
+  expect(variant('app')).toBe(variant('extension-chat'))
+  expect(variant('extension-manager')).toBe(variant('extension-chat'))
 })

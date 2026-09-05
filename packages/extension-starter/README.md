@@ -3,6 +3,11 @@
 A working extension that uses every slot there is. Copy it, change the id, and it
 is yours.
 
+It is the same kind of package as `extension-chat` or `extension-settings`. The
+only difference is that `packages/app/src/extensions.tsx` doesn't list it, so it
+is built on its own and installed from a URL like anything else — which is what
+makes it the example.
+
 ```sh
 bun --filter @tiny/extension-starter build   # → packages/app/dist/extensions/starter.js
 ```
@@ -28,11 +33,11 @@ screen is a couple of kilobytes. Delete the `providers` block and see.
 
 ## Copying it out
 
-Change one line. `@tiny/plugin-host` is `workspace:*` here because it lives in
+Change one line. `@tiny/host` is `workspace:*` here because it lives in
 this repo; outside it, point at the tarball the deploy publishes:
 
 ```json
-"@tiny/plugin-host": "https://kucukkanat.github.io/tiny/pkg/tiny-plugin-host-0.1.0.tgz"
+"@tiny/host": "https://kucukkanat.github.io/tiny/pkg/tiny-host-0.2.0.tgz"
 ```
 
 It is types only — nothing from it is in your built file.

@@ -1,14 +1,20 @@
 ---
 title: Extensions
-description: A feature that arrives at runtime. One ES module, imported in the tab, live in the next message.
+description: The one kind of feature there is. A module that default-exports a function of the host, whether it ships in the bundle or arrives in the tab.
 ---
 
-An extension is **run time**. Whoever is using the app installs one and it is
-live in the next message — no build, no deploy, nothing installed on a server.
-It is one ES module, `import()`ed in the tab.
+An extension is the only kind of feature there is. Every screen the app has is
+one, and so is anything you add yourself.
 
-`@tiny/plugin-extensions` hosts them. `@tiny/extension-starter` is a real one
-that ships with the app.
+Two ways to deliver it, and the difference is **when**. One listed in
+`packages/app/src/extensions.tsx` ships in the bundle, and adding it is a commit
+and a deploy — chat, settings and the extensions screen are all this. One that
+isn't listed is `import()`ed in the tab when somebody installs it, live in the
+next message, with no build and nothing on a server.
+
+Same type, same registry, same screen, same switch. `@tiny/extension-manager`
+holds the registry; `@tiny/extension-starter` is a real one, served next to the
+app, that the app does not list.
 
 :::note
 This is the **only** way to give the model a tool. There used to be a
@@ -23,7 +29,7 @@ is no `activate`, nothing to tear down, and no side effects — which is what ma
 turning one off exactly as cheap as turning it on.
 
 ```tsx
-import type { Extension, Tiny } from '@tiny/plugin-host'
+import type { Extension, Tiny } from '@tiny/host'
 import { tool } from 'ai'
 import { z } from 'zod'
 
@@ -44,41 +50,58 @@ export default (tiny: Tiny): Extension => ({
 
 `id` and `title` are required. Everything past them is optional:
 
-| Slot           | What it adds                                                        |
-| -------------- | ------------------------------------------------------------------- |
-| `Screen`       | a route at `/#/<id>`, rendered by the shell like any plugin's        |
-| `Sidebar`      | a section in the left sidebar                                        |
-| `tools`        | functions the model can call mid-answer                              |
-| `providers`    | a model API, offered in Settings beside Anthropic and OpenAI         |
-| `actions`      | an entry in the bar shown when a passage of a reply is highlighted   |
-| `instructions` | a line added to the model's system prompt                            |
-| `css`          | a stylesheet, adopted while the extension is on                      |
+| Slot           | What it adds                                                       |
+| -------------- | ------------------------------------------------------------------ |
+| `Screen`       | a route at `/#/<id>`, rendered by the shell                        |
+| `Sidebar`      | a section in the left sidebar                                      |
+| `tools`        | functions the model can call mid-answer                            |
+| `providers`    | a model API, offered in Settings beside Anthropic and OpenAI       |
+| `actions`      | an entry in the bar shown when a passage of a reply is highlighted |
+| `instructions` | a line added to the model's system prompt                          |
+| `css`          | a stylesheet, adopted while the extension is on                    |
 
-An `Extension` is a `Plugin` whose `Screen` is optional — a tools-only extension
-has no screen — plus those five.
+`Screen` is optional — a tools-only extension has no screen, and a
+sidebar-only one has no page worth showing.
 
 ## What the host hands you
 
-Three things, because everything else an extension needs is already the platform:
-`localStorage` for its own state, `react-router` to navigate, Tailwind on the
-app's tokens to look right.
+The platform you didn't bring, and the fold of what every extension did.
+Everything else is already there: `localStorage` for your own state,
+`react-router` to navigate, Tailwind on the app's tokens to look right.
 
 ```ts
 type Tiny = {
   readonly useChats: () => readonly Chat[]
   readonly useModel: () => LanguageModel | undefined
   readonly ask: (question: string, options?: readonly string[]) => Promise<string>
+  readonly useTools: () => ToolSet
+  readonly useInstructions: () => string | undefined
+  readonly useActions: () => readonly ChatAction[]
+  readonly useProviders: () => Registry
 }
 ```
 
 `useChats()` is every conversation, newest first, read-only. `useModel()` is the
 configured model, or `undefined` while there is not one. `ask()` puts a question
 in the chat and waits for the answer — which is how a tool can ask the person at
-the keyboard something only they know.
+the keyboard something only they know. The four reads below them are the fold:
+what every live extension registered, yours included.
+
+:::note
+`Tiny` only ever grows. A module already sitting in someone's `localStorage` is
+bound to the shape it was written against, and there is no migration that reaches
+it — so `useModel` returns a `LanguageModel` and always will.
+:::
 
 ## What you may import
 
-Five bare specifiers, resolved by an import map in the page:
+This is the whole of what being in the build buys you. A bundled extension is in
+the app's module graph, so it can reach `@tiny/ui`, an `@ai-sdk/*` provider,
+anything in the workspace.
+
+One that arrives at runtime gets five bare specifiers, resolved by an import map
+in the page, and no relative imports at all — a blob has no base to resolve
+against:
 
 ```
 react   react/jsx-runtime   react-router   zod   ai
@@ -92,6 +115,9 @@ installs it rather than on every first visit.
 <CardGroup cols={2}>
   <Card title="Build one" icon="code" href="/extensions/building">
     In the app's editor, or with your own build.
+  </Card>
+  <Card title="Ship one in the build" icon="package" href="/extensions/bundling">
+    A package in this repo, and one line in `extensions.tsx`.
   </Card>
   <Card title="Install one" icon="download" href="/extensions/installing">
     A URL, a file, a premade, or text you type.

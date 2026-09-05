@@ -32,17 +32,19 @@ Chat does not know. It is handed a hook:
 
 ```tsx
 chat({
-  useModel,     // () => { model, name, names, select } | undefined
+  useModel, // () => { model, name, names, select } | undefined
   unconfigured, // rendered while useModel has nothing to call
-  useTools,     // () => ToolSet
-  useSystem,    // () => extra system prompt lines
-  useActions,   // () => selection actions
-  Panel,        // rendered between the thread and the composer
+  useTools, // () => ToolSet
+  useSystem, // () => extra system prompt lines
+  useActions, // () => selection actions
+  Panel, // rendered between the thread and the composer
 })
 ```
 
-`plugin-settings` owns the endpoint, the key and the model name;
-`plugin-extensions` owns the tools. `plugins.tsx` is where they are joined.
+`extension-settings` owns the screen you set the endpoint, key and model on, and
+contributes the two dialects that ship; the store behind it is `@tiny/host/app`,
+because chat reads it too. The registry folds every extension's tools into one
+set, and `tiny` is how both come back.
 
 :::note
 `useModel` and `useTools` are hooks, so `chat(options)` is called once at module

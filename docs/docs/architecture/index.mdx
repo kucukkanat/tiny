@@ -12,47 +12,54 @@ static files from GitHub Pages.
 
 <Steps>
   <Step title="The shell">
-    `@tiny/app`. A `HashRouter`, a sidebar, a top bar, and a list of features.
-    It knows nothing about chat, settings, or models — only that a feature has
-    an `id`, a `title`, a `Screen`, and maybe a `Sidebar`.
+    `@tiny/app`. A `HashRouter`, a sidebar, a top bar, and a list of features. It knows
+    nothing about chat, settings, or models — only that a feature has an `id`, a `title`,
+    a `Screen`, and maybe a `Sidebar`.
   </Step>
   <Step title="The host">
-    `@tiny/plugin-host`. The `Plugin` and `Extension` types, an error boundary,
-    and two storage helpers. It is the one package with nothing behind it, and
-    it is the only package every feature is allowed to depend on.
+    `@tiny/host`. The `Extension` and `Tiny` types, an error boundary, two storage
+    helpers, and the two stores a feature can't own alone. It is the one package with
+    nothing behind it, and the only one every feature may depend on.
   </Step>
   <Step title="The features">
-    `plugin-chat`, `plugin-settings`, `plugin-extensions` in the bundle, and
-    whatever extensions the user installed at runtime. A feature never imports
-    another feature.
+    `extension-chat`, `extension-settings`, `extension-manager` in the bundle, and
+    whatever the user installed at runtime — one kind, built the same way by the same
+    registry. A feature never imports another feature.
   </Step>
 </Steps>
 
 ## Where features meet
 
-A plugin that needs something it does not own exports a factory that takes it,
-and `packages/app/src/plugins.tsx` fills it in. That file is the only place in
-the codebase where two features are in the same sentence:
+Nowhere, is the short answer. An extension that needs something it does not own
+takes it off `tiny`, and the registry is what put it there — so the two never
+appear in the same sentence:
 
-```tsx packages/app/src/plugins.tsx
-const BUILT_IN = [
-  chat({ useModel, unconfigured, useTools, useSystem, useActions, Panel: ToolQuestions }),
-  settings({ useProviders }),
-] as const satisfies readonly Plugin[]
+```tsx packages/app/src/extensions.tsx
+export const tiny: Tiny = {
+  useChats,
+  useModel,
+  ask: askUser,
+  useTools: () => useExtensions().tools,
+  useInstructions: () => useExtensions().instructions,
+  useActions: () => useExtensions().actions,
+  useProviders: () => useExtensions().providers,
+}
 
-export const plugins = [
-  ...BUILT_IN,
-  extensions({ tiny, reserved: BUILT_IN.map(({ id }) => id) }),
-] as const satisfies readonly Plugin[]
+export const BUNDLED = [
+  chat,
+  settings,
+  manager,
+] as const satisfies readonly ExtensionModule[]
 ```
 
-Chat calls a model without knowing `plugin-settings` exists, and runs tools
-without knowing `plugin-extensions` exists. `plugins.test.ts` fails the build if
-that ever slips.
+Chat calls a model without knowing `extension-settings` exists, and runs tools
+without knowing where they came from. `extensions.test.ts` fails the build if an
+`extension-*` package ever depends on another.
 
 :::tip
-The first entry in `plugins` is home. An unknown route redirects there, so it
-has to be a built-in — an extension's route may not exist yet on first paint.
+Home is the first screen that is actually live, read off the registry rather than
+off `BUNDLED`. What ships can be switched off, and a constant would redirect to a
+route with no `<Route>` — which the catch-all would then match again.
 :::
 
 ## Reading the rest

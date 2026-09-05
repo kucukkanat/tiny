@@ -1,7 +1,7 @@
 # @tiny/ui
 
-Design tokens and every component the app uses. Plugins import from here;
-nothing else touches the registries.
+Design tokens and every component the app uses. Extensions in the build import
+from here; nothing else touches the registries.
 
 ```tsx
 import { Input } from '@tiny/ui/components/input'
@@ -22,7 +22,7 @@ bun x shadcn@latest add popover         # general UI
 bun x ai-elements@latest add reasoning  # AI UI, from the Vercel AI SDK registry
 ```
 
-Add a component when a plugin needs it, not before.
+Add a component when an extension needs it, not before.
 
 ## Written here, not installed
 

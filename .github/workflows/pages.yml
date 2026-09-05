@@ -35,7 +35,7 @@ jobs:
       # belongs to someone else. Versioned names, never overwritten — a reused
       # name fails a cold install with an integrity error.
       - run: bun pm pack --destination ../app/dist/pkg
-        working-directory: packages/plugin-host
+        working-directory: packages/host
       - uses: actions/upload-pages-artifact@v5
         with:
           path: packages/app/dist

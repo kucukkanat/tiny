@@ -2,21 +2,21 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { App } from './app'
 
-test('an unknown route lands on the first plugin', async () => {
+test('an unknown route lands on the first screen there is', async () => {
   window.location.hash = '#/nope'
   render(<App />)
 
   expect(await screen.findByTestId('chat-to-settings')).toBeDefined()
 })
 
-test('a plugin with a sidebar section gets one, and no footer link', async () => {
+test('one with a sidebar section gets one, and no footer link', async () => {
   render(<App />)
 
   expect(await screen.findByTestId('chat-list')).toBeDefined()
   expect(screen.queryByTestId('nav-chat')).toBeNull()
 })
 
-test('a plugin without a sidebar section is reachable from the footer', async () => {
+test('one without a sidebar section is reachable from the footer', async () => {
   render(<App />)
 
   expect((await screen.findByTestId('nav-settings')).textContent).toBe('Settings')
@@ -81,7 +81,7 @@ test('reloading on an extension route waits for it instead of bouncing home', as
   expect(window.location.hash).toBe('#/recap')
 })
 
-test('a route no extension claims still lands on the first plugin', async () => {
+test('a route no extension claims still lands on the first screen', async () => {
   install('1', withScreen('recap', 'Recap'))
   window.location.hash = '#/nope'
   render(<App />)
@@ -99,6 +99,21 @@ test('an extension id that merely starts like a built-in is its own screen', asy
   await settle(() => header().includes('Chat Plus'))
   expect(header()).toContain('Chat Plus')
   expect(screen.queryByTestId('chat-input')).toBeNull()
+})
+
+// What ships is switchable like anything else, and `home` is derived rather
+// than fixed: pointed at a route with no `<Route>`, the catch-all would match
+// itself again.
+test('switching off what ships takes its route and its sidebar with it', async () => {
+  localStorage.setItem('tiny.extensions.off', JSON.stringify(['chat']))
+  window.location.hash = '#/chat/abc'
+  render(<App />)
+
+  await settle(() => screen.queryByTestId('nav-settings') !== null)
+  expect(screen.queryByTestId('chat-list')).toBeNull()
+  expect(screen.queryByTestId('chat-input')).toBeNull()
+  // Settings leads what is left, so that is where an unclaimed route lands.
+  expect(header()).toContain('Settings')
 })
 
 test('a screen that throws says so and leaves the rest of the app standing', async () => {

@@ -1,0 +1,19 @@
+{
+  "name": "@tiny/extension-settings",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.41",
+    "@ai-sdk/openai-compatible": "^3.0.35",
+    "@tiny/host": "workspace:*",
+    "@tiny/ui": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  }
+}

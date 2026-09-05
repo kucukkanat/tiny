@@ -8,12 +8,12 @@ between them. The difference is whether anything compiles it.
 
 <CardGroup cols={2}>
   <Card title="Written in the app" icon="pencil">
-    Kept as source, run from a `blob:` URL. **JSX works**, TypeScript does not,
-    and you may import only the five specifiers on the map.
+    Kept as source, run from a `blob:` URL. **JSX works**, TypeScript does not, and you
+    may import only the five specifiers on the map.
   </Card>
   <Card title="Built with vite" icon="hammer">
-    Fetched and imported as it is. **No JSX**, no bare TypeScript — put both
-    through your build. Anything you bundle comes with you.
+    Fetched and imported as it is. **No JSX**, no bare TypeScript — put both through your
+    build. Anything you bundle comes with you.
   </Card>
 </CardGroup>
 
@@ -89,12 +89,12 @@ export default defineConfig({
 })
 ```
 
-`@tiny/plugin-host` is types only — nothing from it ends up in your built file.
+`@tiny/host` is types only — nothing from it ends up in your built file.
 Inside this repo it is `workspace:*`; outside it, point at the tarball the deploy
 publishes:
 
 ```json package.json
-"@tiny/plugin-host": "https://kucukkanat.github.io/tiny/pkg/tiny-plugin-host-0.1.0.tgz"
+"@tiny/host": "https://kucukkanat.github.io/tiny/pkg/tiny-host-0.2.0.tgz"
 ```
 
 ### Working on one
@@ -140,7 +140,10 @@ export default (tiny: Tiny): Extension => ({
         count: z.number().optional().describe('How many to roll. One by default.'),
       }),
       execute: ({ sides, count = 1 }) => {
-        const rolls = Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides))
+        const rolls = Array.from(
+          { length: count },
+          () => 1 + Math.floor(Math.random() * sides),
+        )
         return { rolls, total: rolls.reduce((sum, roll) => sum + roll, 0) }
       },
     }),
@@ -180,4 +183,4 @@ screen is a couple of kilobytes. Delete the `providers` block and watch.
 only documentation the model gets — one zod on the import map is what keeps it.
 
 Tool names have to be something a provider will accept; `isToolName` from
-`@tiny/plugin-host` is the same check the app runs.
+`@tiny/host` is the same check the app runs.

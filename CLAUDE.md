@@ -42,9 +42,10 @@ Monorepo with packages. Each package:
 
 Examples must actually run. A broken example is worse than none.
 
-Plugins are packages too, named `plugin-<name>` (`packages/plugin-fs`,
-`packages/plugin-settings`). One plugin per package, no exceptions — a plugin that
-needs a second plugin is two packages.
+Extensions are packages too, named `extension-<name>` (`packages/extension-chat`,
+`packages/extension-settings`). One per package, no exceptions — one that needs a
+second is two packages. `packages/host` is not one of them; it is the contract
+they share.
 
 ## The app
 
@@ -61,34 +62,42 @@ Mobile first. Touch is the primary input, not an afterthought:
 
 Every interactive element gets a `data-testid`.
 
-### Shell and plugins
+### Shell and extensions
 
-The app layer is razor thin. The shell does routing, layout, and the plugin
-host — nothing else. Every actual feature is a plugin.
+The app layer is razor thin. The shell does routing, layout, and the extension
+host — nothing else. Every actual feature is an extension.
 
-If you're about to add a feature to the shell, stop: it's a plugin. The shell only
-grows when plugins need a new extension point, and then it grows by the smallest
-hook that works.
+If you're about to add a feature to the shell, stop: it's an extension. The shell
+only grows when extensions need a new extension point, and then it grows by the
+smallest hook that works.
 
-A plugin depends on `plugin-host` and nothing else with `plugin-` in its name.
-When one needs something another owns, it exports a factory that takes it and
-`packages/app/src/plugins.tsx` fills it in — that file is where features meet.
-`chat({ useModel, unconfigured, useTools, Panel })` is the whole of it today:
-chat calls a model without knowing settings exists, and runs tools without
-knowing plugin-extensions does. `plugins.test.ts` fails the build if that slips.
+There is one kind of feature and two ways to deliver it. One listed in
+`packages/app/src/extensions.tsx` ships in the bundle, and adding it is a commit
+and a deploy. One that isn't listed — because someone else wrote it — is
+`import()`ed in the tab, live in the next message, with no build and nothing
+installed on a server. Same type, same registry, same screen, same switch.
 
-### Plugins and extensions
+Both are `(tiny: Tiny) => Extension`. `Extension` is `id`, `title`, an optional
+`Screen` and `Sidebar`, plus `tools`, `providers`, `actions`, `instructions` and
+`css`; `Tiny` is what the app hands back — the platform an extension didn't
+bring, and the fold of what every extension did. Nobody imports a sibling:
+`extensions.test.ts` fails the build if an `extension-*` package depends on
+another `@tiny/extension-*`.
 
-Two ways to add a feature, and the difference is _when_.
+What being in the build buys you is imports. A bundled extension is in the app's
+module graph, so it can reach `@tiny/ui`, an `@ai-sdk/*` provider, anything in
+the workspace. One that arrives later gets five bare specifiers and no relative
+imports at all, because a blob has no base to resolve against. That is the whole
+of the difference, and it is the reason `packages/host` exists: it is what they
+are extensions to, so it is the one package outside the `extension-` namespace
+and the one both deliveries may depend on.
 
-A **plugin** is build time. It is a package in this repo, it ships in the bundle,
-and adding one is a commit and a deploy. Everything the app does itself is a
-plugin.
-
-An **extension** is run time. Whoever is using the app installs one and it is
-live in the next message — no build, no deploy, nothing installed on a server.
-It is one ES module, `import()`ed in the tab. `packages/plugin-extensions` hosts
-them; `packages/extension-starter` is a real one that ships with the app.
+`Tiny` only ever grows. A module sitting in someone's `localStorage` is bound to
+the shape it was written against and there is no migration that reaches it — so
+`useModel` returns a `LanguageModel` and always will, and `useTools`,
+`useInstructions` and `useActions`, which exist because the chat that ships is an
+extension like any other, are frozen by the same rule. Weigh that before adding
+an eighth.
 
 There is no other way to give the model a tool. There used to be a `plugin-tools`
 that let you write one in a textarea, which was a second mechanism for the same
@@ -99,18 +108,25 @@ it.
 Four ways to install: a URL, a file off the disk, one of three premades in
 `templates.ts`, or text typed into the editor. The last three are kept as source
 and run from a `blob:` minted per version — so they work offline, survive a
-reload, and can be edited in place. Two things follow from there being no build
-step. A written extension cannot use JSX, so the premades use `createElement`;
-and it cannot import anything the map does not carry, not even a file beside it,
-because a blob has no base to resolve against. Editing saves but does not run:
-importing a module executes it, and a loop you are halfway through writing would
-take the tab with it, so Run is a button.
+reload, and can be edited in place. JSX works; it is compiled on the way to the
+blob by `jsx.ts`. TypeScript does not. Editing saves but does not run: importing
+a module executes it, and a loop you are halfway through writing would take the
+tab with it, so Run is a button.
 
-The contract for both lives in `plugin-host`, because both are features:
-`Extension` is a `Plugin` with an optional `Screen`, plus `tools`, `providers`,
-`actions`, `instructions` and `css`. The module default-exports a function of
-the host — the same "take what you don't own as an argument" rule plugins follow,
-applied to a module that arrives after the build.
+That scanner is also why a generic arrow — `<T,>` — cannot appear in a `.ts`
+file here: it reads as a tag. `jsx.test.ts` walks every `.ts` in the repo to keep
+it so. Write the `function` declaration instead.
+
+An extension that ships in the build can be switched off like any other, and the
+Extensions screen lists both under their own headings. Off means different things
+either side of that line and the copy says so: an installed one that is off was
+never imported at all, while one in the build is only hidden — it loses its
+screen and its sidebar section, not its evaluation. The screen that holds the
+switches is the one thing that cannot be hidden, and `readOff` drops its id
+rather than leaving a switch off a row, because that list is the user's own
+storage. `home` is derived from the first live screen for the same reason: a
+constant would redirect to a route that no longer exists, and the catch-all would
+match itself.
 
 Extensions reach five bare specifiers through an import map in `index.html`:
 `react`, `react/jsx-runtime`, `react-router`, `zod`, `ai`. Only those, and only
@@ -126,7 +142,9 @@ An extension runs in the page with the API key in reach. There is no sandbox and
 no permission list, because a permission this app cannot enforce is theatre — and
 a Worker can't render a screen. What there is instead: the Extensions screen
 shows what an extension registers, and its `instructions` verbatim, before the
-switch is turned on, and an install link never turns itself on.
+switch is turned on, and an install link never turns itself on. That disclosure
+is about code the app did not give you, so it stays on the installed side of the
+screen; what ships in the build gets a heading saying it is the app.
 
 ### Talking to models
 
@@ -142,13 +160,13 @@ Vercel AI Elements (`bun x ai-elements@latest add <name>`) is where AI component
 come from — it's a shadcn registry built on the AI SDK, so its components already
 speak `useChat`'s message parts. Never write an adapter layer around them.
 
-Everything lands in `packages/ui`. Plugins import `@tiny/ui`; nothing else touches
-the registry. Add a component when a plugin needs it — not the whole catalogue.
+Everything lands in `packages/ui`. Extensions import `@tiny/ui`; nothing else touches
+the registry. Add a component when an extension needs it — not the whole catalogue.
 
 Weigh what a component costs before adding it, in bundle as well as lines.
 `prompt-input` was 1,363 lines and dragged in six more files for a command
 palette, a dropdown and an attachment picker this app has no use for; the
-composer that replaced it is 84 lines in `plugin-chat`. `message`'s mermaid
+composer that replaced it is 84 lines in `extension-chat`. `message`'s mermaid
 plugin was a static import, so mermaid, d3 and rough loaded on first paint
 whether or not a reply drew a diagram — a quarter of the payload. Both are gone.
 
@@ -218,7 +236,7 @@ beautifului.dev ships no code — no registry, no npm package, no per-component
 page, checked. So what it showcases gets written here from its rendered markup,
 on our tokens, and only where the app already has the data to fill it: its
 loading state and code block are in `packages/ui`, its tool chips and selection
-actions in `plugin-chat`, its approval card in `plugin-extensions`. Together they
+actions in `extension-chat`, its approval card in `extension-manager`. Together they
 cost 1.5 kB gzipped, because none of them pull a dependency.
 
 The other twelve it showcases aren't built and shouldn't be until something
@@ -314,7 +332,7 @@ every component an entry and entries are exempt from the check by default.
 
 What it does not answer: an export used only by its own test still counts as
 used. `--production` would catch that, but it does not resolve across workspaces
-here — it reports the app's plugins as unused dependencies — so it is not wired
+here — it reports the app's own extensions as unused dependencies — so it is not wired
 up.
 
 ## Git

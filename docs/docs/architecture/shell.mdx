@@ -3,8 +3,8 @@ title: The shell
 description: Routing, layout, and the two slots every feature gets. Nothing else belongs here.
 ---
 
-`@tiny/app` is the shell. It is about 120 lines, and if you are about to add a
-feature to it, stop — it is a plugin.
+`@tiny/app` is the shell. It is about 130 lines, and if you are about to add a
+feature to it, stop — it is an extension.
 
 ## Routing
 
@@ -18,7 +18,7 @@ routing — chat uses it for `/#/chat/:id`, extensions for
 
 ```tsx packages/app/src/app.tsx
 <Routes>
-  {plugins.map(({ id, title, Screen }) => (
+  {screens.map(({ id, title, Screen }) => (
     <Route
       key={id}
       path={`/${id}/*`}
@@ -29,7 +29,18 @@ routing — chat uses it for `/#/chat/:id`, extensions for
       }
     />
   ))}
-  <Route path="*" element={ready ? <Navigate to={home} replace /> : <Loading label="Loading" />} />
+  <Route
+    path="*"
+    element={
+      ready ? (
+        home ? (
+          <Navigate to={`/${home.id}`} replace />
+        ) : null
+      ) : (
+        <Loading label="Loading" />
+      )
+    }
+  />
 </Routes>
 ```
 
@@ -44,10 +55,10 @@ arrived — so the catch-all shows a loader instead of redirecting.
 
 ## Two slots
 
-| Slot      | Where it renders                                              |
-| --------- | ------------------------------------------------------------- |
-| `Screen`  | under `/#/<id>`, in the main column                            |
-| `Sidebar` | in the sidebar body, always mounted — optional                 |
+| Slot      | Where it renders                               |
+| --------- | ---------------------------------------------- |
+| `Screen`  | under `/#/<id>`, in the main column            |
+| `Sidebar` | in the sidebar body, always mounted — optional |
 
 A feature with no `Sidebar` gets a link in the sidebar footer instead. One that
 already has a section up there is reachable from it, so it does not get a second
@@ -65,9 +76,9 @@ one bad screen takes the sidebar and every other feature with it — and since t
 route is in the hash, reloading lands you right back on it.
 
 ```tsx
-import { Safely } from '@tiny/plugin-host'
+import { Safely } from '@tiny/host'
 
-<Safely name="Chat" resetKey={pathname}>
+;<Safely name="Chat" resetKey={pathname}>
   <Screen />
 </Safely>
 ```

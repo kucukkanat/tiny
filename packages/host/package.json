@@ -1,0 +1,19 @@
+{
+  "name": "@tiny/host",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  },
+  "dependencies": {
+    "ai": "^7.0.77"
+  },
+  "files": [
+    "src"
+  ]
+}

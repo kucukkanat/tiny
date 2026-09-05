@@ -1,0 +1,107 @@
+---
+title: Shipping one in the build
+description: A package in this repo, a default export, and one line in extensions.tsx.
+---
+
+Everything the app does itself is an extension that ships in the bundle. Chat,
+Settings and the Extensions screen are all packages under `packages/`, listed in
+`packages/app/src/extensions.tsx`, and the registry builds them exactly the way
+it builds one somebody installs from a URL.
+
+Choose this over a runtime one when the feature is part of what the app _is_, or
+when it needs something only the build can give it — `@tiny/ui`, an `@ai-sdk/*`
+provider, a library too big to ask every installer to bundle.
+
+## Four steps
+
+<Steps>
+  <Step title="Make the package">
+    `packages/extension-<name>`, named `@tiny/extension-<name>`, with `exports` pointing
+    at `./src/index.tsx` and `@tiny/host` as a dependency. It may depend on `@tiny/ui`
+    and on anything from npm. It may **not** depend on another `@tiny/extension-*` —
+    `extensions.test.ts` fails the build if it does.
+  </Step>
+  <Step title="Default-export a function of the host">
+    The same shape as a module that arrives at runtime. Nothing is special about being
+    in the build except what you are allowed to import.
+
+    ```tsx
+    import type { ExtensionModule } from '@tiny/host'
+    import { TimerScreen } from './screen'
+
+    export default ((tiny) => ({
+      id: 'timer',
+      title: 'Timer',
+      Screen: () => <TimerScreen tiny={tiny} />,
+    })) satisfies ExtensionModule
+    ```
+
+  </Step>
+  <Step title="List it">
+    One line in `packages/app/src/extensions.tsx`:
+
+    ```ts
+    export const BUNDLED = [chat, settings, manager, timer] as const satisfies readonly ExtensionModule[]
+    ```
+
+    The order is the sidebar order. `app.tsx` hands the list to the registry with
+    `attach(tiny, BUNDLED)`, which is also the only thing that evaluates this file.
+
+  </Step>
+  <Step title="Write its README and its tests">
+    Every package has a README that shows what it does and how to use it. Tests sit
+    beside the source and select by `data-testid`.
+  </Step>
+</Steps>
+
+## Taking what you don't own
+
+An extension never imports another extension — not in the build either. If chat
+needs a model, it doesn't reach into Settings; it reads `tiny.useModel()`. If it
+needs the tools an extension registered, it reads `tiny.useTools()`. The registry
+is what folds every contribution into one list, and `tiny` is how the fold comes
+back.
+
+```tsx
+function Thread({ tiny }: { tiny: Tiny }) {
+  const model = tiny.useModel()
+  const tools = tiny.useTools()
+  // …
+}
+```
+
+So the honest question when a feature needs something it doesn't own is not
+"which package do I import" but "is this on `Tiny` yet". If it isn't, adding it
+is a new member on the contract — weigh it, because that type only grows.
+
+There is one thing `tiny` cannot give you and it is deliberate: a route belonging
+to another extension. Chat's empty state links to `/settings` as a _string_, and
+falls back to `/extensions` when no provider is registered at all, because that
+is the one screen that cannot be switched off.
+
+## It can be switched off like any other
+
+Being in the build does not make it permanent. The Extensions screen lists what
+ships under its own heading with a switch, and turning one off takes away its
+route and its sidebar section. It is still evaluated — the word on the screen is
+"Hidden", not "Off" — because nothing unimports a module.
+
+The screen holding the switches is the exception, and the lock lives in
+`readOff()` rather than in the JSX: that list is the user's own `localStorage`,
+so leaving a switch off a row would not be enforcement.
+
+## The one that isn't listed
+
+`packages/extension-starter` is the same kind of package as the rest and the app
+does not list it. It is built on its own into `packages/app/dist/extensions/` and
+installed from a URL like anything else, which is what makes it the working
+example — and what makes every deploy prove the runtime path still works.
+
+<CardGroup cols={2}>
+  <Card title="The contract" icon="book" href="/reference/contracts">
+    Every type, written out.
+  </Card>
+  <Card title="Build one at runtime" icon="code" href="/extensions/building">
+    The same module, without the build.
+  </Card>
+</CardGroup>

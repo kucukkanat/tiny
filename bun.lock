@@ -20,10 +20,10 @@
       "name": "@tiny/app",
       "version": "0.0.0",
       "dependencies": {
-        "@tiny/plugin-chat": "workspace:*",
-        "@tiny/plugin-extensions": "workspace:*",
-        "@tiny/plugin-host": "workspace:*",
-        "@tiny/plugin-settings": "workspace:*",
+        "@tiny/extension-chat": "workspace:*",
+        "@tiny/extension-manager": "workspace:*",
+        "@tiny/extension-settings": "workspace:*",
+        "@tiny/host": "workspace:*",
         "@tiny/ui": "workspace:*",
         "ai": "^7.0.77",
         "react": "^19.2.8",
@@ -38,31 +38,15 @@
         "@vitejs/plugin-react": "^6.0.4",
         "vite": "^8.2.0",
         "vite-plugin-pwa": "^1.0.3",
+        "workbox-window": "^7.4.1",
       },
     },
-    "packages/extension-starter": {
-      "name": "@tiny/extension-starter",
-      "version": "0.0.0",
-      "dependencies": {
-        "@ai-sdk/google": "^4.0.63",
-        "@tiny/plugin-host": "workspace:*",
-        "@tiny/ui": "workspace:*",
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "^4",
-        "@vitejs/plugin-react": "^6.0.4",
-        "ai": "^7.0.77",
-        "react": "^19.2.8",
-        "vite": "^8.2.0",
-        "zod": "^4.4.3",
-      },
-    },
-    "packages/plugin-chat": {
-      "name": "@tiny/plugin-chat",
+    "packages/extension-chat": {
+      "name": "@tiny/extension-chat",
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/react": "^4.0.80",
-        "@tiny/plugin-host": "workspace:*",
+        "@tiny/host": "workspace:*",
         "@tiny/ui": "workspace:*",
         "ai": "^7.0.77",
         "lucide-react": "^1.33.0",
@@ -73,11 +57,11 @@
         "react": "^19",
       },
     },
-    "packages/plugin-extensions": {
-      "name": "@tiny/plugin-extensions",
+    "packages/extension-manager": {
+      "name": "@tiny/extension-manager",
       "version": "0.0.0",
       "dependencies": {
-        "@tiny/plugin-host": "workspace:*",
+        "@tiny/host": "workspace:*",
         "@tiny/ui": "workspace:*",
         "ai": "^7.0.77",
         "lucide-react": "^1.33.0",
@@ -90,25 +74,42 @@
         "react": "^19",
       },
     },
-    "packages/plugin-host": {
-      "name": "@tiny/plugin-host",
-      "version": "0.1.0",
+    "packages/extension-settings": {
+      "name": "@tiny/extension-settings",
+      "version": "0.0.0",
       "dependencies": {
-        "ai": "^7.0.77",
+        "@ai-sdk/anthropic": "^4.0.41",
+        "@ai-sdk/openai-compatible": "^3.0.35",
+        "@tiny/host": "workspace:*",
+        "@tiny/ui": "workspace:*",
+        "zod": "^4.4.3",
       },
       "peerDependencies": {
         "react": "^19",
       },
     },
-    "packages/plugin-settings": {
-      "name": "@tiny/plugin-settings",
+    "packages/extension-starter": {
+      "name": "@tiny/extension-starter",
       "version": "0.0.0",
       "dependencies": {
-        "@ai-sdk/anthropic": "^4.0.41",
-        "@ai-sdk/openai-compatible": "^3.0.35",
-        "@tiny/plugin-host": "workspace:*",
+        "@ai-sdk/google": "^4.0.63",
+        "@tiny/host": "workspace:*",
         "@tiny/ui": "workspace:*",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4",
+        "@vitejs/plugin-react": "^6.0.4",
+        "ai": "^7.0.77",
+        "react": "^19.2.8",
+        "vite": "^8.2.0",
         "zod": "^4.4.3",
+      },
+    },
+    "packages/host": {
+      "name": "@tiny/host",
+      "version": "0.2.0",
+      "dependencies": {
+        "ai": "^7.0.77",
       },
       "peerDependencies": {
         "react": "^19",
@@ -803,15 +804,15 @@
 
     "@tiny/app": ["@tiny/app@workspace:packages/app"],
 
+    "@tiny/extension-chat": ["@tiny/extension-chat@workspace:packages/extension-chat"],
+
+    "@tiny/extension-manager": ["@tiny/extension-manager@workspace:packages/extension-manager"],
+
+    "@tiny/extension-settings": ["@tiny/extension-settings@workspace:packages/extension-settings"],
+
     "@tiny/extension-starter": ["@tiny/extension-starter@workspace:packages/extension-starter"],
 
-    "@tiny/plugin-chat": ["@tiny/plugin-chat@workspace:packages/plugin-chat"],
-
-    "@tiny/plugin-extensions": ["@tiny/plugin-extensions@workspace:packages/plugin-extensions"],
-
-    "@tiny/plugin-host": ["@tiny/plugin-host@workspace:packages/plugin-host"],
-
-    "@tiny/plugin-settings": ["@tiny/plugin-settings@workspace:packages/plugin-settings"],
+    "@tiny/host": ["@tiny/host@workspace:packages/host"],
 
     "@tiny/ui": ["@tiny/ui@workspace:packages/ui"],
 

@@ -2,9 +2,9 @@
 
 [kucukkanat.github.io/tiny](https://kucukkanat.github.io/tiny/)
 
-A browser-only PWA. A thin shell that routes, lays out, and hosts features.
-Features come two ways: **plugins** are built in, **extensions** are installed
-into the running app from a URL.
+A browser-only PWA. A thin shell that routes, lays out, and hosts extensions.
+There is one kind of feature and two ways to deliver it: some ship in the bundle,
+and anyone can install more into the running app from a URL.
 
 ```sh
 bun install
@@ -17,20 +17,20 @@ bun run build  # static files in packages/app/dist
 
 ## Docs
 
-[`docs/`](docs) is the full documentation — architecture, plugins, extensions,
-and how to build either. `cd docs && bun dev`.
+[`docs/`](docs) is the full documentation — architecture, extensions, and how to
+build and ship one either way. `cd docs && bun dev`.
 
 ## Packages
 
-| Package                   | What it is                                              |
-| ------------------------- | ------------------------------------------------------- |
-| `@tiny/app`               | The shell: routing, layout, plugin list                 |
-| `@tiny/ui`                | Design tokens and components (shadcn + AI Elements)     |
-| `@tiny/plugin-host`       | The `Plugin` and `Extension` contracts, and little else |
-| `@tiny/plugin-chat`       | Chat and its history, straight from the tab             |
-| `@tiny/plugin-settings`   | Model endpoint, API key and theme, kept on device       |
-| `@tiny/plugin-extensions` | Extensions you install into the running app             |
-| `@tiny/extension-starter` | A working extension, and the one to copy                |
+| Package                    | What it is                                          |
+| -------------------------- | --------------------------------------------------- |
+| `@tiny/app`                | The shell: routing, layout, the list of what ships  |
+| `@tiny/ui`                 | Design tokens and components (shadcn + AI Elements) |
+| `@tiny/host`               | The `Extension` contract, and little else           |
+| `@tiny/extension-chat`     | Chat and its history, straight from the tab         |
+| `@tiny/extension-settings` | Model endpoint, API key and theme, kept on device   |
+| `@tiny/extension-manager`  | The registry, and the screen you install one on     |
+| `@tiny/extension-starter`  | A working extension, and the one to copy            |
 
 ## Look
 
@@ -47,24 +47,28 @@ routing is hash-based — no server rewrite, no `base` to keep in sync.
 
 ## Adding a feature
 
-Two ways, and the difference is when.
+One kind, two ways to deliver it, and the difference is when.
 
-**A plugin** is built in. Make `packages/plugin-<name>`, export a `Plugin`, add
-it to `packages/app/src/plugins.tsx`. The shell doesn't change. It ships when you
-deploy.
+**In the build.** Make `packages/extension-<name>`, default-export
+`(tiny) => Extension`, add it to `packages/app/src/extensions.tsx`. The shell
+doesn't change. It ships when you deploy, and it can import anything in the
+workspace.
 
-**An extension** is installed by whoever is using the app, and is live in the
-next message. No build, no deploy. It can register tools for the model, add a
-screen and a sidebar section, register a model provider, read past conversations,
-add an action to a highlighted reply, and bring its own styles. Tools are
-extensions too — it is the only way to give the model one.
+**At runtime.** The same module, installed by whoever is using the app, live in
+the next message. No build, no deploy — and five bare specifiers to import from
+rather than the workspace.
+
+Either way it can register tools for the model, add a screen and a sidebar
+section, register a model provider, read past conversations, add an action to a
+highlighted reply, and bring its own styles. Tools are extensions too — it is the
+only way to give the model one.
 
 Four ways in, on the Extensions screen: paste a URL, pick a file, start from one
 of three premades and edit it, or write one from scratch. The last three are
 kept as text and run from it, so they work offline and survive a reload.
 
 ```tsx
-import type { Extension, Tiny } from '@tiny/plugin-host'
+import type { Extension, Tiny } from '@tiny/host'
 import { tool } from 'ai'
 import { z } from 'zod'
 

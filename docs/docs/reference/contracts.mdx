@@ -1,24 +1,11 @@
 ---
 title: Contracts
-description: Every type in @tiny/plugin-host, and what each one is for.
+description: Every type in @tiny/host, and what each one is for.
 ---
 
-`@tiny/plugin-host` is the whole contract between the shell and a feature. One
-file, no runtime code beyond an error boundary and two storage helpers.
-
-## Plugin
-
-```ts
-type Plugin = {
-  readonly id: string
-  readonly title: string
-  readonly Screen: ComponentType
-  readonly Sidebar?: ComponentType
-}
-```
-
-The shell renders `Screen` under `/#/<id>` — nested routes below that are the
-plugin's own — and `Sidebar`, if there is one, in the sidebar body.
+`@tiny/host` is the whole contract between the shell and a feature. One file,
+no runtime code beyond an error boundary and two storage helpers — plus a second
+entry, `@tiny/host/app`, for the two stores a single feature cannot own alone.
 
 ## Extension
 
@@ -38,9 +25,14 @@ type Extension = {
 type ExtensionModule = (tiny: Tiny) => Extension
 ```
 
-A `Plugin` whose `Screen` is optional — a tools-only extension has no screen —
-plus what it can hand to the rest of the app. `ExtensionModule` is what the
-module default-exports.
+One type however it arrives. The shell renders `Screen` under `/#/<id>` — nested
+routes below that are the extension's own — and `Sidebar`, if there is one, in the
+sidebar body; everything past them is folded in with what every other extension
+registered. `Screen` is optional: a tools-only extension has no page.
+
+`ExtensionModule` is what the module default-exports, and what a package listed
+in `packages/app/src/extensions.tsx` exports too. `Screened` is the same type
+with `Screen` required — what the shell routes.
 
 ## Tiny
 
@@ -101,15 +93,15 @@ it into something the SDK can call — Settings offers one row per spec.
 ## The runtime bits
 
 ```tsx
-import { Safely, isExtensionId, isToolName, write } from '@tiny/plugin-host'
+import { Safely, isExtensionId, isToolName, write } from '@tiny/host'
 
-<Safely name="Chat" resetKey={pathname}>
+;<Safely name="Chat" resetKey={pathname}>
   <Screen />
 </Safely>
 
 write('tiny.thing', json) // false when storage is full, never a throw
-isToolName(name)          // what a provider will accept, and a model call
-isExtensionId(id)         // what may become a route
+isToolName(name) // what a provider will accept, and a model call
+isExtensionId(id) // what may become a route
 ```
 
 Three things every feature needs and none of them may import from each other.

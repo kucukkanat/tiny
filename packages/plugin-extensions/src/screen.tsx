@@ -6,8 +6,9 @@ import { Loading } from '@tiny/ui/components/loading'
 import { Switch } from '@tiny/ui/components/switch'
 import { Textarea } from '@tiny/ui/components/textarea'
 import { asSchema, type Tool } from 'ai'
-import { PlayIcon, RotateCwIcon, Trash2Icon } from 'lucide-react'
-import { useState } from 'react'
+import { PlayIcon, RotateCwIcon, Trash2Icon, WandSparklesIcon } from 'lucide-react'
+import type { PrismEditor } from 'prism-code-editor'
+import { useRef, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -26,6 +27,7 @@ import {
   type Installed,
 } from './installed'
 import { runningSource, useExtensions, type Entry } from './loaded'
+import { prettify } from './pretty'
 import { useRichEditor } from './rich'
 import { TEMPLATES } from './templates'
 import { refuse } from './url'
@@ -446,16 +448,48 @@ function Detail() {
  */
 function Editor({ one, stale }: { one: Installed; stale: boolean }) {
   const [full, setFull] = useState(false)
-  const rich = useRichEditor()
+  const [problem, setProblem] = useState<string>()
+  const [formatting, setFormatting] = useState(false)
+  const rich = useRef<PrismEditor>(null)
+  const loaded = useRichEditor()
   const save = (source: string) => setFull(!saveInstalled({ ...one, source }))
+
+  const format = async () => {
+    setFormatting(true)
+    try {
+      const next = await prettify(one.source ?? '')
+      const box = rich.current?.textarea
+      // Through the textarea, not `setOptions`: an input event is what the
+      // highlighting, the undo history and `save` are all already listening for.
+      if (box) {
+        box.setRangeText(next, 0, box.value.length, 'end')
+        box.dispatchEvent(new Event('input', { bubbles: true }))
+      } else save(next)
+      setProblem(undefined)
+    } catch (error) {
+      // Prettier's message is a sentence and then a code frame; the sentence is
+      // the part that fits on a line.
+      setProblem(
+        error instanceof Error ? error.message.split('\n')[0] : 'Would not format.',
+      )
+    }
+    setFormatting(false)
+  }
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
       {/* The plain box is what's here until the editor arrives, and what stays
           if it never does — offline on a first visit, say. Same testid either
           way: it is a real textarea underneath the colour. */}
-      {rich ? (
-        <rich.RichEditor key={one.id} value={one.source ?? ''} onChange={save} />
+      {loaded ? (
+        <loaded.RichEditor
+          key={one.id}
+          value={one.source ?? ''}
+          onChange={save}
+          onReady={(made) => {
+            rich.current = made
+          }}
+        />
       ) : (
         <Textarea
           data-testid="ext-source"
@@ -468,13 +502,30 @@ function Editor({ one, stale }: { one: Installed; stale: boolean }) {
           onChange={(event) => save(event.target.value)}
         />
       )}
-      <p className="text-muted-foreground text-sm" data-testid="ext-source-hint">
-        {full
-          ? 'There is no room left in storage, so this is not saved.'
-          : stale
-            ? 'Edited. Press Run to use it.'
-            : 'JSX works. Only these can be imported: react, react/jsx-runtime, react-router, zod, ai.'}
-      </p>
+      <div className="flex items-start gap-2">
+        <p
+          className={`flex-1 text-sm ${problem ? 'text-destructive' : 'text-muted-foreground'}`}
+          data-testid="ext-source-hint"
+        >
+          {problem ??
+            (full
+              ? 'There is no room left in storage, so this is not saved.'
+              : stale
+                ? 'Edited. Press Run to use it.'
+                : 'JSX works. Only these can be imported: react, react/jsx-runtime, react-router, zod, ai.')}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          data-testid="ext-prettify"
+          className="h-11 shrink-0 px-3 md:h-8"
+          disabled={formatting}
+          onClick={() => void format()}
+        >
+          <WandSparklesIcon />
+          Prettify
+        </Button>
+      </div>
     </fieldset>
   )
 }

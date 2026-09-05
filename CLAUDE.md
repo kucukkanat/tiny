@@ -181,6 +181,13 @@ still drive it with `fireEvent.input`. The plain box stays as the fallback: a
 chunk that fails to load is remembered as failed for the life of the document,
 so there is nothing to retry, and the box is the whole feature minus the colour.
 
+Prettify is prettier, fetched the same way: **+458 B gzipped on first paint,
+167,228 B gzipped when it arrives** (81,021 babel + 59,931 estree + 26,276
+standalone). It is a lot, and there is no smaller formatter that reads JSX —
+`acorn` and `meriyah` don't, so `babel` is the parser. It goes in through the
+textarea rather than `setOptions`, because an input event is what the
+highlighting, the undo history and the save are all already listening for.
+
 Completions are a table in `complete.ts`, not a language service. TypeScript in
 the browser measured 1.76 MB gzipped and would be worse here anyway — five
 overloads of `tool()` defeat its contextual typing, so it answers `tool({` with a

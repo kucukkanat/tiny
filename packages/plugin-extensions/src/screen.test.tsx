@@ -100,6 +100,33 @@ test('what you type is saved as you type, so a reload costs nothing', () => {
   expect(stored()[0]?.source).toContain('id: "edited"')
 })
 
+test('prettify lays out what is in the box, and saves it', async () => {
+  const list = renderExtensions()
+  fireEvent.click(screen.getByTestId('ext-template-weather'))
+  const id = stored()[0]?.id ?? ''
+  list.unmount()
+
+  renderExtensions(`/extensions/${id}`)
+  type('ext-source', 'const a={x:1};export default ()=>a')
+  await act(async () => void fireEvent.click(screen.getByTestId('ext-prettify')))
+
+  expect(stored()[0]?.source).toBe('const a = { x: 1 }\nexport default () => a\n')
+})
+
+test('prettify says what is wrong rather than eating the source', async () => {
+  const list = renderExtensions()
+  fireEvent.click(screen.getByTestId('ext-template-weather'))
+  const id = stored()[0]?.id ?? ''
+  list.unmount()
+
+  renderExtensions(`/extensions/${id}`)
+  type('ext-source', 'const = ')
+  await act(async () => void fireEvent.click(screen.getByTestId('ext-prettify')))
+
+  expect(screen.getByTestId('ext-source-hint').textContent).toContain('Unexpected token')
+  expect(stored()[0]?.source).toBe('const = ')
+})
+
 test('an edit does not run until you say so, and says as much', async () => {
   // No bare imports: those resolve through the page's import map, which Bun has
   // no equivalent of, so a template would never finish loading here.

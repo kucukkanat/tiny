@@ -28,6 +28,7 @@ const host = {
   useTools: () => ({}),
   useInstructions: () => undefined,
   useActions: () => [],
+  useMessageActions: () => [],
   useProviders: () => ({}),
 }
 
@@ -151,7 +152,7 @@ test('one broken extension does not take the working ones with it', async () => 
   ])
 })
 
-test('a screen, a provider and an action all arrive', async () => {
+test('a screen, a provider and both kinds of action all arrive', async () => {
   install(
     '1',
     module(`export default () => ({
@@ -159,6 +160,7 @@ test('a screen, a provider and an action all arrive', async () => {
       Screen: () => null,
       providers: { gemini: { label: 'Gemini', baseUrl: 'https://g.dev', model: () => 'm', models: () => Promise.resolve([]) } },
       actions: [{ label: 'Translate', ask: 'Translate this' }],
+      messageActions: [{ label: 'Keep', icon: 'add', run: () => {} }],
       instructions: 'Prefer metric units.',
     })`),
   )
@@ -174,6 +176,7 @@ test('a screen, a provider and an action all arrive', async () => {
   ])
   expect(Object.keys(result.current.providers)).toEqual(['anthropic', 'gemini'])
   expect(result.current.actions.map(({ label }) => label)).toEqual(['Translate'])
+  expect(result.current.messageActions.map(({ label }) => label)).toEqual(['Keep'])
   expect(result.current.instructions).toBe('Prefer metric units.')
 })
 

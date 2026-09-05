@@ -42,6 +42,11 @@ const TINY: Record<keyof Tiny, Completion> = {
     icon: 'method',
     detail: '(): readonly ChatAction[]',
   },
+  useMessageActions: {
+    label: 'useMessageActions',
+    icon: 'method',
+    detail: '(): readonly MessageAction[]',
+  },
   useProviders: {
     label: 'useProviders',
     icon: 'method',
@@ -58,6 +63,7 @@ const EXTENSION: Record<keyof Extension, string> = {
   tools: 'Record<string, Tool> — what the model may call',
   providers: 'Record<string, ProviderSpec> — another model API',
   actions: 'ChatAction[] — offered on a highlighted reply',
+  messageActions: 'MessageAction[] — offered in a message footer',
   instructions: 'string — added to the system prompt',
   css: 'string — adopted while this is on',
 }

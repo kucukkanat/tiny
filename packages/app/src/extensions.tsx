@@ -48,6 +48,7 @@ export const tiny: Tiny = {
   useTools: () => useExtensions().tools,
   useInstructions: () => useExtensions().instructions,
   useActions: () => useExtensions().actions,
+  useMessageActions: () => useExtensions().messageActions,
   useProviders: () => useExtensions().providers,
 }
 

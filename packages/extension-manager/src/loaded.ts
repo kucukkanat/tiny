@@ -4,6 +4,7 @@ import {
   type ChatAction,
   type Extension,
   type ExtensionModule,
+  type MessageAction,
   type Registry,
   type Screened,
   type Tiny,
@@ -42,6 +43,7 @@ export type Loaded = {
   readonly tools: ToolSet
   readonly providers: Registry
   readonly actions: readonly ChatAction[]
+  readonly messageActions: readonly MessageAction[]
   readonly instructions: string | undefined
 }
 
@@ -323,6 +325,7 @@ const collect = (): Loaded => {
     ),
     providers: first(live.flatMap(({ providers }) => Object.entries(providers ?? {}))),
     actions: live.flatMap(({ actions }) => actions ?? []),
+    messageActions: live.flatMap(({ messageActions }) => messageActions ?? []),
     instructions: instructions || undefined,
   }
 }

@@ -6,7 +6,7 @@ import {
   ConversationScrollButton,
 } from '@tiny/ui/components/ai-elements/conversation'
 import { Message, MessageContent } from '@tiny/ui/components/ai-elements/message'
-import type { ChatAction, Registry, Tiny } from '@tiny/host'
+import type { ChatAction, MessageAction, Registry, Tiny } from '@tiny/host'
 import { readModels, useProvider } from '@tiny/host/app'
 import { DirectChatTransport, type LanguageModel, type ToolSet } from 'ai'
 import { useEffect, useMemo, useRef } from 'react'
@@ -16,10 +16,11 @@ import {
   draftKey,
   newChatPath,
   saveConversation,
+  titleOf,
   useConversations,
 } from './conversations'
-import { agentFor, textOf, type ChatMessage } from './model'
-import { MessageParts, ReplyActions, Thinking } from './parts'
+import { agentFor, asSeen, type ChatMessage } from './model'
+import { MessageFooter, MessageParts, Thinking } from './parts'
 import { ToolQuestions } from './questions'
 import { SelectionActions } from './selection'
 
@@ -77,6 +78,7 @@ function Thread({ tiny }: { tiny: Tiny }) {
   const tools = tiny.useTools()
   const instructions = tiny.useInstructions()
   const actions = tiny.useActions()
+  const messageActions = tiny.useMessageActions()
   // The picker is the stored choice, not the model object: which names are on
   // offer and which one is set is state Settings writes and this one reads.
   const specs = tiny.useProviders()
@@ -106,6 +108,7 @@ function Thread({ tiny }: { tiny: Tiny }) {
       tools={tools}
       instructions={instructions}
       actions={actions}
+      messageActions={messageActions}
       history={
         conversations.find((conversation) => conversation.id === id)?.messages ?? []
       }
@@ -122,6 +125,7 @@ function Chat({
   tools,
   instructions,
   actions,
+  messageActions,
   history,
 }: {
   id: string
@@ -132,6 +136,7 @@ function Chat({
   tools: ToolSet
   instructions?: string
   actions: readonly ChatAction[]
+  messageActions: readonly MessageAction[]
   history: readonly ChatMessage[]
 }) {
   const transport = useMemo(
@@ -159,6 +164,42 @@ function Chat({
     saveConversation(id, messages)
   }, [id, messages])
 
+  /**
+   * `status` in a closure is a render behind, so it cannot see a request the
+   * same `run` just started — and two at once do not lose a reply, they
+   * interleave and write both into the one conversation. One send per press is
+   * the rule, and this is what holds it.
+   */
+  const sending = useRef(false)
+  useEffect(() => {
+    // Only once the answer is over. A render can land between the send and the
+    // SDK saying it is out, and clearing on any render would undo the latch in
+    // exactly the window it exists for.
+    if (status !== 'submitted' && status !== 'streaming') sending.current = false
+  }, [status])
+
+  // The conversation as an extension sees it, handed to every action on every
+  // message — so it is built once a render and not once a button. Its type is
+  // checked where it lands, by `MessageFooter`.
+  const thread = useMemo(
+    () => ({
+      id,
+      // Derived, not read back: this is right before the first save lands.
+      title: titleOf(messages),
+      model: name,
+      messages: messages.map(asSeen),
+      send: (text: string) => {
+        // Loud, because an extension can ask whether this is a good moment and
+        // a silent no-op cannot be asked about.
+        if (sending.current || status === 'submitted' || status === 'streaming')
+          throw new Error('The model is still answering.')
+        sending.current = true
+        void sendMessage({ text })
+      },
+    }),
+    [id, name, messages, status, sendMessage],
+  )
+
   return (
     <div className="mx-auto flex h-full w-full max-w-2xl flex-col gap-3">
       <Conversation className="flex-1">
@@ -177,8 +218,14 @@ function Chat({
                   <MessageContent>
                     <MessageParts parts={message.parts} streaming={live} />
                   </MessageContent>
-                  {message.role === 'assistant' && !live && (
-                    <ReplyActions text={textOf(message.parts)} />
+                  {/* Not while it is still arriving: half a reply is not what
+                      an action was written to be handed. */}
+                  {!live && (
+                    <MessageFooter
+                      message={asSeen(message)}
+                      thread={thread}
+                      actions={messageActions}
+                    />
                   )}
                 </Message>
               )

@@ -41,6 +41,54 @@ export type ChatAction = {
   readonly ask: string
 }
 
+/** One message, as an extension sees it: what was said, not how it's stored. */
+export type Message = {
+  readonly id: string
+  readonly role: 'user' | 'assistant'
+  /** Everything it said out loud, with tool calls and reasoning left out. */
+  readonly text: string
+}
+
+/** The conversation an action was pressed in, and the one way to add to it. */
+export type Thread = {
+  readonly id: string
+  readonly title: string
+  /** The model name showing in the picker, not the object behind it. */
+  readonly model: string
+  /** Everything in it, oldest first, the message you were handed included. */
+  readonly messages: readonly Message[]
+  /** Say something, as you. Once per press, and never while one is arriving. */
+  readonly send: (text: string) => void
+}
+
+/**
+ * An icon this build already ships, so naming one costs nothing. Anything else
+ * is a component of your own — which is why the slot takes both.
+ */
+export type IconName =
+  'add' | 'check' | 'copy' | 'play' | 'retry' | 'stop' | 'trash' | 'wand'
+
+/**
+ * Something to offer in the footer of a message, beside Copy.
+ *
+ * Unlike a `ChatAction`, which can only ask, this runs your code — so it can
+ * copy something else, keep it, post it somewhere, or say something back
+ * through `thread.send`.
+ */
+export type MessageAction = {
+  readonly label: string
+  /**
+   * One of the names above, a component of your own, or any other string,
+   * which is drawn as it is — an emoji works. The label is what a screen
+   * reader gets either way.
+   */
+  readonly icon?: IconName | ComponentType | (string & {})
+  /** Which messages it belongs on. On all of them when there isn't one. */
+  readonly when?: (message: Message) => boolean
+  /** Pressed. The button is disabled while a promise you return is pending. */
+  readonly run: (message: Message, thread: Thread) => void | Promise<void>
+}
+
 /**
  * What the app hands an extension: the platform it didn't bring, and the fold of
  * what every extension did. Everything else is already there — `localStorage`
@@ -48,7 +96,7 @@ export type ChatAction = {
  *
  * This type only ever grows. A module sitting in someone's storage binds to the
  * shape it was written against and there is no migration that reaches it, so
- * `useModel` returns a `LanguageModel` and always will. Three of the reads below
+ * `useModel` returns a `LanguageModel` and always will. Four of the reads below
  * exist for the chat that ships in this build, and are frozen by the same rule.
  */
 export type Tiny = {
@@ -64,6 +112,8 @@ export type Tiny = {
   readonly useInstructions: () => string | undefined
   /** Every action offered when a passage of a reply is highlighted. */
   readonly useActions: () => readonly ChatAction[]
+  /** Every action offered in the footer of a message. */
+  readonly useMessageActions: () => readonly MessageAction[]
   /** Every dialect on offer, whoever brought it. */
   readonly useProviders: () => Registry
 }
@@ -87,6 +137,8 @@ export type Extension = {
   readonly tools?: Readonly<Record<string, Tool>>
   readonly providers?: Readonly<Record<string, ProviderSpec>>
   readonly actions?: readonly ChatAction[]
+  /** Offered in the footer of a message, beside Copy. */
+  readonly messageActions?: readonly MessageAction[]
   /** Added to the model's system prompt. Shown to the user before they enable it. */
   readonly instructions?: string
   /** Adopted as a stylesheet while this is on. See the README. */

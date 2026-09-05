@@ -114,7 +114,7 @@ const subscribe = (listener: () => void) => {
 }
 
 /** The first thing you said, which is what you'll recognise it by. */
-const titleOf = (messages: readonly ChatMessage[]): string => {
+export const titleOf = (messages: readonly ChatMessage[]): string => {
   const first = messages.find((message) => message.role === 'user')
   const said = first ? textOf(first.parts).trim() : ''
   return said ? said.slice(0, 60) : 'New chat'

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import type { ChatMessage } from './model'
-import { MessageParts, ReplyActions, Thinking } from './parts'
+import type { Message, MessageAction, Thread } from '@tiny/host'
+import { MessageFooter, MessageParts, Thinking } from './parts'
 
 const show = (parts: ChatMessage['parts'], streaming = false) =>
   render(<MessageParts parts={parts} streaming={streaming} />)
@@ -49,20 +50,195 @@ test('waiting on the first token says what it is doing', () => {
   expect(screen.getByTestId('chat-thinking').textContent).toBe('Thinking0.0s')
 })
 
-test('a reply can be copied, and says when it has been', async () => {
+const reply: Message = { id: 'm1', role: 'assistant', text: 'the whole answer' }
+
+const thread = (over: Partial<Thread> = {}): Thread => ({
+  id: 'c1',
+  title: 'A chat',
+  model: 'test-model',
+  messages: [reply],
+  send: () => {},
+  ...over,
+})
+
+const footer = (actions: readonly MessageAction[] = [], message = reply) =>
+  render(<MessageFooter message={message} thread={thread()} actions={actions} />)
+
+test('a message can be copied, and says when it has been', async () => {
   const copied: string[] = []
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: (text: string) => void copied.push(text) },
   })
 
-  render(<ReplyActions text="the whole answer" />)
+  footer()
   const button = screen.getByTestId('message-copy')
   expect(button.textContent).toContain('Copy')
 
   fireEvent.click(button)
   expect(copied).toEqual(['the whole answer'])
   await waitFor(() => expect(button.textContent).toContain('Copied'))
+})
+
+test("an extension's action is handed the message and the thread", () => {
+  const seen: [Message, Thread][] = []
+  footer([{ label: 'Save', run: (message, one) => void seen.push([message, one]) }])
+
+  fireEvent.click(screen.getByTestId('message-action-save'))
+  expect(seen[0]?.[0]).toEqual(reply)
+  expect(seen[0]?.[1].messages).toEqual([reply])
+  expect(seen[0]?.[1].model).toBe('test-model')
+})
+
+test('`when` decides which messages an action appears on', () => {
+  const only = (role: Message['role']): MessageAction => ({
+    label: 'Redo',
+    when: (message) => message.role === role,
+    run: () => {},
+  })
+
+  footer([only('user')])
+  expect(screen.queryByTestId('message-action-redo')).toBeNull()
+
+  footer([only('assistant')])
+  expect(screen.getByTestId('message-action-redo')).toBeDefined()
+})
+
+test('a named icon is drawn, an unknown one is drawn as it stands', () => {
+  footer([
+    { label: 'Again', icon: 'retry', run: () => {} },
+    { label: 'Star', icon: '★', run: () => {} },
+    { label: 'Plain', run: () => {} },
+  ])
+
+  expect(screen.getByTestId('message-action-again').querySelector('svg')).toBeDefined()
+  expect(screen.getByTestId('message-action-star').textContent).toContain('★')
+  // Nothing to draw but the words, so the words are what it draws.
+  expect(screen.getByTestId('message-action-plain').textContent).toContain('Plain')
+})
+
+test('an action that throws says so instead of taking the screen down', async () => {
+  footer([
+    {
+      label: 'Break',
+      run: () => {
+        throw new Error('nope')
+      },
+    },
+  ])
+
+  fireEvent.click(screen.getByTestId('message-action-break'))
+  expect(screen.getByTestId('message-action-error').textContent).toBe('Break: nope')
+})
+
+test('an action is out of use while what it returned is still going', async () => {
+  let finish = () => {}
+  footer([{ label: 'Wait', run: () => new Promise<void>((done) => (finish = done)) }])
+
+  const button = screen.getByTestId('message-action-wait')
+  fireEvent.click(button)
+  expect(button.hasAttribute('disabled')).toBe(true)
+
+  await act(async () => void finish())
+  expect(button.hasAttribute('disabled')).toBe(false)
+})
+
+test('an icon name off Object.prototype is a string, not a component', () => {
+  // A bare index into an object literal answers `constructor` with a function,
+  // which React would then try to render.
+  footer([{ label: 'Oops', icon: 'constructor', run: () => {} }])
+  expect(screen.getByTestId('message-action-oops').textContent).toContain('constructor')
+})
+
+test('a `when` that throws shows the button rather than taking chat down', () => {
+  footer([
+    {
+      label: 'Rude',
+      when: () => {
+        throw new Error('boom')
+      },
+      run: () => {},
+    },
+  ])
+  expect(screen.getByTestId('message-action-rude')).toBeDefined()
+})
+
+test('a button with only words says them once, not twice', () => {
+  footer([{ label: 'Plain', run: () => {} }])
+  expect(screen.getByTestId('message-action-plain').textContent).toBe('Plain')
+})
+
+test('a promise from somewhere else still parks the button', async () => {
+  let finish = () => {}
+  const foreign = {
+    then: (ok: () => void) => {
+      finish = ok
+    },
+  }
+  footer([{ label: 'Odd', run: () => foreign as unknown as Promise<void> }])
+
+  const button = screen.getByTestId('message-action-odd')
+  fireEvent.click(button)
+  expect(button.hasAttribute('disabled')).toBe(true)
+
+  await act(async () => void finish())
+  expect(button.hasAttribute('disabled')).toBe(false)
+})
+
+test('a button keeps its own pending state when one above it goes away', async () => {
+  let finish = () => {}
+  const hides: MessageAction = { label: 'First', when: () => true, run: () => {} }
+  const waits: MessageAction = {
+    label: 'Second',
+    run: () => new Promise<void>((done) => (finish = done)),
+  }
+
+  const { rerender } = render(
+    <MessageFooter message={reply} thread={thread()} actions={[hides, waits]} />,
+  )
+  fireEvent.click(screen.getByTestId('message-action-second'))
+  expect(screen.getByTestId('message-action-second').hasAttribute('disabled')).toBe(true)
+
+  // `First` drops out, so `Second` moves up a place in what is drawn.
+  rerender(
+    <MessageFooter
+      message={reply}
+      thread={thread()}
+      actions={[{ ...hides, when: () => false }, waits]}
+    />,
+  )
+  expect(screen.queryByTestId('message-action-first')).toBeNull()
+  expect(screen.getByTestId('message-action-second').hasAttribute('disabled')).toBe(true)
+
+  await act(async () => void finish())
+  expect(screen.getByTestId('message-action-second').hasAttribute('disabled')).toBe(false)
+})
+
+test('a send refused mid-answer is said out loud, not swallowed', () => {
+  render(
+    <MessageFooter
+      message={reply}
+      thread={thread({
+        send: () => {
+          throw new Error('The model is still answering.')
+        },
+      })}
+      actions={[{ label: 'Again', run: (_message, one) => one.send('again') }]}
+    />,
+  )
+
+  fireEvent.click(screen.getByTestId('message-action-again'))
+  expect(screen.getByTestId('message-action-error').textContent).toBe(
+    'Again: The model is still answering.',
+  )
+})
+
+test('two extensions may offer the same label, and both are drawn', () => {
+  footer([
+    { label: 'Save', run: () => {} },
+    { label: 'Save', run: () => {} },
+  ])
+  expect(screen.getAllByTestId('message-action-save')).toHaveLength(2)
 })
 
 test('the thinking row counts the seconds it has been waiting', async () => {

@@ -393,6 +393,7 @@ const summarise = (extension: Extension | undefined): string => {
     extension.Screen ? 'a screen' : '',
     plural(Object.keys(extension.providers ?? {}).length, 'provider'),
     (extension.actions?.length ?? 0) > 0 ? 'chat actions' : '',
+    (extension.messageActions?.length ?? 0) > 0 ? 'message actions' : '',
   ].filter(Boolean)
   return bits.length > 0 ? bits.join(' · ') : 'On'
 }
@@ -524,6 +525,13 @@ function Detail() {
                   {(extension.actions ?? []).map(({ label }) => (
                     <li key={label} data-testid={`ext-action-${label}`}>
                       A “{label}” action on a highlighted reply
+                    </li>
+                  ))}
+                  {(extension.messageActions ?? []).map(({ label }, index) => (
+                    // On the position: unlike the others, nothing stops two of
+                    // these sharing a label, and the fold keeps both.
+                    <li key={index} data-testid={`ext-message-action-${label}`}>
+                      A “{label}” button under a message — <em>runs its own code</em>
                     </li>
                   ))}
                 </ul>

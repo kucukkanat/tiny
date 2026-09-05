@@ -18,6 +18,7 @@ type Extension = {
   readonly tools?: Readonly<Record<string, Tool>>
   readonly providers?: Readonly<Record<string, ProviderSpec>>
   readonly actions?: readonly ChatAction[]
+  readonly messageActions?: readonly MessageAction[]
   readonly instructions?: string
   readonly css?: string
 }
@@ -44,13 +45,14 @@ type Tiny = {
   readonly useTools: () => ToolSet
   readonly useInstructions: () => string | undefined
   readonly useActions: () => readonly ChatAction[]
+  readonly useMessageActions: () => readonly MessageAction[]
   readonly useProviders: () => Registry
 }
 ```
 
 What the app hands an extension: the platform it didn't bring, and the fold of
 what every extension did. The first three are the platform — conversations, the
-configured model, and a question the person at the keyboard answers. The four
+configured model, and a question the person at the keyboard answers. The five
 below them are the fold, and they exist because the chat that ships is an
 extension like any other and had to read them through the same contract.
 
@@ -62,8 +64,9 @@ with a reason.
 :::note
 This type only ever grows. A module sitting in someone's `localStorage` is bound
 to the shape it was written against and there is no migration that reaches it —
-so `useModel` returns a `LanguageModel` and always will. Weigh an eighth member
-against that.
+so `useModel` returns a `LanguageModel` and always will. `useMessageActions` is
+the eighth, and the shape it hands out — `Message` and `Thread` below — is
+frozen with it. Weigh a ninth against that.
 :::
 
 ## Chat and ChatAction
@@ -85,6 +88,48 @@ type ChatAction = {
 ```
 
 A conversation as an extension sees it: what was said, not how it is stored.
+
+## Message, Thread and MessageAction
+
+```ts
+type Message = {
+  readonly id: string
+  readonly role: 'user' | 'assistant'
+  /** Everything it said out loud, with tool calls and reasoning left out. */
+  readonly text: string
+}
+
+type Thread = {
+  readonly id: string
+  readonly title: string
+  /** The model name showing in the picker, not the object behind it. */
+  readonly model: string
+  readonly messages: readonly Message[]
+  /** Say something, as you. Once per press, and never while one is arriving. */
+  readonly send: (text: string) => void
+}
+
+type IconName = 'add' | 'check' | 'copy' | 'play' | 'retry' | 'stop' | 'trash' | 'wand'
+
+type MessageAction = {
+  readonly label: string
+  readonly icon?: IconName | ComponentType | (string & {})
+  /** Which messages it belongs on. On all of them when there isn't one. */
+  readonly when?: (message: Message) => boolean
+  readonly run: (message: Message, thread: Thread) => void | Promise<void>
+}
+```
+
+A `ChatAction` can only ask; a `MessageAction` runs its own code, which is why
+the Extensions screen says so about it and not about the others. `Message` and
+`Thread` are our own reduction rather than the SDK's `UIMessage` — the contract
+is frozen and the SDK's message type is not.
+
+The names in `IconName` are the icons this build already draws somewhere else,
+so naming one costs nothing. Anything past them is a component of your own, or
+any other string, which is drawn as it stands.
+
+See [every slot](/extensions/slots#messageactions).
 
 ## Provider and ProviderSpec
 

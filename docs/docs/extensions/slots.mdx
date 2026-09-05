@@ -8,15 +8,16 @@ sidebar calls it. Everything else is optional, and each slot is a feature on its
 own: an extension with only `tools` never draws anything, and one with only a
 `Screen` never says a word to the model.
 
-| Slot           | What it adds                                    |
-| -------------- | ----------------------------------------------- |
-| `Screen`       | a route at `/#/<id>`, and everything under it   |
-| `Sidebar`      | your own section of the left rail               |
-| `tools`        | functions the model can call mid-answer         |
-| `providers`    | another model API, offered in Settings          |
-| `actions`      | a button on a highlighted passage of a reply    |
-| `instructions` | a line in the model's system prompt             |
-| `css`          | a stylesheet, adopted while the extension is on |
+| Slot             | What it adds                                     |
+| ---------------- | ------------------------------------------------ |
+| `Screen`         | a route at `/#/<id>`, and everything under it    |
+| `Sidebar`        | your own section of the left rail                |
+| `tools`          | functions the model can call mid-answer          |
+| `providers`      | another model API, offered in Settings           |
+| `actions`        | a button on a highlighted passage of a reply     |
+| `messageActions` | a button in the footer of a message, beside Copy |
+| `instructions`   | a line in the model's system prompt              |
+| `css`            | a stylesheet, adopted while the extension is on  |
 
 Every example below is a whole module in the flavour you write in the app's own
 editor: JSX, no TypeScript, and nothing imported but the five specifiers on the
@@ -370,6 +371,103 @@ Nothing is imported, because an action is plain data. The bar only appears on a
 reply — highlighting your own message offers nothing, since selecting what you
 wrote is copying, not asking for another go at it.
 
+## messageActions
+
+A button in the footer of a message, beside Copy. Where an `action` can only
+ask, this one runs your code — so it can reach the clipboard, keep something,
+post it somewhere, or say something back.
+
+It is handed the message it sits under, and the conversation that message is in:
+
+```ts
+type Message = {
+  readonly id: string
+  readonly role: 'user' | 'assistant'
+  /** Everything it said out loud, with tool calls and reasoning left out. */
+  readonly text: string
+}
+
+type Thread = {
+  readonly id: string
+  readonly title: string
+  /** The model name showing in the picker, not the object behind it. */
+  readonly model: string
+  /** Everything in it, oldest first, the message you were handed included. */
+  readonly messages: readonly Message[]
+  /** Say something, as you. Once per press, and never while one is arriving. */
+  readonly send: (text: string) => void
+}
+```
+
+```jsx
+export default () => ({
+  id: 'keeper',
+  title: 'Keeper',
+
+  messageActions: [
+    {
+      label: 'Quote',
+      icon: 'copy',
+      run: ({ text }) => void navigator.clipboard?.writeText(text.replace(/^/gm, '> ')),
+    },
+    {
+      label: 'Shorter',
+      icon: 'wand',
+      // Only on a reply, and only on one long enough to be worth shortening.
+      // A button that does not apply is better absent than disabled.
+      when: ({ role, text }) => role === 'assistant' && text.length > 280,
+      run: ({ text }, thread) => thread.send(`Say this in one sentence:\n\n> ${text}`),
+    },
+  ],
+})
+```
+
+Both sides get a footer — your own messages included, which is where their Copy
+button came from. The one still streaming does not: half a reply is not what an
+action was written to be handed.
+
+### What gets drawn
+
+| `icon`           | What you get                                |
+| ---------------- | ------------------------------------------- |
+| one of the names | the icon this build already draws elsewhere |
+| a component      | yours, in the same slot                     |
+| any other string | the string itself, so an emoji works        |
+| nothing          | the label, as words, in a wider button      |
+
+The names are `add`, `check`, `copy`, `play`, `retry`, `stop`, `trash` and
+`wand` — that list and not a nicer one, because every one of them is already in
+the bundle for something else, so naming one costs nothing. A ninth would be a
+commit and a deploy, which is the thing the component form saves you.
+
+```jsx
+messageActions: [
+  { label: 'Star', icon: '★', run: () => {} },
+  { label: 'Mine', icon: () => <svg viewBox="0 0 24 24">…</svg>, run: () => {} },
+  { label: 'Keep', run: () => {} }, // no icon, so the word is the button
+]
+```
+
+:::note
+Return a promise from `run` and the button is out of use until it settles. Throw,
+or reject, and the message is shown under the row rather than left in the
+console — it is somebody else's code, and a button that silently did nothing is
+worse than one that says why.
+:::
+
+`when` runs in render, inside chat's screen rather than your own, so a throw in
+it is not allowed to take chat down: the button is shown, which is the default
+anyway, and whatever is wrong turns up attributed to your label the moment
+someone presses it. Keep it to a look at the message you were handed.
+
+:::warning
+`thread.send` throws while a reply is still arriving, and again if you call it
+twice from one press. Two requests at once do not lose a reply — they interleave
+and write both into the one conversation. It throws rather than doing nothing,
+because an extension can ask whether this is a good moment and a silent no-op
+cannot be asked about.
+:::
+
 ## instructions
 
 One line added to the model's system prompt. Every live extension's is joined,
@@ -454,6 +552,7 @@ slot:
 | the same tool name       | First folded wins, silently. Prefix yours.                     |
 | the same provider `kind` | Refused: _"…is a dialect this build already answers to."_      |
 | `actions`                | Both appear, in fold order.                                    |
+| `messageActions`         | Both appear, labels may collide, and both are drawn.           |
 | `instructions`           | Both, joined with a blank line.                                |
 | `css`                    | Both sheets are adopted. The order between them is not stable. |
 
@@ -463,5 +562,6 @@ down at boot, which is what you want from a build error.
 
 Before the switch goes on, the Extensions screen shows the screen's route, every
 tool with its parameters read back out of the compiled schema, every provider,
-every action, and the `instructions` in full. `Sidebar` and `css` are not on that
+every action — a message action named, and marked as running its own code — and
+the `instructions` in full. `Sidebar` and `css` are not on that
 list — see [what an extension can do to you](/extensions/security).

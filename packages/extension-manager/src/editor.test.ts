@@ -56,6 +56,7 @@ test('after a dot on the host, it offers what the host actually has', async () =
     'useActions',
     'useChats',
     'useInstructions',
+    'useMessageActions',
     'useModel',
     'useProviders',
     'useTools',

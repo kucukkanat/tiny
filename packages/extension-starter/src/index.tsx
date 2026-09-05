@@ -44,6 +44,23 @@ export default (tiny: Tiny): Extension => ({
   // Offered when a passage of a reply is highlighted, beside the built-in five.
   actions: [{ label: 'Bullets', ask: 'Rewrite this as a short bulleted list' }],
 
+  // Under every message, beside Copy. Unlike a chat action, which can only ask,
+  // these run code — so one reaches the clipboard and the other says something
+  // back. `when` keeps a button off the messages it has nothing to do with.
+  messageActions: [
+    {
+      label: 'Quote',
+      icon: 'copy',
+      run: ({ text }) => void navigator.clipboard?.writeText(text.replace(/^/gm, '> ')),
+    },
+    {
+      label: 'Shorter',
+      icon: 'wand',
+      when: ({ role, text }) => role === 'assistant' && text.length > 280,
+      run: ({ text }, thread) => thread.send(`Say this in one sentence:\n\n> ${text}`),
+    },
+  ],
+
   // Added to the model's system prompt. The Extensions screen shows it in full
   // before anyone turns this on, because nothing else in the app would.
   instructions: 'When a question involves chance, roll for it rather than guessing.',

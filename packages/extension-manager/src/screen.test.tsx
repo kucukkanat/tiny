@@ -14,6 +14,7 @@ attach(
     useTools: () => ({}),
     useInstructions: () => undefined,
     useActions: () => [],
+    useMessageActions: () => [],
     useProviders: () => ({}),
   },
   [

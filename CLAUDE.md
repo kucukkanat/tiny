@@ -78,9 +78,9 @@ and a deploy. One that isn't listed — because someone else wrote it — is
 installed on a server. Same type, same registry, same screen, same switch.
 
 Both are `(tiny: Tiny) => Extension`. `Extension` is `id`, `title`, an optional
-`Screen` and `Sidebar`, plus `tools`, `providers`, `actions`, `instructions` and
-`css`; `Tiny` is what the app hands back — the platform an extension didn't
-bring, and the fold of what every extension did. Nobody imports a sibling:
+`Screen` and `Sidebar`, plus `tools`, `providers`, `actions`, `messageActions`,
+`instructions` and `css`; `Tiny` is what the app hands back — the platform an
+extension didn't bring, and the fold of what every extension did. Nobody imports a sibling:
 `extensions.test.ts` fails the build if an `extension-*` package depends on
 another `@tiny/extension-*`.
 
@@ -95,9 +95,25 @@ and the one both deliveries may depend on.
 `Tiny` only ever grows. A module sitting in someone's `localStorage` is bound to
 the shape it was written against and there is no migration that reaches it — so
 `useModel` returns a `LanguageModel` and always will, and `useTools`,
-`useInstructions` and `useActions`, which exist because the chat that ships is an
-extension like any other, are frozen by the same rule. Weigh that before adding
-an eighth.
+`useInstructions`, `useActions` and `useMessageActions`, which exist because the
+chat that ships is an extension like any other, are frozen by the same rule.
+Weigh that before adding a ninth.
+
+`messageActions` is the one slot that runs an extension's code on a press rather
+than handing over data, so what it is given is frozen too: `Message` and
+`Thread` are our own reduction, not the SDK's `UIMessage`, because the contract
+cannot move and the SDK's message type can. `Thread.send` throws rather than
+no-opping — an extension can ask whether this is a good moment, and a silent
+no-op cannot be asked about — and it is one send per press, because `status` in
+a closure is a render behind and two requests at once do not lose a reply, they
+interleave and write both into the one conversation. A `run` that returns a
+promise parks its own button; one that throws says so under the row, because a
+button that silently did nothing is worse than one that says why. The whole of
+it is **+2,084 B raw / +676 B gzipped of JS on first paint, and +121 B raw /
++18 B gzipped of CSS** — the eight named icons cost nothing, because every one
+is already in the bundle for something else, which is why that list is that
+list. A ninth is a commit and a
+deploy; an extension that wants one passes a component instead.
 
 There is no other way to give the model a tool. There used to be a `plugin-tools`
 that let you write one in a textarea, which was a second mechanism for the same

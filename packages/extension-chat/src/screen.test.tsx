@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import type { LanguageModel } from 'ai'
-import type { Registry, Tiny } from '@tiny/host'
+import type { Registry, Thread, Tiny } from '@tiny/host'
 import { askUser } from '@tiny/host/app'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { ChatScreen } from './screen'
@@ -23,6 +23,7 @@ const host = (over: Partial<Tiny> = {}): Tiny => ({
   useTools: () => ({}),
   useInstructions: () => undefined,
   useActions: () => [],
+  useMessageActions: () => [],
   useProviders: (): Registry => ({ test: spec }),
   ...over,
 })
@@ -88,6 +89,86 @@ test('a stored conversation is on screen when you open it', async () => {
 
   renderChat()
   expect((await screen.findByTestId('message-user')).textContent).toContain('earlier')
+})
+
+test('an extension gets a button under both sides, and the thread with it', async () => {
+  chose()
+  localStorage.setItem(
+    'tiny.chat.abc',
+    JSON.stringify({
+      id: 'abc',
+      title: 'earlier',
+      updatedAt: 1,
+      messages: [
+        { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'earlier' }] },
+        { id: 'm2', role: 'assistant', parts: [{ type: 'text', text: 'the answer' }] },
+      ],
+    }),
+  )
+
+  const seen: Thread[] = []
+  renderChat(
+    host({
+      useMessageActions: () => [
+        { label: 'Keep', run: (_message, thread) => void seen.push(thread) },
+      ],
+    }),
+  )
+
+  // Both sides get a footer now, so yours has a Copy it did not have before.
+  await waitFor(() => expect(screen.getAllByTestId('message-copy')).toHaveLength(2))
+
+  const [mine] = screen.getAllByTestId('message-action-keep')
+  fireEvent.click(mine as HTMLElement)
+  expect(seen[0]?.title).toBe('earlier')
+  expect(seen[0]?.model).toBe('test-model')
+  expect(seen[0]?.messages.map(({ role, text }) => [role, text])).toEqual([
+    ['user', 'earlier'],
+    ['assistant', 'the answer'],
+  ])
+})
+
+test('one send per press: the second is refused, not queued behind the first', async () => {
+  chose()
+  localStorage.setItem(
+    'tiny.chat.abc',
+    JSON.stringify({
+      id: 'abc',
+      title: 'earlier',
+      updatedAt: 1,
+      messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'earlier' }] }],
+    }),
+  )
+
+  // Two sends at once do not lose a reply — they interleave and write both into
+  // the one conversation — so the second has to be refused where it is made.
+  const tried: string[] = []
+  const say = (thread: Thread, text: string) => {
+    try {
+      thread.send(text)
+      tried.push('sent')
+    } catch (cause) {
+      tried.push(cause instanceof Error ? cause.message : String(cause))
+    }
+  }
+
+  renderChat(
+    host({
+      useMessageActions: () => [
+        {
+          label: 'Twice',
+          run: (_message, thread) => {
+            say(thread, 'one')
+            say(thread, 'two')
+          },
+        },
+      ],
+    }),
+  )
+
+  const button = await screen.findByTestId('message-action-twice')
+  await act(async () => void fireEvent.click(button))
+  expect(tried).toEqual(['sent', 'The model is still answering.'])
 })
 
 test('landing on it without a conversation starts one', async () => {

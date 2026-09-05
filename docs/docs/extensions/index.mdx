@@ -50,15 +50,16 @@ export default (tiny: Tiny): Extension => ({
 
 `id` and `title` are required. Everything past them is optional:
 
-| Slot           | What it adds                                                       |
-| -------------- | ------------------------------------------------------------------ |
-| `Screen`       | a route at `/#/<id>`, rendered by the shell                        |
-| `Sidebar`      | a section in the left sidebar                                      |
-| `tools`        | functions the model can call mid-answer                            |
-| `providers`    | a model API, offered in Settings beside Anthropic and OpenAI       |
-| `actions`      | an entry in the bar shown when a passage of a reply is highlighted |
-| `instructions` | a line added to the model's system prompt                          |
-| `css`          | a stylesheet, adopted while the extension is on                    |
+| Slot             | What it adds                                                       |
+| ---------------- | ------------------------------------------------------------------ |
+| `Screen`         | a route at `/#/<id>`, rendered by the shell                        |
+| `Sidebar`        | a section in the left sidebar                                      |
+| `tools`          | functions the model can call mid-answer                            |
+| `providers`      | a model API, offered in Settings beside Anthropic and OpenAI       |
+| `actions`        | an entry in the bar shown when a passage of a reply is highlighted |
+| `messageActions` | a button in the footer of a message, beside Copy                   |
+| `instructions`   | a line added to the model's system prompt                          |
+| `css`            | a stylesheet, adopted while the extension is on                    |
 
 `Screen` is optional — a tools-only extension has no screen, and a
 sidebar-only one has no page worth showing.
@@ -80,6 +81,7 @@ type Tiny = {
   readonly useTools: () => ToolSet
   readonly useInstructions: () => string | undefined
   readonly useActions: () => readonly ChatAction[]
+  readonly useMessageActions: () => readonly MessageAction[]
   readonly useProviders: () => Registry
 }
 ```
@@ -87,7 +89,7 @@ type Tiny = {
 `useChats()` is every conversation, newest first, read-only. `useModel()` is the
 configured model, or `undefined` while there is not one. `ask()` puts a question
 in the chat and waits for the answer — which is how a tool can ask the person at
-the keyboard something only they know. The four reads below them are the fold:
+the keyboard something only they know. The five reads below them are the fold:
 what every live extension registered, yours included.
 
 :::note

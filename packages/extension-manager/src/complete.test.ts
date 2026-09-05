@@ -13,6 +13,7 @@ test('tiny. answers with everything the host hands over, and nothing else', () =
     'useTools',
     'useInstructions',
     'useActions',
+    'useMessageActions',
     'useProviders',
   ])
 })
@@ -25,6 +26,7 @@ test('a half-typed member still answers, so the list can filter', () => {
     'useTools',
     'useInstructions',
     'useActions',
+    'useMessageActions',
     'useProviders',
   ])
 })
@@ -47,6 +49,7 @@ test('the top level offers the shapes worth having whole', () => {
   expect(top).toContain('tool')
   expect(top).toContain('id')
   expect(top).toContain('instructions')
+  expect(top).toContain('messageActions')
 })
 
 test.each([

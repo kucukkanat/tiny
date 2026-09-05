@@ -63,9 +63,10 @@ section, register a model provider, read past conversations, add an action to a
 highlighted reply, and bring its own styles. Tools are extensions too — it is the
 only way to give the model one.
 
-Four ways in, on the Extensions screen: paste a URL, pick a file, start from one
-of three premades and edit it, or write one from scratch. The last three are
-kept as text and run from it, so they work offline and survive a reload.
+Five ways in, on the Extensions screen: paste a URL, pick a file, start from a
+blank one, start from one of three premades, or edit one you already have. The
+last four are kept as text and run from it, so they work offline and survive a
+reload.
 
 ```tsx
 import type { Extension, Tiny } from '@tiny/host'

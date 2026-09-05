@@ -105,13 +105,31 @@ job; it is gone, and what it stored is carried across on first boot by
 `migrate.ts`, which can be deleted once nobody is upgrading from a build that had
 it.
 
-Four ways to install: a URL, a file off the disk, one of three premades in
-`templates.ts`, or text typed into the editor. The last three are kept as source
-and run from a `blob:` minted per version — so they work offline, survive a
-reload, and can be edited in place. JSX works; it is compiled on the way to the
-blob by `jsx.ts`. TypeScript does not. Editing saves but does not run: importing
-a module executes it, and a loop you are halfway through writing would take the
-tab with it, so Run is a button.
+Five ways to install: a URL, a file off the disk, a blank one, one of three
+premades in `templates.ts`, or text typed into an editor already open. The last
+four are kept as source and run from a `blob:` minted per version — so they work
+offline, survive a reload, and can be edited in place. JSX works; it is compiled
+on the way to the blob by `jsx.ts`. TypeScript does not. Editing saves but does
+not run: importing a module executes it, and a loop you are halfway through
+writing would take the tab with it, so Run is a button.
+
+Blank exists so that code on the clipboard is one paste from installed. It is a
+button rather than a fourth `TEMPLATES` row, because a template is a premade
+that runs and `templates.test.ts` checks every one of them for a default export.
+
+A row's name has two writers and they take turns, because both writing at once
+made them trade the row back and forth on every keystroke. While it is off, the
+text names it: `titleIn` reads the `title:` out of the source on save, so one
+you pasted into reads right before it has run. Once it is on, the module is the
+authority and `sync` writes what it calls itself. `Pasted` is what a blank one
+is called until either of them says otherwise, and `titleIn` reads a plain
+string literal only — a backtick can carry an interpolation, and `${name}` is
+not a name.
+
+The blob is minted at the moment a row is switched on, not while it sits there
+off. `sourceOf` is what mints it and only the version is its key, so minting one
+for a row that is off would freeze the empty box a blank one starts as, and the
+paste that followed would never be what ran.
 
 That scanner is also why a generic arrow — `<T,>` — cannot appear in a `.ts`
 file here: it reads as a tag. `jsx.test.ts` walks every `.ts` in the repo to keep

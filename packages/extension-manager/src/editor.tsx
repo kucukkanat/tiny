@@ -67,6 +67,12 @@ export function RichEditor({ value, onChange, onReady }: RichEditorProps) {
   const host = useRef<HTMLDivElement>(null)
   const editor = useRef<PrismEditor>(null)
   const [keyboard, setKeyboard] = useState(false)
+  // The editor is built once, so what it calls on every keystroke must not be
+  // the props of the render that built it. A save from before you flipped the
+  // switch writes the whole row back as it was, and the extension turns itself
+  // off as you type.
+  const latest = useRef(onChange)
+  latest.current = onChange
 
   useEffect(() => {
     if (!host.current) return
@@ -90,7 +96,7 @@ export function RichEditor({ value, onChange, onReady }: RichEditorProps) {
     made.textarea.setAttribute('autocorrect', 'off')
     made.textarea.setAttribute('data-testid', 'ext-source')
 
-    made.on('update', (next: string) => onChange(next))
+    made.on('update', (next: string) => latest.current(next))
     onReady?.(made)
     return () => made.remove()
     // Built once. `value` after that is the editor's own business, or every

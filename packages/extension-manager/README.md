@@ -66,7 +66,7 @@ copy of React you ship will throw `Invalid hook call` on its first render.
 
 ## Installing one
 
-Four ways, and three of them keep the source rather than an address.
+Five ways, and four of them keep the source rather than an address.
 
 **A URL.** It has to be a real ES module served with a JavaScript MIME type and
 `Access-Control-Allow-Origin`, which in practice means jsDelivr, esm.sh, or
@@ -75,6 +75,9 @@ and gist raw URLs both send `text/plain`, and no browser will run that.
 
 **A file**, picked off the disk. Its text is what gets stored, so nothing has to
 still be there tomorrow.
+
+**A blank one.** An empty editor, so what is on the clipboard is one paste from
+installed. It is named `Pasted` until the text in it says what it calls itself.
 
 **One of three premades** — a tool that fetches, a tool that asks you something,
 and a screen. Pick one and it opens in the editor, yours to change.
@@ -94,7 +97,9 @@ follow from nothing compiling it:
   a blob URL has no base to resolve a relative path against.
 
 Editing saves as you type, so a reload costs you nothing, but nothing runs until
-you press Run. Importing a module executes it, and a loop you are halfway through
+you press Run. While it is off the row takes its name from the `title:` in the
+box, read off the text rather than by running it, so it reads right before it
+has ever been switched on; once it is on, the module's own title is the name. Importing a module executes it, and a loop you are halfway through
 writing would take the tab with it.
 
 ## The editor

@@ -1,6 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 import { expect, test } from 'bun:test'
-import { newInstall, removeInstalled, saveInstalled, useInstalled } from './installed'
+import {
+  newInstall,
+  removeInstalled,
+  saveInstalled,
+  titleIn,
+  useInstalled,
+} from './installed'
 
 const watch = () => renderHook(useInstalled)
 
@@ -59,4 +65,17 @@ test('storage from an older build is dropped, not fatal', () => {
   seed('c', 'Survivor')
 
   expect(watch().result.current.map((one) => one.title)).toEqual(['Survivor'])
+})
+
+test.each([
+  ["export default () => ({ id: 'x', title: 'Dice' })", 'Dice'],
+  ['export default () => ({ id: "x", title: "Dice" })', 'Dice'],
+  // A word boundary is what keeps `subtitle:` from answering for `title:`.
+  ["export default () => ({ subtitle: 'Roll one', title: 'Dice' })", 'Dice'],
+  ["export default () => ({ id: 'x' })", undefined],
+  // A backtick can carry an interpolation, and `${name}` is not a name.
+  ['export default () => ({ title: `${name}` })', undefined],
+  ['', undefined],
+])('%s is called %s', (source, title) => {
+  expect(titleIn(source)).toBe(title)
 })

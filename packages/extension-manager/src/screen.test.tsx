@@ -187,6 +187,90 @@ test('an edit does not run until you say so, and says as much', async () => {
   view.unmount()
 })
 
+test('a blank one opens empty, and what you paste in names it', () => {
+  const list = renderExtensions()
+  fireEvent.click(screen.getByTestId('ext-blank'))
+
+  const id = stored()[0]?.id ?? ''
+  expect(stored()[0]?.title).toBe('Pasted')
+  expect(stored()[0]?.source).toBe('')
+  list.unmount()
+
+  renderExtensions(`/extensions/${id}`)
+  type('ext-source', `export default () => ({ id: 'dice', title: 'Dice' })`)
+  expect(stored()[0]?.title).toBe('Dice')
+
+  // Text that names nothing leaves the name it already had, which is what
+  // keeps a file called `mine.js` called that while you edit it.
+  type('ext-source', '// starting over')
+  expect(stored()[0]?.title).toBe('Dice')
+})
+
+test('typing after you turn one on does not turn it off again', async () => {
+  const list = renderExtensions()
+  fireEvent.click(screen.getByTestId('ext-blank'))
+  const id = stored()[0]?.id ?? ''
+  list.unmount()
+
+  // The real editor, not the plain box. It is built once, so what it calls on
+  // every keystroke used to be the props of the render that built it — and a
+  // save from before the switch wrote the whole row back off.
+  const view = renderExtensions(`/extensions/${id}`)
+  await waitFor(() => expect(screen.queryByTestId('ext-editor')).not.toBeNull())
+
+  act(() => void fireEvent.click(screen.getByTestId(`ext-enabled-${id}`)))
+  await act(async () => {
+    type('ext-source', `export default () => ({ id: 'kept', title: 'Kept' })`)
+  })
+
+  expect(stored()[0]?.enabled).toBe(true)
+  expect(stored()[0]?.source).toContain('Kept')
+  view.unmount()
+})
+
+test('what you paste into a blank one is what runs when you turn it on', async () => {
+  const list = renderExtensions()
+  fireEvent.click(screen.getByTestId('ext-blank'))
+  const id = stored()[0]?.id ?? ''
+  list.unmount()
+
+  // Turning it on is the first time this text is compiled. A blob minted while
+  // it was still off would have been made from the empty box, and only Run
+  // bumps the version that would mint another.
+  const view = renderExtensions(`/extensions/${id}`)
+  type('ext-source', `export default () => ({ id: 'pasted', title: 'Pasted One' })`)
+  act(() => void fireEvent.click(screen.getByTestId(`ext-enabled-${id}`)))
+  await waitFor(() => expect(screen.queryByTestId('ext-registers')).not.toBeNull())
+
+  expect(screen.queryByTestId(`ext-error-${id}`)).toBeNull()
+  expect(stored()[0]?.title).toBe('Pasted One')
+  view.unmount()
+})
+
+test('an edit made while it loads is not undone by the name it turns out to have', async () => {
+  // The first `title:` in the text is not the extension's own, so the row is
+  // named wrong until it runs — which is what makes the loader rename it, and
+  // renaming is where an in-flight edit used to be written back over.
+  const source = `const parts = { title: 'Draft' }
+export default () => ({ id: 'plain', title: 'Real' })`
+  const list = renderExtensions()
+  fireEvent.change(screen.getByTestId('ext-file'), {
+    target: { files: [new File([source], 'plain.js', { type: 'text/javascript' })] },
+  })
+  await waitFor(() => expect(stored()).toHaveLength(1))
+  const id = stored()[0]?.id ?? ''
+  list.unmount()
+
+  const view = renderExtensions(`/extensions/${id}`)
+  act(() => void fireEvent.click(screen.getByTestId(`ext-enabled-${id}`)))
+  type('ext-source', `${source}\n// typed while it was loading`)
+  await waitFor(() => expect(screen.queryByTestId('ext-registers')).not.toBeNull())
+
+  expect(stored()[0]?.source).toContain('typed while it was loading')
+  expect(stored()[0]?.title).toBe('Real')
+  view.unmount()
+})
+
 test('a link to one that is gone lands back on the list', () => {
   renderExtensions('/extensions/nope')
   expect(screen.getByTestId('ext-url')).toBeDefined()

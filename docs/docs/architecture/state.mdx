@@ -21,6 +21,14 @@ a bug.
 | `tiny.extension.<id>`  | `{ id, title, version, enabled }` plus a `url` **or** `source` |
 | the provider and theme | endpoint, key, model, and light/dark, written by settings      |
 
+An extension's `title` is what it will be called in the list before anything has
+run. One installed from a URL is named after its file, one picked off the disk
+after its filename, and one you paste into after the `title:` in its own source,
+re-read on every save by `titleIn` — so the row is right while the switch is
+still off. Once it is on the module is the authority and its own title wins;
+they take turns rather than both writing, or they would trade the row back and
+forth on every keystroke.
+
 One key per conversation rather than one big list: saving one chat does not
 re-serialise the whole history, and two open tabs writing different
 conversations do not overwrite each other.

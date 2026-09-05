@@ -23,6 +23,7 @@ import {
   newSource,
   removeInstalled,
   saveInstalled,
+  titleIn,
   useInstalled,
   type Installed,
 } from './installed'
@@ -35,6 +36,9 @@ import { refuse } from './url'
 
 /** One served next to the app, so an empty screen has something to try. */
 const EXAMPLE = './extensions/starter.js'
+
+/** What a row is called until the source in it says what it calls itself. */
+const UNTITLED = 'Pasted'
 
 /** `/#/extensions` is the two lists; an installed row opens on its own page first. */
 export function ExtensionsScreen() {
@@ -103,7 +107,7 @@ function ExtensionList() {
       </form>
 
       <div className="flex w-full max-w-2xl flex-col gap-2">
-        <p className="text-muted-foreground text-sm">Or open one you have written:</p>
+        <p className="text-muted-foreground text-sm">Or start one here:</p>
         <div className="flex flex-wrap gap-2">
           {/* A label is the only way to make a file input look like anything. */}
           <label
@@ -126,6 +130,17 @@ function ExtensionList() {
               }}
             />
           </label>
+          {/* Nothing to start from is the point: it opens the editor empty, so
+              what you have on the clipboard is one paste from being installed. */}
+          <Button
+            type="button"
+            variant="outline"
+            data-testid="ext-blank"
+            className="h-9"
+            onClick={() => setFull(add(newSource('', UNTITLED), go) ?? '')}
+          >
+            Blank
+          </Button>
           {TEMPLATES.map(({ label, title, source }) => (
             <Button
               key={label}
@@ -520,7 +535,19 @@ function Editor({ one, stale }: { one: Installed; stale: boolean }) {
   const [formatting, setFormatting] = useState(false)
   const rich = useRef<PrismEditor>(null)
   const loaded = useRichEditor()
-  const save = (source: string) => setFull(!saveInstalled({ ...one, source }))
+  // While it is off the text names its own row, which is what lets one you
+  // pasted into read right before it has ever run. Once it is on, the module is
+  // the authority — otherwise the loader's name and this one take turns on
+  // every keystroke. Falling back to the name it has keeps a file called
+  // `mine.js` called that until the source says otherwise.
+  const save = (source: string) =>
+    setFull(
+      !saveInstalled({
+        ...one,
+        source,
+        title: (one.enabled ? undefined : titleIn(source)) ?? one.title,
+      }),
+    )
 
   const format = async () => {
     setFormatting(true)

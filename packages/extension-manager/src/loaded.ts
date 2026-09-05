@@ -346,8 +346,12 @@ const sync = (notify = true) => {
     }
 
   for (const one of installed) {
+    // Off first, because `sourceOf` is what mints the blob, and one minted for
+    // a row that is off is made from the text as it stood then. A blank one is
+    // empty text, so the paste that follows would never be what ran.
+    if (!one.enabled) continue
     const source = sourceOf(one)
-    if (!one.enabled || entries.get(one.id)?.source === source) continue
+    if (entries.get(one.id)?.source === source) continue
 
     entries.set(one.id, { id: one.id, source, status: 'loading' })
     void load(one).then((outcome) => {
@@ -357,8 +361,13 @@ const sync = (notify = true) => {
       style(one.id, outcome.extension?.css)
 
       // Remember what it calls itself, so the row has a name before it loads.
+      // Against the row as it is now, not as it was when this started: a blob
+      // is keyed on the version, so an edit made while the import was in
+      // flight is invisible to the guard above, and writing `one` back would
+      // undo it.
       const title = outcome.extension?.title
-      if (title && title !== one.title) saveInstalled({ ...one, title })
+      const now = readInstalled().find((other) => other.id === one.id)
+      if (now && title && title !== now.title) saveInstalled({ ...now, title })
       publish()
     })
   }

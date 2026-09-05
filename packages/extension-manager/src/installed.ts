@@ -4,8 +4,10 @@ import { z } from 'zod'
 
 /**
  * An extension as it sits in storage. Either it says where to fetch it or it
- * carries its own source — one or the other, never both. `title` is remembered
- * from the last time it loaded, so a row still has a name before anything runs.
+ * carries its own source — one or the other, never both. `title` has two
+ * writers and they take turns: while it is off, `titleIn` reads the name out of
+ * the source on every save, so a row you pasted into reads right before it has
+ * run; once it is on, what the module calls itself is the name.
  */
 export type Installed = {
   /** Ours, not the extension's — its own id isn't known until it loads. */
@@ -37,6 +39,14 @@ export const newInstall = (url: string): Installed => ({
   version: 1,
   enabled: false,
 })
+
+/**
+ * The name a module gives itself, read off the text rather than run. It is what
+ * lets a row you pasted into read right before it has ever been switched on;
+ * `loaded` replaces it with the real one the moment it does load.
+ */
+export const titleIn = (source: string): string | undefined =>
+  /\btitle:\s*['"]([^'"\n]+)/.exec(source)?.[1]
 
 /** One written here, or picked off the disk. There is no address to name it by. */
 export const newSource = (source: string, title: string): Installed => ({

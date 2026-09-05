@@ -57,7 +57,7 @@ const subscribe = (listener: () => void) => {
 }
 
 /** A patch changes what it names and nothing else. */
-export const updateProvider = (patch: Partial<Stored>) => {
+const updateProvider = (patch: Partial<Stored>) => {
   const next = { ...snapshot(), ...patch }
   stored = next
   // Every field is a string, so the provider itself is the write list.

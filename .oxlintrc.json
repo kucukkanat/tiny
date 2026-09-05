@@ -8,6 +8,7 @@
     "react/react-in-jsx-scope": "off"
   },
   "ignorePatterns": [
+    ".agents",
     "dist",
     "dev-dist",
     "packages/ui/src/components",

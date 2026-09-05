@@ -162,6 +162,15 @@ for a JS change is the `index-*.js` line, not the precache total.
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
 
+A registry component arrives whole and is used in part, so the parts nothing
+reaches get cut on the way in — `message`'s branch family and toolbar, which took
+`button-group` with them, `conversation`'s markdown download, `sidebar`'s nine
+unused rows, which took `skeleton` and `separator`. Rolldown already shook that
+code out, so first paint's JS did not move; the CSS fell 1,497 B gzipped, because
+`@source` scans `packages/ui/src` and Tailwind was generating utilities for class
+strings in components nothing rendered. Dead vendored code is a CSS cost here,
+not a JS one.
+
 The editor you write one in is `prism-code-editor`, fetched on the first press
 rather than shipped: **+141 B on first paint, 17,239 B gzipped when it arrives**
 (15,097 JS + 2,142 CSS). CodeMirror 6 with the same features measured 147,273 B

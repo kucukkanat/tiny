@@ -1,0 +1,74 @@
+---
+title: Installing an extension
+description: Four ways in, and three of them keep the source rather than an address.
+---
+
+Everything here happens on the **Extensions** screen.
+
+## A URL
+
+It has to be a real ES module served with a JavaScript MIME type and
+`Access-Control-Allow-Origin`, which in practice means jsDelivr, esm.sh, or
+GitHub Pages.
+
+:::danger
+Two addresses that look right and are not: `raw.githubusercontent.com` and gist
+raw URLs both send `text/plain`, and no browser will run that.
+:::
+
+## A file
+
+Picked off the disk. Its text is what gets stored, so nothing has to still be
+there tomorrow.
+
+## A premade
+
+Three of them — a tool that fetches, a tool that asks you something, and a
+screen. Pick one and it opens in the editor, yours to change.
+
+## Text you write
+
+In the box on any extension you own. See [building](/extensions/building).
+
+---
+
+A written extension is kept as source and run from a `blob:` URL minted fresh
+each time the page loads, so it works offline and survives a reload. A record
+holds either a `url` **or** a `source`, never both — that is the one thing every
+reader of the store has to know.
+
+## Install links
+
+A link can carry an extension:
+
+```
+https://kucukkanat.github.io/tiny/#/extensions/install?url=<the url, encoded>
+```
+
+It opens the page describing what the extension registers, **with the switch
+off**. It never turns itself on — otherwise any web page could link someone into
+running code against their API key.
+
+## Reloading, and the three caches
+
+Each install carries a version counter, and the loader puts it in the query.
+That counter is what gets past the three caches between an author and you:
+
+| Cache               | Why it would otherwise hold you back                  |
+| ------------------- | ----------------------------------------------------- |
+| the module map      | never re-fetches a URL it has already seen            |
+| the browser         | holds a CDN answer for up to a week                   |
+| the service worker  | the app is a PWA, and offline is the point            |
+
+It only moves when you press **Reload**, so an extension you already have keeps
+working offline.
+
+## When it will not load
+
+| What you see                         | What it means                                           |
+| ------------------------------------ | ------------------------------------------------------- |
+| `Failed to resolve module specifier` | you imported something you did not bundle               |
+| MIME type of `text/plain`            | raw.githubusercontent or a gist — use jsDelivr or Pages |
+| `Invalid hook call`                  | react was not marked external                           |
+| `No default export`                  | the module has to default-export a function of the host |
+| `Unexpected token '<'`               | JSX in an extension installed from a URL                |

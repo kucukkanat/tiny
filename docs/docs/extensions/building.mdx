@@ -1,0 +1,183 @@
+---
+title: Building an extension
+description: Two ways — write one in the app, or build one with your own toolchain. They have different rules.
+---
+
+There are two places an extension can come from, and what you may write differs
+between them. The difference is whether anything compiles it.
+
+<CardGroup cols={2}>
+  <Card title="Written in the app" icon="pencil">
+    Kept as source, run from a `blob:` URL. **JSX works**, TypeScript does not,
+    and you may import only the five specifiers on the map.
+  </Card>
+  <Card title="Built with vite" icon="hammer">
+    Fetched and imported as it is. **No JSX**, no bare TypeScript — put both
+    through your build. Anything you bundle comes with you.
+  </Card>
+</CardGroup>
+
+## Writing one in the app
+
+Open **Extensions**, start from a premade or an empty box, and type. It saves as
+you go and runs when you press **Run**.
+
+:::warning
+Editing saves but does not run. Importing a module executes it, and a loop you
+are halfway through writing would take the tab with it — so Run is a button.
+:::
+
+Three things follow from nothing compiling it:
+
+<Steps>
+  <Step title="JSX works, and only here">
+    It is compiled on the way to being run. An extension installed from a **URL**
+    is not compiled, so JSX in one fails with `Unexpected token '<'`.
+  </Step>
+  <Step title="No TypeScript">
+    Types are not stripped, so a `: string` is a syntax error.
+  </Step>
+  <Step title="No imports beyond the five">
+    Not even a file sitting next to it — a blob URL has no base to resolve a
+    relative path against.
+  </Step>
+</Steps>
+
+### The editor
+
+Syntax highlighting on the app's own palette, and completions that know what an
+extension can reach:
+
+- `tiny.` offers exactly what the host hands you, with signatures.
+- `z.` offers the builders a schema is made of.
+- Inside an import's quotes, only the five specifiers that resolve.
+- At the top level, snippets for the shapes worth having whole — the module, a
+  tool, a screen, a question. Each stops where you have to type.
+- A path it knows nothing about gets nothing. An editor that answers `response.`
+  with the other words in your file is one that suggests code which does not
+  exist.
+
+Ctrl-Space asks explicitly. On a phone, the row of keys above the keyboard is the
+tab, the brackets and the quotes a virtual keyboard has not got. **Prettify**
+formats with prettier, fetched on first press.
+
+:::note
+The editor itself is fetched the first time you open one rather than shipped with
+the app. Until it lands — offline on a first visit, say — you get a plain
+textarea, which is the whole feature minus the colour.
+:::
+
+## Building one with vite
+
+Copy `packages/extension-starter`. It uses every slot there is, and it ships with
+the app, so the Extensions screen offers it as "Try the example one".
+
+```ts vite.config.ts
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  build: {
+    outDir: '../app/dist/extensions',
+    emptyOutDir: false,
+    cssCodeSplit: false,
+    lib: { entry: 'src/index.tsx', formats: ['es'], fileName: () => 'starter.js' },
+    rolldownOptions: {
+      // Resolved by the import map in the page. Bundling our own React would
+      // give this extension a second one, and its hooks would throw.
+      external: [/^react($|\/)/, 'react-router', 'zod', 'ai'],
+    },
+  },
+})
+```
+
+`@tiny/plugin-host` is types only — nothing from it ends up in your built file.
+Inside this repo it is `workspace:*`; outside it, point at the tarball the deploy
+publishes:
+
+```json package.json
+"@tiny/plugin-host": "https://kucukkanat.github.io/tiny/pkg/tiny-plugin-host-0.1.0.tgz"
+```
+
+### Working on one
+
+Three terminals, all on `http://localhost` — which is also the only arrangement
+Safari allows, since it refuses to load `http://` from an `https://` page and
+will not upgrade a script.
+
+```sh
+bun dev                                        # the app, :5173
+bun --filter @tiny/extension-starter build --watch
+bunx vite preview --outDir ../app/dist/extensions --port 4173
+```
+
+Then install `http://localhost:4173/starter.js`. Vite's preview server already
+sends CORS headers to localhost.
+
+:::danger
+**Do not run `vite dev` for an extension.** It rewrites `react` to a path on the
+extension's own origin, so the app's import map never sees it, you get a second
+React, and the only symptom is `Invalid hook call`. It is the first thing
+everyone tries.
+:::
+
+Press **Reload** on the extension's page in the app to pick up a new build — that
+bumps the version in the URL, which is what gets past the module map.
+
+## A full example
+
+`packages/extension-starter/src/index.tsx`, abridged:
+
+```tsx
+export default (tiny: Tiny): Extension => ({
+  id: 'starter',
+  title: 'Starter',
+  css,
+
+  tools: {
+    roll_dice: tool({
+      description: 'Roll one or more dice and add them up.',
+      inputSchema: z.object({
+        sides: z.number().describe('How many sides each die has, e.g. 20'),
+        count: z.number().optional().describe('How many to roll. One by default.'),
+      }),
+      execute: ({ sides, count = 1 }) => {
+        const rolls = Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides))
+        return { rolls, total: rolls.reduce((sum, roll) => sum + roll, 0) }
+      },
+    }),
+
+    // `ask` puts the question in the chat and waits for you to answer it.
+    ask_me: tool({
+      description: 'Ask the person at the keyboard something only they know.',
+      inputSchema: z.object({ question: z.string() }),
+      execute: ({ question }) => tiny.ask(question, ['Yes', 'No']),
+    }),
+  },
+
+  actions: [{ label: 'Bullets', ask: 'Rewrite this as a short bulleted list' }],
+
+  instructions: 'When a question involves chance, roll for it rather than guessing.',
+
+  providers: {
+    gemini: {
+      label: 'Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      model: ({ baseUrl, apiKey, model }) =>
+        createGoogleGenerativeAI({ baseURL: baseUrl, apiKey })(model),
+      models: () => Promise.resolve(['gemini-2.5-pro', 'gemini-2.5-flash']),
+    },
+  },
+})
+```
+
+The Gemini provider is most of its weight — `@ai-sdk/google` is bundled in, which
+puts the built file around 80 kB gzipped. An extension with only tools and a
+screen is a couple of kilobytes. Delete the `providers` block and watch.
+
+## Writing a tool the model can use
+
+`tool()` is the AI SDK's own, so what you put in `inputSchema` is both what
+`execute` is handed and what the model is told. `.describe()` on a field is the
+only documentation the model gets — one zod on the import map is what keeps it.
+
+Tool names have to be something a provider will accept; `isToolName` from
+`@tiny/plugin-host` is the same check the app runs.

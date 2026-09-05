@@ -1,0 +1,73 @@
+---
+title: Architecture
+description: A shell that routes and lays out, a host package that holds the contracts, and features that never see each other.
+---
+
+Everything in tiny runs in the browser tab. That is the constraint the rest of
+the design falls out of: if something cannot run in a tab, it does not go in.
+The app is a PWA — installable, offline, manifest and service worker — served as
+static files from GitHub Pages.
+
+## Three layers
+
+<Steps>
+  <Step title="The shell">
+    `@tiny/app`. A `HashRouter`, a sidebar, a top bar, and a list of features.
+    It knows nothing about chat, settings, or models — only that a feature has
+    an `id`, a `title`, a `Screen`, and maybe a `Sidebar`.
+  </Step>
+  <Step title="The host">
+    `@tiny/plugin-host`. The `Plugin` and `Extension` types, an error boundary,
+    and two storage helpers. It is the one package with nothing behind it, and
+    it is the only package every feature is allowed to depend on.
+  </Step>
+  <Step title="The features">
+    `plugin-chat`, `plugin-settings`, `plugin-extensions` in the bundle, and
+    whatever extensions the user installed at runtime. A feature never imports
+    another feature.
+  </Step>
+</Steps>
+
+## Where features meet
+
+A plugin that needs something it does not own exports a factory that takes it,
+and `packages/app/src/plugins.tsx` fills it in. That file is the only place in
+the codebase where two features are in the same sentence:
+
+```tsx packages/app/src/plugins.tsx
+const BUILT_IN = [
+  chat({ useModel, unconfigured, useTools, useSystem, useActions, Panel: ToolQuestions }),
+  settings({ useProviders }),
+] as const satisfies readonly Plugin[]
+
+export const plugins = [
+  ...BUILT_IN,
+  extensions({ tiny, reserved: BUILT_IN.map(({ id }) => id) }),
+] as const satisfies readonly Plugin[]
+```
+
+Chat calls a model without knowing `plugin-settings` exists, and runs tools
+without knowing `plugin-extensions` exists. `plugins.test.ts` fails the build if
+that ever slips.
+
+:::tip
+The first entry in `plugins` is home. An unknown route redirects there, so it
+has to be a built-in — an extension's route may not exist yet on first paint.
+:::
+
+## Reading the rest
+
+<CardGroup cols={2}>
+  <Card title="The shell" icon="layout" href="/architecture/shell">
+    Routing, the two slots a feature gets, and the error boundary around each.
+  </Card>
+  <Card title="State and storage" icon="database" href="/architecture/state">
+    What survives a reload, and which `localStorage` key holds it.
+  </Card>
+  <Card title="Talking to models" icon="sparkles" href="/architecture/models">
+    The AI SDK, in-process agents, and the key sitting in the page.
+  </Card>
+  <Card title="UI and tokens" icon="palette" href="/architecture/ui">
+    Design tokens, container queries, and what gets added to `@tiny/ui`.
+  </Card>
+</CardGroup>

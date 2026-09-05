@@ -1,0 +1,87 @@
+---
+title: Talking to models
+description: The Vercel AI SDK, an agent running in the tab, and a key that is in the page.
+---
+
+The Vercel AI SDK (`ai` plus the `@ai-sdk/*` providers) is how this app talks to
+models. Nothing hand-rolls a fetch, parses SSE, or shapes a per-provider request
+— the SDK already does all of that, for every provider, correctly.
+
+## No server in the middle
+
+There is no API route to POST to, so the agent runs in the tab:
+
+```tsx
+import { DirectChatTransport, ToolLoopAgent } from 'ai'
+import { useChat } from '@ai-sdk/react'
+
+const agent = new ToolLoopAgent({ model, tools })
+
+const { messages, sendMessage, status } = useChat({
+  transport: new DirectChatTransport({ agent }),
+})
+```
+
+`DirectChatTransport` is what makes a browser-only chat possible. Everything
+else — streaming, message parts, abort, the tool loop — is the SDK doing its
+ordinary job.
+
+## Where the model comes from
+
+Chat does not know. It is handed a hook:
+
+```tsx
+chat({
+  useModel,     // () => { model, name, names, select } | undefined
+  unconfigured, // rendered while useModel has nothing to call
+  useTools,     // () => ToolSet
+  useSystem,    // () => extra system prompt lines
+  useActions,   // () => selection actions
+  Panel,        // rendered between the thread and the composer
+})
+```
+
+`plugin-settings` owns the endpoint, the key and the model name;
+`plugin-extensions` owns the tools. `plugins.tsx` is where they are joined.
+
+:::note
+`useModel` and `useTools` are hooks, so `chat(options)` is called once at module
+scope. The same function identity on every render is what the rules of hooks
+want.
+:::
+
+## Providers
+
+A provider is four fields — `kind`, `baseUrl`, `apiKey`, `model` — and a
+`ProviderSpec` is what turns them into something the SDK can call:
+
+```ts
+type ProviderSpec = {
+  readonly label: string
+  readonly baseUrl: string
+  readonly model: (provider: Provider) => LanguageModel
+  readonly models: (provider: Provider) => Promise<readonly string[]>
+}
+```
+
+Anthropic and OpenAI-compatible ship in the build; an extension can register
+more, and Settings offers one row per spec. Built-ins lead the list and cannot
+be shadowed — an extension may not quietly answer to a name one of them already
+has.
+
+Switching dialect leaves the endpoint alone, because one local server or proxy
+often speaks both. Clearing the endpoint field is how you get a dialect's own
+default back.
+
+## The key is in the page
+
+Whatever `useModel` hands over is called from the tab, with the key readable by
+anything running there. Anthropic refuses a browser outright without
+`anthropic-dangerous-direct-browser-access: true`, which the app sends — and it
+is named that for a reason.
+
+:::danger
+This is fine for a local-first app on your own device. It is not fine for one you
+hand to other people, and it is the reason the Extensions screen shows you what
+an extension registers before you turn it on.
+:::

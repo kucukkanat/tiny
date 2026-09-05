@@ -1,0 +1,46 @@
+---
+title: What an extension can do to you
+description: Everything the app can. There is no sandbox — here is what there is instead.
+---
+
+An extension runs in the page, on the same thread, with `localStorage` in reach —
+your API key and every conversation you have had.
+
+There is no sandbox and there is no permission list, because **a permission this
+app cannot enforce is a checkbox pretending to be a lock**. A Worker would not
+help either: a screen has to render on this thread.
+
+## What there is instead
+
+<Steps>
+  <Step title="You see what it registers before it runs">
+    Every tool, with the parameters read back out of its compiled schema. Every
+    provider. Every action.
+  </Step>
+  <Step title="You see its instructions verbatim">
+    A system prompt is otherwise the one contribution that never appears anywhere
+    — you would only meet it in the model's behaviour.
+  </Step>
+  <Step title="An install link never turns itself on">
+    Otherwise any web page could link someone into running code against their
+    key.
+  </Step>
+  <Step title="Every screen is inside an error boundary">
+    One bad extension takes its own screen down, not the app.
+  </Step>
+</Steps>
+
+:::danger
+Read an extension the way you would read anything else you are about to run on
+your own machine. If you did not write it and cannot read it, do not enable it.
+:::
+
+## The same is true of the app
+
+The key is in the page whichever way you got there. Model calls go straight from
+the tab to the endpoint you configured, with no server in between — fine for a
+local-first app on your own device, not for one you hand to other people.
+
+Anthropic will not even accept a browser request without
+`anthropic-dangerous-direct-browser-access: true`, which the app sends. The
+header is named honestly.

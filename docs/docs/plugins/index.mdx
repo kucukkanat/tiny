@@ -1,0 +1,63 @@
+---
+title: Plugins
+description: A feature that ships in the bundle. A package, a Plugin export, one line in the app.
+---
+
+A plugin is **build time**. It is a package in this repo, it ships in the bundle,
+and adding one is a commit and a deploy. Everything the app does itself is a
+plugin — the shell does routing, layout and hosting, and nothing else.
+
+## The contract
+
+The whole of it, from `@tiny/plugin-host`:
+
+```ts
+export type Plugin = {
+  readonly id: string        // renders under /#/<id>
+  readonly title: string     // its label in the shell
+  readonly Screen: ComponentType
+  readonly Sidebar?: ComponentType
+}
+```
+
+That is the entire extension point. It grows only when a plugin needs a hook it
+cannot get today, and then by the smallest hook that works.
+
+## The ones that ship
+
+| Package                   | What it does                                          |
+| ------------------------- | ----------------------------------------------------- |
+| `@tiny/plugin-chat`       | chat and its history, called straight from the tab    |
+| `@tiny/plugin-settings`   | endpoint, key, model and theme, kept on device        |
+| `@tiny/plugin-extensions` | hosts extensions, and is the editor you write them in |
+
+`@tiny/plugin-host` is not a plugin — it is the contract all three depend on, and
+the only package with `plugin-` in its name that any of them may import.
+
+## The rules
+
+<Steps>
+  <Step title="One plugin per package">
+    Named `plugin-<name>`. A plugin that needs a second plugin is two packages.
+  </Step>
+  <Step title="A plugin depends on plugin-host and nothing else with plugin- in its name">
+    When it needs something another owns, it takes it as an argument. See
+    [wiring](/plugins/wiring).
+  </Step>
+  <Step title="It has a README that shows what it does">
+    With runnable examples where an example helps.
+  </Step>
+</Steps>
+
+## Plugin or extension?
+
+<CardGroup cols={2}>
+  <Card title="Make it a plugin" icon="package">
+    It is part of what the app _is_. It needs to be in the bundle, it needs the
+    build (TypeScript, JSX, any dependency), and shipping it on a deploy is fine.
+  </Card>
+  <Card title="Make it an extension" icon="puzzle" href="/extensions">
+    Someone other than you wants to add it, or it needs to be live without a
+    deploy. Giving the model a tool is always this.
+  </Card>
+</CardGroup>

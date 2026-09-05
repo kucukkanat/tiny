@@ -1,0 +1,104 @@
+---
+title: UI and tokens
+description: One file of design tokens, three widths, container queries instead of breakpoints, and a rule for what gets added.
+---
+
+Everything visual lands in `@tiny/ui`. Plugins import from there; nothing else
+touches a component registry.
+
+## Tokens
+
+All of them are Tailwind v4 `@theme` custom properties in
+`packages/ui/src/styles/globals.css` — colour, type, spacing, radius, elevation
+and motion. Restyling the app is editing that one file.
+
+Surfaces run back to front (`page`, `canvas`, `surface`, `inset`), text runs loud
+to quiet (`ink`, `ink-2`, `ink-3`), and there is exactly one blue, `brand`.
+
+```tsx
+<div className="bg-surface text-ink shadow-card rounded-window p-4">
+  <p className="text-ink-2 text-sm">Quieter than the line above it.</p>
+</div>
+```
+
+shadcn's names are aliases onto the same palette rather than a second set, so a
+registry component inherits the look untouched. Note that `--accent` there means
+"hover surface" — the blue is `--brand`.
+
+Radii are named for what they wrap: `chip` 6px, `control` 8px, `card` 10px,
+`window` 14px. Elevation is always a hairline plus a shadow, never a bare shadow.
+`--spacing-control` is the height every form control shares, so a select and the
+button beside it line up without anyone guessing.
+
+## Width is a container query, not a breakpoint
+
+The sidebar is 16rem and appears at 768px, so the room a screen actually gets is
+not monotonic: **735px at a 767px window, 480px at 768px, 736px at 1024px.**
+
+<Steps>
+  <Step title="A md: rule fires at the narrowest moment there is">
+    768px is where the screen has the least room, not the most.
+  </Step>
+  <Step title="No viewport query can see the sidebar collapsed">
+    That is a cookie the user toggles.
+  </Step>
+  <Step title="So: @container on the screen's own root">
+    With `@2xl:` / `@6xl:` variants.
+  </Step>
+</Steps>
+
+:::warning
+A container query has to sit **outside** the width it controls. `@container` and
+`max-w-*` on the same element measures the capped width, so the wide layout can
+never come true.
+:::
+
+Viewport breakpoints are still right for what they actually describe — `md:` for
+touch versus pointer, the way the sidebar rows use it.
+
+## Three widths, and no more
+
+| Width       | For                                              |
+| ----------- | ------------------------------------------------ |
+| `max-w-2xl` | reading and writing — chat, an extension's editor |
+| `max-w-5xl` | a grid of things — the extension list             |
+| `max-w-6xl` | an editor beside what it produced                 |
+
+A form does not get more readable past about 480px of control, so Settings caps
+its cards rather than stretching. Whitespace around a bounded object is design;
+whitespace around an unbounded column is a missing section.
+
+## Adding a component
+
+```sh
+bun x shadcn@latest add popover         # general UI
+bun x ai-elements@latest add reasoning  # AI UI, from the Vercel AI SDK registry
+```
+
+Run those from `packages/ui`. Add a component when a plugin needs it, not before
+— and weigh what it costs in bundle as well as lines.
+
+:::note
+`prompt-input` was 1,363 lines and dragged in six more files for a command
+palette, a dropdown and an attachment picker this app has no use for. The
+composer that replaced it is 84 lines in `plugin-chat`. `message`'s mermaid
+plugin was a static import, so mermaid, d3 and rough loaded on first paint
+whether or not a reply drew a diagram — a quarter of the payload. Both are gone.
+:::
+
+When a registry component is mostly features you do not want, write the small one
+and say so in `CLAUDE.md`. Measure the build before and after: `bun run measure`
+in `packages/app` prints first paint, which is the entry chunk plus everything
+`index.html` preloads.
+
+A registry component also arrives whole and is used in part, so the parts nothing
+reaches get cut on the way in. Rolldown already shakes that code out of the JS —
+the saving is in CSS, because Tailwind scans `packages/ui/src` and will generate
+utilities for class strings in components nothing renders.
+
+## Mobile first
+
+Touch is the primary input, not an afterthought. Tap targets big enough for a
+thumb, layouts that work on a phone and scale up, no hover-only interactions, no
+fixed pixel widths. Every interactive element gets a `data-testid`, and component
+tests select by it.

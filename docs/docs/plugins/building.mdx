@@ -1,0 +1,154 @@
+---
+title: Building a plugin
+description: From an empty folder to a route in the app, in four steps.
+---
+
+A plugin is an ordinary workspace package that exports an object. There is no
+registration API, no lifecycle, nothing to tear down.
+
+## 1. The package
+
+```
+packages/plugin-timer/
+├─ package.json
+├─ README.md
+└─ src/
+   ├─ index.tsx
+   └─ screen.tsx
+```
+
+```json packages/plugin-timer/package.json
+{
+  "name": "@tiny/plugin-timer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.tsx" },
+  "dependencies": {
+    "@tiny/plugin-host": "workspace:*",
+    "@tiny/ui": "workspace:*"
+  }
+}
+```
+
+`@tiny/plugin-host` for the contract, `@tiny/ui` for anything you draw. Nothing
+else with `plugin-` in the name.
+
+## 2. The screen
+
+```tsx packages/plugin-timer/src/screen.tsx
+import { Button } from '@tiny/ui/components/button'
+import { useState } from 'react'
+
+export function TimerScreen() {
+  const [seconds, setSeconds] = useState(0)
+
+  return (
+    // The container query sits outside the width it controls.
+    <div className="@container mx-auto">
+      <div className="mx-auto max-w-2xl space-y-4">
+        <p className="text-ink text-2xl tabular-nums" data-testid="timer-value">
+          {seconds}s
+        </p>
+        <Button data-testid="timer-start" onClick={() => setSeconds((n) => n + 1)}>
+          Tick
+        </Button>
+      </div>
+    </div>
+  )
+}
+```
+
+Every interactive element gets a `data-testid` — that is what the tests select
+by.
+
+## 3. The export
+
+```tsx packages/plugin-timer/src/index.tsx
+import type { Plugin } from '@tiny/plugin-host'
+import { TimerScreen } from './screen'
+
+export const timer: Plugin = {
+  id: 'timer', // renders under /#/timer
+  title: 'Timer', // its label in the shell
+  Screen: TimerScreen,
+}
+```
+
+Add a `Sidebar` too if the plugin has a list worth keeping on screen — chat puts
+its conversations there. Plugins without one get a link in the sidebar footer
+instead.
+
+```tsx
+export const timer: Plugin = {
+  id: 'timer',
+  title: 'Timer',
+  Screen: TimerScreen,
+  Sidebar: TimerSidebar,
+}
+```
+
+## 4. Register it
+
+One line in `packages/app/src/plugins.tsx`, plus the dependency in
+`packages/app/package.json`:
+
+```tsx packages/app/src/plugins.tsx
+const BUILT_IN = [
+  chat({ ... }),
+  settings({ useProviders }),
+  timer,
+] as const satisfies readonly Plugin[]
+```
+
+The shell does not change. Order is sidebar order, and the first entry is home.
+
+## Routing below your route
+
+The shell mounts you at `/#/<id>/*`. Everything under that is yours:
+
+```tsx
+<Routes>
+  <Route index element={<List />} />
+  <Route path=":id" element={<Detail />} />
+</Routes>
+```
+
+Which is how chat gets `/#/chat/:id`.
+
+:::warning
+Whatever the user picked or typed has to survive a reload — in the URL if it is
+"what to show", in `localStorage` if it is "what I typed". See
+[state and storage](/architecture/state).
+:::
+
+## Tests
+
+Unit tests only, run with `bun test` from the root. Test behaviour, not
+implementation: a refactor that changes nothing about what the code does should
+not break a test. Cover the logic and the edge cases; skip the getters and the
+glue.
+
+```tsx packages/plugin-timer/src/screen.test.tsx
+import { render, screen } from '@testing-library/react'
+import { expect, test } from 'bun:test'
+import { TimerScreen } from './screen'
+
+test('starts at zero', () => {
+  render(<TimerScreen />)
+  expect(screen.getByTestId('timer-value')).toHaveTextContent('0s')
+})
+```
+
+## Before you commit
+
+```sh
+bun test
+bun typecheck
+bun lint
+bun run deadcode   # knip: what does nothing reach
+bun run build
+```
+
+`bun run deadcode:fix` applies what it can — read the diff, it will delete an
+export you meant to keep if the only caller is a comment.

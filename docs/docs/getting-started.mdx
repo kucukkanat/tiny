@@ -1,0 +1,66 @@
+---
+title: Getting started
+description: Clone it, run it, and find your way around.
+sidebar:
+  order: 1
+---
+
+```sh
+bun install
+bun dev        # vite dev server on :5173
+```
+
+Open it, go to **Settings**, and give it an endpoint, a key and a model. Any
+Anthropic-compatible or OpenAI-compatible endpoint works — the hosted ones, a
+proxy, or a local server. Nothing leaves the tab except the call to that
+endpoint.
+
+Then open **Extensions** and press "Try the example one" to see what a runtime
+feature looks like from the other side.
+
+## The repo
+
+```
+packages/
+├─ app/                 the shell — routing, layout, the plugin list
+├─ ui/                  design tokens and components
+├─ plugin-host/         the contracts
+├─ plugin-chat/
+├─ plugin-settings/
+├─ plugin-extensions/
+└─ extension-starter/   a working extension, and the one to copy
+
+docs/                   this site — its own install, `cd docs && bun dev`
+```
+
+## The one file that matters
+
+`packages/app/src/plugins.tsx`. Every feature in the app and every wire between
+them is in it — about 120 lines. Read it before anything else.
+
+## Two laws
+
+:::note
+**Least lines of code.** Before adding code, check whether existing code already
+does it, or could with a small change. Deleting code to solve a problem is a
+win.
+
+**Bounded by cognitive load.** Someone reading a file for the first time should
+follow it without holding much in their head. If shorter makes it harder to read,
+it is not shorter — the cost just moved to the reader.
+:::
+
+Which is why there is no speculative abstraction, no wrapper that only forwards
+arguments, no config option with one possible value, and one way to do a thing
+rather than three.
+
+## Adding something
+
+<CardGroup cols={2}>
+  <Card title="A plugin" icon="package" href="/plugins/building">
+    Ships in the bundle. A package, a `Plugin` export, one line in the app.
+  </Card>
+  <Card title="An extension" icon="puzzle" href="/extensions/building">
+    Installed at runtime. One module that default-exports a function of the host.
+  </Card>
+</CardGroup>

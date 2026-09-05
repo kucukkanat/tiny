@@ -1,0 +1,82 @@
+---
+title: The shell
+description: Routing, layout, and the two slots every feature gets. Nothing else belongs here.
+---
+
+`@tiny/app` is the shell. It is about 120 lines, and if you are about to add a
+feature to it, stop — it is a plugin.
+
+## Routing
+
+React Router's `HashRouter`, because the app is static files with no server to
+rewrite paths. It has to work under `/tiny/` on GitHub Pages, and every path the
+build emits is relative, so there is no `base` to keep in sync.
+
+Each feature gets `/#/<id>/*`. Everything below that is the feature's own
+routing — chat uses it for `/#/chat/:id`, extensions for
+`/#/extensions/install?url=…`.
+
+```tsx packages/app/src/app.tsx
+<Routes>
+  {plugins.map(({ id, title, Screen }) => (
+    <Route
+      key={id}
+      path={`/${id}/*`}
+      element={
+        <Safely name={title}>
+          <Screen />
+        </Safely>
+      }
+    />
+  ))}
+  <Route path="*" element={ready ? <Navigate to={home} replace /> : <Loading label="Loading" />} />
+</Routes>
+```
+
+The active feature is matched on the path _segment_, not the string: `/chat-plus`
+is not `/chat`, and an extension picks its own id.
+
+:::warning
+`ready` is false while an enabled extension is still being fetched. Until then
+its route does not exist, and a reload on that route would bounce home before it
+arrived — so the catch-all shows a loader instead of redirecting.
+:::
+
+## Two slots
+
+| Slot      | Where it renders                                              |
+| --------- | ------------------------------------------------------------- |
+| `Screen`  | under `/#/<id>`, in the main column                            |
+| `Sidebar` | in the sidebar body, always mounted — optional                 |
+
+A feature with no `Sidebar` gets a link in the sidebar footer instead. One that
+already has a section up there is reachable from it, so it does not get a second
+link to itself. That is why chat's conversations sit in the body and settings
+sits at the bottom.
+
+On a phone the sidebar is a drawer behind the toggle in the top bar; on a wider
+screen it sits there and collapses. The collapsed state is a cookie, read back
+on load so a reload does not reopen it.
+
+## Failing safely
+
+React unmounts the whole root on an uncaught render error. Without a boundary,
+one bad screen takes the sidebar and every other feature with it — and since the
+route is in the hash, reloading lands you right back on it.
+
+```tsx
+import { Safely } from '@tiny/plugin-host'
+
+<Safely name="Chat" resetKey={pathname}>
+  <Screen />
+</Safely>
+```
+
+Every `Screen` and every `Sidebar` is wrapped in one. This matters most for
+extensions: code that arrived at runtime is code nobody reviewed.
+
+## Theme
+
+Dark unless storage says otherwise. `index.html` ships `class="dark"` so the
+first paint is dark, and `main.tsx` applies a stored choice over the top. The
+switch lives in Settings; the tokens live in `@tiny/ui`.

@@ -1,0 +1,117 @@
+---
+title: Contracts
+description: Every type in @tiny/plugin-host, and what each one is for.
+---
+
+`@tiny/plugin-host` is the whole contract between the shell and a feature. One
+file, no runtime code beyond an error boundary and two storage helpers.
+
+## Plugin
+
+```ts
+type Plugin = {
+  readonly id: string
+  readonly title: string
+  readonly Screen: ComponentType
+  readonly Sidebar?: ComponentType
+}
+```
+
+The shell renders `Screen` under `/#/<id>` — nested routes below that are the
+plugin's own — and `Sidebar`, if there is one, in the sidebar body.
+
+## Extension
+
+```ts
+type Extension = {
+  readonly id: string
+  readonly title: string
+  readonly Screen?: ComponentType
+  readonly Sidebar?: ComponentType
+  readonly tools?: Readonly<Record<string, Tool>>
+  readonly providers?: Readonly<Record<string, ProviderSpec>>
+  readonly actions?: readonly ChatAction[]
+  readonly instructions?: string
+  readonly css?: string
+}
+
+type ExtensionModule = (tiny: Tiny) => Extension
+```
+
+A `Plugin` whose `Screen` is optional — a tools-only extension has no screen —
+plus what it can hand to the rest of the app. `ExtensionModule` is what the
+module default-exports.
+
+## Tiny
+
+```ts
+type Tiny = {
+  readonly useChats: () => readonly Chat[]
+  readonly useModel: () => LanguageModel | undefined
+  readonly ask: (question: string, options?: readonly string[]) => Promise<string>
+}
+```
+
+What the app hands an extension. Three things, because everything else is
+already the platform.
+
+## Chat and ChatAction
+
+```ts
+type Chat = {
+  readonly id: string
+  readonly title: string
+  readonly updatedAt: number
+  /** Everything said in it, both sides, newline-separated. */
+  readonly text: string
+}
+
+type ChatAction = {
+  readonly label: string
+  /** Sent with the highlighted passage quoted under it. */
+  readonly ask: string
+}
+```
+
+A conversation as an extension sees it: what was said, not how it is stored.
+
+## Provider and ProviderSpec
+
+```ts
+type Provider = {
+  readonly kind: string
+  readonly baseUrl: string
+  readonly apiKey: string
+  readonly model: string
+}
+
+type ProviderSpec = {
+  readonly label: string
+  /** Where calls go when the endpoint field is left blank. */
+  readonly baseUrl: string
+  readonly model: (provider: Provider) => LanguageModel
+  /** What this endpoint serves. Throw with a readable message and it is shown. */
+  readonly models: (provider: Provider) => Promise<readonly string[]>
+}
+```
+
+`Provider` is what the user configured. `ProviderSpec` is the dialect that turns
+it into something the SDK can call — Settings offers one row per spec.
+
+## The runtime bits
+
+```tsx
+import { Safely, isExtensionId, isToolName, write } from '@tiny/plugin-host'
+
+<Safely name="Chat" resetKey={pathname}>
+  <Screen />
+</Safely>
+
+write('tiny.thing', json) // false when storage is full, never a throw
+isToolName(name)          // what a provider will accept, and a model call
+isExtensionId(id)         // what may become a route
+```
+
+Three things every feature needs and none of them may import from each other.
+`Safely` is the shell's error boundary — see [the shell](/architecture/shell)
+for why it is not optional.

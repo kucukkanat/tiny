@@ -15,6 +15,11 @@ bun lint
 bun run build  # static files in packages/app/dist
 ```
 
+## Docs
+
+[`docs/`](docs) is the full documentation — architecture, plugins, extensions,
+and how to build either. `cd docs && bun dev`.
+
 ## Packages
 
 | Package                   | What it is                                              |

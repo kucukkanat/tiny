@@ -1,0 +1,13 @@
+{
+  "name": "@tiny/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build"
+  },
+  "devDependencies": {
+    "blume": "^1.6.0"
+  }
+}

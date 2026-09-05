@@ -16,6 +16,9 @@ export default {
         .join('\n'),
   },
   workspaces: {
+    // Its own install, outside `packages/*`, so the docs toolchain can't hoist a
+    // dependency over one the app builds with. Blume reads these two by name.
+    docs: { entry: ['blume.config.ts', 'docs/**/meta.ts'], project: ['**/*.{ts,css}'] },
     'packages/app': {
       // The shims are rollup inputs named in `vite.config.ts`, reached from an
       // import map generated at build time, so no file imports them.

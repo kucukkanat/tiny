@@ -1,0 +1,62 @@
+---
+title: Publishing an extension
+description: Tag it, let a CDN serve it, and share an install link.
+---
+
+An extension is one file. Anywhere that serves it as JavaScript with CORS will
+do; jsDelivr off a git tag is the least work.
+
+```sh
+git tag v1 && git push --tags
+# https://cdn.jsdelivr.net/gh/<you>/<repo>@v1/dist/extension.js
+```
+
+:::danger
+A tag or a commit, **never a branch**. jsDelivr serves a branch address with a
+week of browser cache, so your fix would look like it did nothing.
+:::
+
+## Share it as an install link
+
+```
+https://kucukkanat.github.io/tiny/#/extensions/install?url=<the url, encoded>
+```
+
+That lands on the page describing what the extension adds, switched off. Whoever
+follows it reads what it registers before anything runs.
+
+## Before you publish
+
+<Steps>
+  <Step title="Mark all five externals">
+    `react`, `react/jsx-runtime`, `react-router`, `zod`, `ai`. A bundled React is
+    `Invalid hook call` on first render.
+  </Step>
+  <Step title="Compile your JSX">
+    An extension fetched from a URL is imported as it is. Nothing compiles it.
+  </Step>
+  <Step title="Pick an id nothing else answers to">
+    It becomes a route. The app's own ids are reserved.
+  </Step>
+  <Step title="Write your instructions honestly">
+    They go into the system prompt, and they are shown verbatim before anyone
+    turns the extension on.
+  </Step>
+  <Step title="Check the size">
+    Whatever you bundle, the person installing it downloads. A tools-and-a-screen
+    extension is a couple of kilobytes; one provider package is 80 kB gzipped.
+  </Step>
+</Steps>
+
+## Hosting it beside the app
+
+The starter builds into the app's own `dist/extensions/`, so it is served from
+the same origin with nothing to configure:
+
+```sh
+bun --filter @tiny/extension-starter build   # → packages/app/dist/extensions/starter.js
+```
+
+The Extensions screen installs it from `./extensions/starter.js`. That is a
+reasonable pattern for an extension you want in the box without putting it in the
+bundle.

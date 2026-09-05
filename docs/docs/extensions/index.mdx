@@ -1,0 +1,105 @@
+---
+title: Extensions
+description: A feature that arrives at runtime. One ES module, imported in the tab, live in the next message.
+---
+
+An extension is **run time**. Whoever is using the app installs one and it is
+live in the next message — no build, no deploy, nothing installed on a server.
+It is one ES module, `import()`ed in the tab.
+
+`@tiny/plugin-extensions` hosts them. `@tiny/extension-starter` is a real one
+that ships with the app.
+
+:::note
+This is the **only** way to give the model a tool. There used to be a
+`plugin-tools` that let you write one in a textarea; it was a second mechanism
+for the same job, so it is gone.
+:::
+
+## What one looks like
+
+The default export is a function of the host that returns a plain object. There
+is no `activate`, nothing to tear down, and no side effects — which is what makes
+turning one off exactly as cheap as turning it on.
+
+```tsx
+import type { Extension, Tiny } from '@tiny/plugin-host'
+import { tool } from 'ai'
+import { z } from 'zod'
+
+export default (tiny: Tiny): Extension => ({
+  id: 'dice',
+  title: 'Dice',
+  tools: {
+    roll: tool({
+      description: 'Roll an n-sided die.',
+      inputSchema: z.object({ sides: z.number() }),
+      execute: ({ sides }) => 1 + Math.floor(Math.random() * sides),
+    }),
+  },
+})
+```
+
+## Every slot
+
+`id` and `title` are required. Everything past them is optional:
+
+| Slot           | What it adds                                                        |
+| -------------- | ------------------------------------------------------------------- |
+| `Screen`       | a route at `/#/<id>`, rendered by the shell like any plugin's        |
+| `Sidebar`      | a section in the left sidebar                                        |
+| `tools`        | functions the model can call mid-answer                              |
+| `providers`    | a model API, offered in Settings beside Anthropic and OpenAI         |
+| `actions`      | an entry in the bar shown when a passage of a reply is highlighted   |
+| `instructions` | a line added to the model's system prompt                            |
+| `css`          | a stylesheet, adopted while the extension is on                      |
+
+An `Extension` is a `Plugin` whose `Screen` is optional — a tools-only extension
+has no screen — plus those five.
+
+## What the host hands you
+
+Three things, because everything else an extension needs is already the platform:
+`localStorage` for its own state, `react-router` to navigate, Tailwind on the
+app's tokens to look right.
+
+```ts
+type Tiny = {
+  readonly useChats: () => readonly Chat[]
+  readonly useModel: () => LanguageModel | undefined
+  readonly ask: (question: string, options?: readonly string[]) => Promise<string>
+}
+```
+
+`useChats()` is every conversation, newest first, read-only. `useModel()` is the
+configured model, or `undefined` while there is not one. `ask()` puts a question
+in the chat and waits for the answer — which is how a tool can ask the person at
+the keyboard something only they know.
+
+## What you may import
+
+Five bare specifiers, resolved by an import map in the page:
+
+```
+react   react/jsx-runtime   react-router   zod   ai
+```
+
+Only those, and only because a second copy of each genuinely breaks: React and
+the router carry context, and one zod is what keeps a `.describe()` in what the
+model is told. Everything else you bundle yourself, so the cost lands on whoever
+installs it rather than on every first visit.
+
+<CardGroup cols={2}>
+  <Card title="Build one" icon="code" href="/extensions/building">
+    In the app's editor, or with your own build.
+  </Card>
+  <Card title="Install one" icon="download" href="/extensions/installing">
+    A URL, a file, a premade, or text you type.
+  </Card>
+  <Card title="Publish one" icon="upload" href="/extensions/publishing">
+    jsDelivr, a pinned tag, and an install link.
+  </Card>
+  <Card title="What it can do to you" icon="shield" href="/extensions/security">
+    There is no sandbox. Here is what there is instead.
+  </Card>
+</CardGroup>

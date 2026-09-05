@@ -36,7 +36,7 @@ const readStored = (): Stored => ({
  * provider you chose quietly rewritten to something else — you'd come back to
  * find your endpoint changed.
  */
-export const resolve = (stored: Stored, specs: Registry): Provider => ({
+const resolve = (stored: Stored, specs: Registry): Provider => ({
   ...stored,
   baseUrl: stored.baseUrl || specs[stored.kind]?.baseUrl || '',
 })

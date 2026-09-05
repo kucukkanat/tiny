@@ -291,6 +291,25 @@ catching a real break.
 
 Component tests select by `data-testid`.
 
+## Dead code
+
+`bun run deadcode` answers "what does nothing reach". It is knip, configured in
+`knip.ts`, and it exits non-zero when it finds something. `bun run deadcode:fix`
+applies what it can — read the diff, it will delete an export you meant to keep
+if the only caller is a comment.
+
+The config teaches it three things rather than ignoring them, because an ignore
+also hides the next one: CSS is compiled down to its `@import`/`@reference`
+specifiers, so the one place an extension depends on `@tiny/ui` is visible; the
+`sdk/*` shims are declared as entries, since nothing imports a rollup input; and
+`packages/ui` sets `includeEntryExports`, because a wildcard `exports` map makes
+every component an entry and entries are exempt from the check by default.
+
+What it does not answer: an export used only by its own test still counts as
+used. `--production` would catch that, but it does not resolve across workspaces
+here — it reports the app's plugins as unused dependencies — so it is not wired
+up.
+
 ## Git
 
 Work on `main`. Commit and push when the change is done — don't leave work sitting

@@ -111,11 +111,6 @@ const SNIPPETS: readonly Completion[] = [
 
 const KEYS = Object.keys(EXTENSION).map(field)
 
-const at = (before: string, options: readonly Completion[]) => ({
-  from: before.length,
-  options: [...options],
-})
-
 /**
  * What to offer, given the dotted path before the cursor and the line it is on.
  * Kept free of the editor so it can be tested without one.
@@ -148,5 +143,3 @@ export const completionsFor = (
 
   return { word, options: [...SNIPPETS, ...KEYS] }
 }
-
-export { at }

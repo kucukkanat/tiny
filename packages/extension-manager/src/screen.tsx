@@ -1,6 +1,7 @@
 import type { Extension } from '@tiny/host'
 import { Button } from '@tiny/ui/components/button'
 import { CodeBlock } from '@tiny/ui/components/code-block'
+import { ConfirmDelete } from '@tiny/ui/components/confirm-delete'
 import { Input } from '@tiny/ui/components/input'
 import { Loading } from '@tiny/ui/components/loading'
 import { Switch } from '@tiny/ui/components/switch'
@@ -256,6 +257,16 @@ function InBuild() {
   )
 }
 
+/**
+ * What a delete actually costs. Nothing here knows where a source came from —
+ * a file, a premade, the clipboard — so it says what it does know: the copy the
+ * app is holding goes. A linked one only ever held the address.
+ */
+const loss = (one: Installed) =>
+  one.source !== undefined
+    ? 'The source goes with it, and nothing here keeps another copy.'
+    : 'You would need its URL again to add it back.'
+
 /** What this one is doing, in the fewest words that are still true. */
 const say = (one: Installed, entry: Entry | undefined) => {
   if (!one.enabled) return 'Off'
@@ -283,17 +294,22 @@ function Row({ one, entry }: { one: Installed; entry: Entry | undefined }) {
         checked={one.enabled}
         onCheckedChange={(enabled) => saveInstalled({ ...one, enabled })}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={`Delete ${one.title}`}
-        data-testid={`ext-delete-${one.id}`}
-        className="size-11 md:size-8"
-        onClick={() => removeInstalled(one.id)}
+      <ConfirmDelete
+        name={one.title}
+        note={loss(one)}
+        onConfirm={() => removeInstalled(one.id)}
       >
-        <Trash2Icon />
-      </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={`Delete ${one.title}`}
+          data-testid={`ext-delete-${one.id}`}
+          className="size-11 md:size-8"
+        >
+          <Trash2Icon />
+        </Button>
+      </ConfirmDelete>
     </li>
   )
 }
@@ -446,18 +462,23 @@ function Detail() {
                 {written ? <PlayIcon /> : <RotateCwIcon />}
                 {written ? 'Run' : 'Reload'}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-control px-4"
-                data-testid={`ext-delete-${one.id}`}
-                onClick={() => {
+              <ConfirmDelete
+                name={one.title}
+                note={loss(one)}
+                onConfirm={() => {
                   removeInstalled(one.id)
                   void navigate('/extensions')
                 }}
               >
-                Delete
-              </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-control px-4"
+                  data-testid={`ext-delete-${one.id}`}
+                >
+                  Delete
+                </Button>
+              </ConfirmDelete>
             </div>
           </div>
 

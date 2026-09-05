@@ -27,6 +27,9 @@
 
   --color-line: var(--line);
 
+  /* What dims the page behind anything modal — a sheet, a confirm. */
+  --color-scrim: var(--scrim);
+
   /* The one blue. `brand`, not `accent`: shadcn already means "hover" by that. */
   --color-brand: var(--brand);
 
@@ -105,6 +108,8 @@
 
   --line: oklch(94.6% 0.003 264.542);
   --line-strong: oklch(91.2% 0.005 258.326);
+
+  --scrim: oklch(0% 0 0 / 0.1);
 
   --brand: oklch(62.6% 0.205 254.947);
   --brand-ink: oklch(55.6% 0.187 255.617);

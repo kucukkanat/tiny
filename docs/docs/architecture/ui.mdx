@@ -84,6 +84,10 @@ palette, a dropdown and an attachment picker this app has no use for. The
 composer that replaced it is 84 lines in `plugin-chat`. `message`'s mermaid
 plugin was a static import, so mermaid, d3 and rough loaded on first paint
 whether or not a reply drew a diagram — a quarter of the payload. Both are gone.
+
+`alert-dialog` is 196 lines and twelve exports for a question with two answers.
+`ConfirmDelete` is 67, and cost +973 B gzipped on first paint because `Sheet`
+already brings radix's dialog in.
 :::
 
 When a registry component is mostly features you do not want, write the small one

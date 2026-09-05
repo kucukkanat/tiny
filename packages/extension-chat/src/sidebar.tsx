@@ -1,3 +1,4 @@
+import { ConfirmDelete } from '@tiny/ui/components/confirm-delete'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -115,17 +116,22 @@ function ChatRow({
         </SidebarMenuButton>
       </div>
 
-      <button
-        type="button"
-        data-testid={`chat-delete-${id}`}
-        aria-label={`Delete ${title}`}
-        // Full height of the row on touch so the swipe uncovers a real target;
-        // a centred square inside the row on a pointer device.
-        className="bg-red-tint text-red md:text-ink-2 absolute inset-y-0 right-0 flex w-16 items-center justify-center transition-opacity md:right-1 md:my-auto md:size-7 md:rounded-md md:bg-transparent md:opacity-0 md:group-focus-within/menu-item:opacity-100 md:group-hover/menu-item:opacity-100 md:hover:bg-red-tint md:hover:text-red md:focus-visible:opacity-100"
-        onClick={onDelete}
+      <ConfirmDelete
+        name={title}
+        note="The conversation and anything drafted in it go for good."
+        onConfirm={onDelete}
       >
-        <Trash2Icon className="size-4" />
-      </button>
+        <button
+          type="button"
+          data-testid={`chat-delete-${id}`}
+          aria-label={`Delete ${title}`}
+          // Full height of the row on touch so the swipe uncovers a real target;
+          // a centred square inside the row on a pointer device.
+          className="bg-red-tint text-red md:text-ink-2 absolute inset-y-0 right-0 flex w-16 items-center justify-center transition-opacity md:right-1 md:my-auto md:size-7 md:rounded-md md:bg-transparent md:opacity-0 md:group-focus-within/menu-item:opacity-100 md:group-hover/menu-item:opacity-100 md:hover:bg-red-tint md:hover:text-red md:focus-visible:opacity-100"
+        >
+          <Trash2Icon className="size-4" />
+        </button>
+      </ConfirmDelete>
     </SidebarMenuItem>
   )
 }

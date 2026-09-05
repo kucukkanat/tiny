@@ -84,6 +84,10 @@ The gesture only claims a drag once it is clearly sideways, so the list still
 scrolls under it, and `touch-pan-y` leaves the vertical axis to the browser.
 Tapping a row that's already open puts it back rather than opening the chat.
 
+Either way in, the trash asks first — `ConfirmDelete` from `@tiny/ui`, naming the
+chat, because a conversation and its draft are gone for good and neither device's
+gesture is hard enough to be a decision on its own.
+
 The transport is the whole trick:
 
 ```ts

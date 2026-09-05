@@ -153,6 +153,15 @@ which never re-fetches a URL it has already seen; the browser's, which holds a
 CDN answer for up to a week; and the service worker's. It only moves when you
 press Reload, so an extension you already have keeps working offline.
 
+## Deleting one
+
+From the row on the list or from the button on its page, and either way it asks
+first — `ConfirmDelete` from `@tiny/ui`. What it says goes depends on what the
+record holds, and only on that: a source-backed one is the app's only copy of
+that text, a linked one is an address you would need again. Nothing here knows
+whether the source came off a disk, a premade or the clipboard, so it does not
+claim to. The store is `localStorage`; there is no bin to fish it out of.
+
 ## Storage
 
 One `localStorage` key per extension, `tiny.extension.<id>`, holding

@@ -26,6 +26,12 @@ const renderSidebar = (at = '/chat/a') =>
 
 const path = () => screen.getByTestId('path').textContent
 
+/** Delete asks first, so both taps are the one act the test means. */
+const remove = async (id: string) => {
+  fireEvent.click(await screen.findByTestId(`chat-delete-${id}`))
+  fireEvent.click(await screen.findByTestId('confirm-delete'))
+}
+
 test('nothing to show says so', async () => {
   renderSidebar()
   expect(await screen.findByTestId('chat-list-empty')).toBeDefined()
@@ -56,7 +62,7 @@ test('deleting the conversation you are in moves you to a new one', async () => 
   renderSidebar('/chat/a')
   act(() => saveConversation('a', said('doomed')))
 
-  fireEvent.click(await screen.findByTestId('chat-delete-a'))
+  await remove('a')
 
   expect(screen.queryByTestId('chat-open-a')).toBeNull()
   await waitFor(() => expect(path()).not.toBe('/chat/a'))
@@ -68,10 +74,21 @@ test('deleting a conversation you are not in leaves you where you are', async ()
   act(() => saveConversation('a', said('reading')))
   act(() => saveConversation('b', said('doomed')))
 
-  fireEvent.click(await screen.findByTestId('chat-delete-b'))
+  await remove('b')
 
   expect(path()).toBe('/chat/a')
   expect(screen.queryByTestId('chat-open-b')).toBeNull()
+})
+
+test('backing out of the delete keeps the conversation', async () => {
+  renderSidebar('/chat/a')
+  act(() => saveConversation('a', said('spared')))
+
+  fireEvent.click(await screen.findByTestId('chat-delete-a'))
+  fireEvent.click(await screen.findByTestId('confirm-cancel'))
+
+  expect(await screen.findByTestId('chat-open-a')).toBeDefined()
+  expect(path()).toBe('/chat/a')
 })
 
 test('new chat takes you somewhere you have not been', async () => {

@@ -297,14 +297,56 @@ test('an install link nobody should follow is refused, with no way to confirm', 
   expect(screen.getByTestId('ext-install-confirm').hasAttribute('disabled')).toBe(true)
 })
 
-test('deleting one takes it out of the list and out of storage', () => {
-  const first = renderExtensions()
+/** One in storage and nothing mounted, so a test can start wherever it means to. */
+const install = () => {
+  const view = renderExtensions()
   fireEvent.click(screen.getByTestId('ext-template-weather'))
   const id = stored()[0]?.id ?? ''
-  first.unmount()
+  view.unmount()
+  return id
+}
 
+test('deleting one takes it out of the list and out of storage', async () => {
+  const id = install()
   renderExtensions()
+
   fireEvent.click(screen.getByTestId(`ext-delete-${id}`))
+  fireEvent.click(await screen.findByTestId('confirm-delete'))
 
   expect(stored()).toEqual([])
+})
+
+test('the delete asks first, and backing out keeps it', async () => {
+  const id = install()
+  renderExtensions()
+
+  fireEvent.click(screen.getByTestId(`ext-delete-${id}`))
+  // What it says goes is what you would miss: the only copy of the source.
+  expect((await screen.findByTestId('confirm')).textContent).toContain('another copy')
+
+  fireEvent.click(screen.getByTestId('confirm-cancel'))
+
+  expect(stored()).toHaveLength(1)
+  expect(screen.getByTestId(`ext-open-${id}`)).toBeDefined()
+})
+
+test('a linked one is told what it would take to get it back', async () => {
+  renderExtensions()
+  type('ext-url', 'https://cdn.jsdelivr.net/gh/me/ext@v1/x.js')
+  fireEvent.click(screen.getByTestId('ext-add'))
+
+  fireEvent.click(screen.getByTestId(`ext-delete-${stored()[0]?.id ?? ''}`))
+
+  expect((await screen.findByTestId('confirm')).textContent).toContain('its URL again')
+})
+
+test('deleting from its own page asks, then puts you back on the list', async () => {
+  const id = install()
+  renderExtensions(`/extensions/${id}`)
+
+  fireEvent.click(screen.getByTestId(`ext-delete-${id}`))
+  fireEvent.click(await screen.findByTestId('confirm-delete'))
+
+  expect(stored()).toEqual([])
+  expect(screen.getByTestId('ext-url')).toBeDefined()
 })

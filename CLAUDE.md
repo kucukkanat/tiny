@@ -198,6 +198,12 @@ for a JS change is the `index-*.js` line, not the precache total.
 on/off that reads as state rather than a button, and `radix-ui` was already a
 dependency, so it cost one file.
 
+`ConfirmDelete` is not from a registry — shadcn's `alert-dialog` is 196 lines and
+twelve exports for a question with two answers, and all three call sites here ask
+the same question. It is 67 lines on radix's `AlertDialog` directly, and it cost
+**+931 B gzipped of JS and +42 B of CSS on first paint**, because `Sheet` already
+brings radix's dialog in and `AlertDialog` is a thin layer over it.
+
 A registry component arrives whole and is used in part, so the parts nothing
 reaches get cut on the way in — `message`'s branch family and toolbar, which took
 `button-group` with them, `conversation`'s markdown download, `sidebar`'s nine

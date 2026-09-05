@@ -51,6 +51,29 @@ import { CodeBlock } from '@tiny/ui/components/code-block'
 ;<CodeBlock label="Input" code={JSON.stringify({ city: 'Istanbul' }, null, 2)} />
 ```
 
+Not all of it comes from there. `ConfirmDelete` is written rather than pulled
+because shadcn's `alert-dialog` is 196 lines and twelve exports for a question
+with two answers. It wraps the button that already meant "delete" rather than
+replacing it, so a row keeps its layout and its testid.
+
+```tsx
+import { ConfirmDelete } from '@tiny/ui/components/confirm-delete'
+
+;<ConfirmDelete
+  name={chat.title}
+  note="The conversation and anything drafted in it go for good."
+  onConfirm={() => remove(chat.id)}
+>
+  <button data-testid={`chat-delete-${chat.id}`}>
+    <Trash2Icon />
+  </button>
+</ConfirmDelete>
+```
+
+`note` is the one sentence the caller has to write, because what a delete costs
+is the caller's to know: a conversation takes its draft with it, an extension
+takes either its source or the address it came from.
+
 `useCopy` is the copy-and-say-so behind both that button and the one under a
 reply. The confirmation is shown for a moment rather than hovered into view,
 because there is no hover on a phone.

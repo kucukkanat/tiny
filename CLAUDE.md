@@ -115,6 +115,47 @@ is already in the bundle for something else, which is why that list is that
 list. A ninth is a commit and a
 deploy; an extension that wants one passes a component instead.
 
+A tool draws its own result by hanging a `View` on itself, and that is the ninth
+slot that isn't one: it rides across on `tools`, which `useTools` already hands
+back, so there is no second registry keyed by tool name that can disagree with
+the first. `first()` is already the collision rule, the extension's switch is
+already the off switch, uninstalling is already the fallback — the lookup misses,
+the part folds back into the run, and the JSON returns — and it is disclosed on
+the tool's own row, because it is a property of a tool you already registered
+rather than a new thing to register. `Tiny` stays at eight. The price is that
+`useTools`'s declared return type moved, from `ToolSet` to
+`Record<string, Viewed>`; a stored module is untyped JS handed objects with one
+more key, and `Tool & { View? }` is assignable to `Tool` in every position, so
+nothing downstream moved with it.
+
+It is handed `{ input, output }` and both are `unknown`, because both came back
+through `JSON.stringify`. It is called only once there is an output — never
+while the call is out, never on a failure — so an extension has no half-arrived
+state to defend against, and by the same rule can never be given a loading
+state, a progress bar or a preview of half-written arguments. Those would be new
+props on a shape stored modules already bind to. If that ever matters it is a
+second slot, not a wider one.
+
+The chip stays underneath, shut. Losing it was the tempting version and it is
+wrong: the whole security model here is that you can see what an extension did,
+and a drawing with no way to read the input and output it came from removes the
+last place that is visible. One collapsed line per drawing buys the ability to
+catch a `View` that misreports its own tool.
+
+The slot is **+1,178 B raw / +392 B gzipped of JS on first paint**;
+`extension-charts`, the bundled example, is **+1,478 B raw / +456 B gzipped**
+on top, and together they moved CSS by +331 B raw / +78 B gzipped. The CSS can't
+be split between them, because `@source` scans `packages/*/src` off disk whether
+or not a package is listed in `extensions.tsx`. Everything expensive about a
+picture — a charting library, `mermaid`, a calendar — belongs in the extension
+that wants one, bundled into it or `import()`ed from a CDN inside the component,
+so it lands on whoever installed it and on nobody else's first visit.
+
+`wrap()` carries two properties across that `dynamicTool` has no field for:
+`View`, and `toModelOutput`. Without the second, a payload written to be looked
+at is also spent in the model's context in full, on every turn after the one
+that drew it.
+
 There is no other way to give the model a tool. There used to be a `plugin-tools`
 that let you write one in a textarea, which was a second mechanism for the same
 job; it is gone, and what it stored is carried across on first boot by
@@ -315,6 +356,12 @@ the editor beside what it produced. A form does not get more readable past about
 Settings caps its cards rather than stretching, and the leftover reads as margin
 because the cards have edges. Whitespace around a bounded object is design;
 whitespace around an unbounded column is a missing section.
+
+`MessageContent` is `w-fit` on the user's side and `w-full` on the assistant's,
+which is not a symmetry worth restoring: a bubble sizes to its text, but a child
+asking for `100%` inside a `w-fit` parent resolves against that parent's own
+content and collapses. Text never noticed, because `max-w-2xl` had already
+capped it upstream. A drawing does.
 
 Design tokens are Tailwind v4 `@theme` custom properties in `packages/ui`:
 colour, type, spacing, radius, elevation and motion, all of it, so restyling is

@@ -40,17 +40,30 @@ body doesn't need a link to itself.
 ## What it can hand over, and what it gets back
 
 `Extension` is `id`, `title`, an optional `Screen` and `Sidebar`, plus `tools`,
-`providers`, `actions`, `instructions` and `css`. `Tiny` is the other direction —
-the platform it didn't bring, and the fold of what everyone else registered:
+`providers`, `actions`, `messageActions`, `instructions` and `css`. `Tiny` is the
+other direction — the platform it didn't bring, and the fold of what everyone
+else registered:
 
 ```ts
 tiny.useChats() //  every conversation, newest first
 tiny.useModel() //  the configured model, or undefined
 tiny.ask(q, []) //  puts a question in the chat, waits for the answer
 tiny.useTools() //  every tool the model may call, yours included
-tiny.useInstructions() // the whole system prompt
-tiny.useActions() //     every action on a highlighted reply
-tiny.useProviders() //   every dialect on offer
+tiny.useInstructions() //  the whole system prompt
+tiny.useActions() //       every action on a highlighted reply
+tiny.useMessageActions() // every button under a message
+tiny.useProviders() //     every dialect on offer
+```
+
+A tool can draw its own result rather than leaving it as JSON. `View` is a
+component hung on the tool itself, handed `{ input, output }` once the call has
+come back — so whichever extension won the tool's name won the drawing with it,
+and switching that extension off takes both away together.
+
+```ts
+tools: {
+  chart: { ...tool({ description, inputSchema, execute }), View: Bars },
+}
 ```
 
 Both are written out in full in `src/index.ts`. `Tiny` only ever grows: a module

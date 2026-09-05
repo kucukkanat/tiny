@@ -1,4 +1,4 @@
-import type { LanguageModel, Tool, ToolSet } from 'ai'
+import type { LanguageModel, Tool } from 'ai'
 import type { ComponentType } from 'react'
 
 /** Where the app sends model calls, what dialect it speaks, and as which model. */
@@ -90,6 +90,34 @@ export type MessageAction = {
 }
 
 /**
+ * Draws one call's result in the reply, in place of its JSON. Called only once
+ * the output is there, so there is no half-arrived state to handle: while the
+ * call is still out, or if it failed, chat draws its own row as it always did.
+ *
+ * Both props are `unknown` because both have been through storage and back. You
+ * wrote the tool, so you know the shape — `zod` is on the import map to check
+ * it, and what you draw is on our tokens: `var(--brand)`, `var(--ink-2)`.
+ *
+ * Frozen at two props, and by omission at one moment. There is no loading
+ * state, no progress and no preview of half-written arguments, because a new
+ * prop on a shape a stored module already binds to is what this rules out. If
+ * that turns out to matter it is a second slot, not a wider one.
+ */
+export type ToolView = ComponentType<{
+  /** What the model asked for. */
+  readonly input: unknown
+  /** What your `execute` returned. */
+  readonly output: unknown
+}>
+
+/**
+ * A tool, and what draws its result. Keyed to the tool by being on it rather
+ * than by name in a second place — so whichever extension won the name won the
+ * drawing with it, and there is no other list that can disagree with this one.
+ */
+export type Viewed = Tool & { readonly View?: ToolView }
+
+/**
  * What the app hands an extension: the platform it didn't bring, and the fold of
  * what every extension did. Everything else is already there — `localStorage`
  * for its own state, `react-router` to navigate, Tailwind on our tokens.
@@ -107,7 +135,7 @@ export type Tiny = {
   /** Puts a question in the chat and waits for the answer. */
   readonly ask: (question: string, options?: readonly string[]) => Promise<string>
   /** Every tool the model may call, yours included, ready for the SDK. */
-  readonly useTools: () => ToolSet
+  readonly useTools: () => Readonly<Record<string, Viewed>>
   /** Every extension's `instructions`, joined, as the system prompt gets them. */
   readonly useInstructions: () => string | undefined
   /** Every action offered when a passage of a reply is highlighted. */
@@ -133,8 +161,11 @@ export type Extension = {
   readonly Screen?: ComponentType
   /** Its own section of the left sidebar. Chat puts its history here. */
   readonly Sidebar?: ComponentType
-  /** Written with the SDK's `tool()`, so the model sees your `inputSchema`. */
-  readonly tools?: Readonly<Record<string, Tool>>
+  /**
+   * Written with the SDK's `tool()`, so the model sees your `inputSchema`. Hang
+   * a `View` on one and it draws its own result in the reply.
+   */
+  readonly tools?: Readonly<Record<string, Viewed>>
   readonly providers?: Readonly<Record<string, ProviderSpec>>
   readonly actions?: readonly ChatAction[]
   /** Offered in the footer of a message, beside Copy. */

@@ -1,4 +1,12 @@
-import type { IconName, Message, MessageAction, Thread } from '@tiny/host'
+import {
+  Safely,
+  type IconName,
+  type Message,
+  type MessageAction,
+  type Thread,
+  type ToolView,
+  type Viewed,
+} from '@tiny/host'
 import {
   // Aliased because the contract owns these two names: `MessageAction` here is
   // the button, and `MessageAction` above is the thing an extension registers.
@@ -23,6 +31,7 @@ import {
 } from 'lucide-react'
 import {
   createElement,
+  memo,
   useEffect,
   useState,
   type ComponentType,
@@ -31,6 +40,9 @@ import {
 import type { ChatMessage } from './model'
 
 type Part = ChatMessage['parts'][number]
+
+/** Every tool that is live, which is where a drawing for one is kept. */
+type Tools = Readonly<Record<string, Viewed>>
 
 /** Between sending and the first token, when there is nothing else to show. */
 export function Thinking() {
@@ -226,10 +238,14 @@ export function MessageFooter({
   )
 }
 
+// Out here rather than inline: `MessageResponse` is memoised on its props, and
+// a fresh object every render is a prop that never compares equal.
+const FADE_IN = { animation: 'fadeIn', sep: 'word', duration: 260 } as const
+
 /** Words fade in as they land, and a caret sits where the next one will go. */
 const Text = ({ text, streaming }: { text: string; streaming: boolean }) => (
   <MessageResponse
-    animated={{ animation: 'fadeIn', sep: 'word', duration: 260 }}
+    animated={FADE_IN}
     isAnimating={streaming}
     {...(streaming ? { caret: 'block' as const } : {})}
   >
@@ -335,6 +351,53 @@ const ToolChip = ({ part }: { part: DynamicToolUIPart }) => (
   </Expander>
 )
 
+/**
+ * What draws this call's result, if its extension brought one. `Object.hasOwn`
+ * and not a bare index, for the reason `iconNamed` above has it: a tool called
+ * `constructor` would otherwise answer with a function off the prototype.
+ */
+const viewIn = (tools: Tools, name: string): ToolView | undefined =>
+  Object.hasOwn(tools, name) ? tools[name]?.View : undefined
+
+/**
+ * A call that draws its own result, with the chip it replaced kept shut
+ * underneath. Nothing is hidden by being drawn: the input and the raw answer
+ * stay one press away, which is the only way to catch a drawing that doesn't
+ * match what its tool actually returned.
+ *
+ * Only once there is an output. While the call is still out, or if it failed,
+ * this is the chip on its own exactly as before — so the extension is never
+ * handed half-arrived data, and never has a loading state to write.
+ */
+const Drawn = memo(
+  ({ part, View }: { part: DynamicToolUIPart; View: ToolView }) =>
+    part.state === 'output-available' ? (
+      <div className="flex w-full flex-col gap-1.5">
+        {/* Its own scroller: a chart wider than the thread should scroll, not
+            widen the column every message is read in. */}
+        <div className="w-full overflow-x-auto" data-testid="message-drawing">
+          {/* Somebody else's component, rendering in our screen. Uncaught, a
+              throw here takes the whole thread with it and names chat as what
+              broke — and on a reload the hash would land straight back on it. */}
+          <Safely name={part.toolName} resetKey={part.toolCallId}>
+            <View input={part.input} output={part.output} />
+          </Safely>
+        </div>
+        <ToolChip part={part} />
+      </div>
+    ) : (
+      <ToolChip part={part} />
+    ),
+  // On the fields and not the object: a reply lands ten times a second and the
+  // SDK hands back a shallow copy of every part each time, so identity never
+  // holds — but what hangs off `output` is the same object throughout.
+  (was, now) =>
+    was.View === now.View &&
+    was.part.state === now.part.state &&
+    was.part.input === now.part.input &&
+    was.part.output === now.part.output,
+)
+
 /** A run of calls as one line you can open, not a stack of boxes. */
 const ToolCalls = ({ parts }: { parts: readonly DynamicToolUIPart[] }) => (
   <Expander
@@ -355,13 +418,19 @@ const ToolCalls = ({ parts }: { parts: readonly DynamicToolUIPart[] }) => (
 
 type Chunk =
   | { readonly kind: 'tools'; readonly parts: readonly DynamicToolUIPart[] }
+  | { readonly kind: 'drawn'; readonly part: DynamicToolUIPart; readonly View: ToolView }
   | { readonly kind: 'part'; readonly part: Part; readonly last: boolean }
 
 /** Consecutive calls travel together; everything else stands on its own. */
-const chunk = (parts: ChatMessage['parts']): readonly Chunk[] =>
+const chunk = (parts: ChatMessage['parts'], tools: Tools): readonly Chunk[] =>
   parts.reduce<readonly Chunk[]>((chunks, part, index) => {
     if (part.type !== 'dynamic-tool')
       return [...chunks, { kind: 'part', part, last: index === parts.length - 1 }]
+
+    // One that draws itself stands out of the run: folded in, a picture would
+    // be buried behind the two shut expanders a run collapses to.
+    const View = viewIn(tools, part.toolName)
+    if (View) return [...chunks, { kind: 'drawn', part, View }]
 
     const previous = chunks.at(-1)
     return previous?.kind === 'tools'
@@ -377,14 +446,19 @@ const chunk = (parts: ChatMessage['parts']): readonly Chunk[] =>
 export function MessageParts({
   parts,
   streaming,
+  tools,
 }: {
   parts: ChatMessage['parts']
   streaming: boolean
+  /** Live now, not when this was said: uninstall one and its picture is JSON again. */
+  tools: Tools
 }) {
   return (
     <>
-      {chunk(parts).map((piece, index) => {
+      {chunk(parts, tools).map((piece, index) => {
         if (piece.kind === 'tools') return <ToolCalls key={index} parts={piece.parts} />
+        if (piece.kind === 'drawn')
+          return <Drawn key={index} part={piece.part} View={piece.View} />
         // Only the last part is still growing; the ones above it are finished.
         const live = streaming && piece.last
         if (piece.part.type === 'text')

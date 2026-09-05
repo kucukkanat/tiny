@@ -1,11 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import type { ChatMessage } from './model'
-import type { Message, MessageAction, Thread } from '@tiny/host'
+import type { Message, MessageAction, Thread, Viewed } from '@tiny/host'
+import { jsonSchema } from 'ai'
 import { MessageFooter, MessageParts, Thinking } from './parts'
 
-const show = (parts: ChatMessage['parts'], streaming = false) =>
-  render(<MessageParts parts={parts} streaming={streaming} />)
+const show = (
+  parts: ChatMessage['parts'],
+  streaming = false,
+  tools: Readonly<Record<string, Viewed>> = {},
+) => render(<MessageParts parts={parts} streaming={streaming} tools={tools} />)
 
 test('text is rendered', () => {
   show([{ type: 'text', text: 'the answer' }])
@@ -336,4 +340,117 @@ test('what a tool was handed can be copied off the block showing it', () => {
   fireEvent.click(screen.getByTestId('code-copy-input'))
 
   expect(copied).toEqual([JSON.stringify({ city: 'Istanbul' }, null, 2)])
+})
+
+const drawn = (View: Viewed['View']): Record<string, Viewed> => ({
+  weather: { inputSchema: jsonSchema({ type: 'object' }), View },
+})
+
+test('a tool that brought a drawing draws it, with the chip kept underneath', () => {
+  show(
+    [call('weather', 'call-1')],
+    false,
+    drawn(({ output }) => <b>{String(output)}</b>),
+  )
+
+  expect(screen.getByTestId('message-drawing').textContent).toBe('[object Object]')
+  // Still there, still shut: a drawing that misreports its tool has to be catchable.
+  const chip = screen.getByTestId('message-tool')
+  expect(chip.querySelector('button')?.getAttribute('aria-expanded')).toBe('false')
+})
+
+test('a drawing is handed the input and the output, and nothing else', () => {
+  const seen: unknown[] = []
+  show(
+    [call('weather', 'call-1')],
+    false,
+    drawn((props) => {
+      seen.push(props)
+      return null
+    }),
+  )
+
+  expect(seen).toEqual([{ input: { city: 'Istanbul' }, output: { celsius: '19' } }])
+})
+
+test('nothing is drawn until the output is there', () => {
+  show(
+    [
+      {
+        type: 'dynamic-tool',
+        toolName: 'weather',
+        toolCallId: 'call-1',
+        state: 'input-available',
+        input: { city: 'Istanbul' },
+      },
+    ],
+    false,
+    drawn(() => <b>drawn</b>),
+  )
+
+  expect(screen.queryByTestId('message-drawing')).toBeNull()
+  expect(screen.getByTestId('message-tool').textContent).toContain('weather')
+})
+
+test('a call that failed keeps its own error rather than being drawn', () => {
+  show(
+    [
+      {
+        type: 'dynamic-tool',
+        toolName: 'weather',
+        toolCallId: 'call-1',
+        state: 'output-error',
+        input: { city: 'Istanbul' },
+        errorText: 'wttr.in said 503',
+      },
+    ],
+    false,
+    drawn(() => <b>drawn</b>),
+  )
+
+  expect(screen.queryByTestId('message-drawing')).toBeNull()
+  expect(screen.getByTestId('message-tool').textContent).toContain('wttr.in said 503')
+})
+
+test('a drawing that throws names its tool instead of taking the thread down', () => {
+  show(
+    [call('weather', 'call-1'), { type: 'text', text: 'still here' }],
+    false,
+    drawn(() => {
+      throw new Error('bad data')
+    }),
+  )
+
+  expect(screen.getByTestId('crashed').textContent).toBe('weather crashed: bad data')
+  expect(document.body.textContent).toContain('still here')
+})
+
+test('a drawing stands out of a run of calls; the rest of the run still folds', () => {
+  show(
+    [call('weather', 'call-1'), call('time', 'call-2')],
+    false,
+    drawn(() => <b>drawn</b>),
+  )
+
+  expect(screen.getByTestId('message-drawing')).toBeDefined()
+  // The one left has nothing to fold with, so it is a run of one, not of two.
+  expect(screen.getByTestId('message-tools').textContent).toContain('1 tool call')
+})
+
+test('with the extension gone the same call is a plain chip again', () => {
+  show([call('weather', 'call-1')])
+
+  expect(screen.queryByTestId('message-drawing')).toBeNull()
+  expect(screen.getByTestId('message-tools').textContent).toContain('1 tool call')
+})
+
+test('a tool named off Object.prototype has no drawing on it', () => {
+  // A bare index would answer `constructor` with a function, which React would
+  // then try to render as a component.
+  show(
+    [call('constructor', 'call-1')],
+    false,
+    drawn(() => <b>drawn</b>),
+  )
+  expect(screen.queryByTestId('message-drawing')).toBeNull()
 })

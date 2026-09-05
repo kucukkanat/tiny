@@ -30,6 +30,7 @@ build and ship one either way. `cd docs && bun dev`.
 | `@tiny/extension-chat`     | Chat and its history, straight from the tab         |
 | `@tiny/extension-settings` | Model endpoint, API key and theme, kept on device   |
 | `@tiny/extension-manager`  | The registry, and the screen you install one on     |
+| `@tiny/extension-charts`   | One tool that draws its own result, as an example   |
 | `@tiny/extension-starter`  | A working extension, and the one to copy            |
 
 ## Look

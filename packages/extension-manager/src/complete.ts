@@ -60,7 +60,7 @@ const EXTENSION: Record<keyof Extension, string> = {
   title: 'string — what the sidebar calls it',
   Screen: '() => ReactNode — a screen at /#/<id>',
   Sidebar: '() => ReactNode — a section in the sidebar',
-  tools: 'Record<string, Tool> — what the model may call',
+  tools: 'Record<string, Tool> — what the model may call, each with an optional View',
   providers: 'Record<string, ProviderSpec> — another model API',
   actions: 'ChatAction[] — offered on a highlighted reply',
   messageActions: 'MessageAction[] — offered in a message footer',

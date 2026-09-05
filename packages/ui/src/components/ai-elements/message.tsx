@@ -40,7 +40,10 @@ export const MessageContent = ({
 }: MessageContentProps) => (
   <div
     className={cn(
-      'is-user:dark flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm',
+      // `w-fit` on the assistant side sizes the column to its own content, so a
+      // child asking for 100% resolves against nothing and an SVG collapses to
+      // the replaced-element default. Text was already capped upstream.
+      'is-user:dark flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-sm group-[.is-assistant]:w-full',
       'group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground',
       'group-[.is-assistant]:text-foreground',
       className,
@@ -106,17 +109,20 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>
 // and a quarter of the payload. Mermaid fences render as code blocks.
 const streamdownPlugins = { cjk, code, math }
 
+// Plain `memo`, so every prop counts. It was a comparator on `children` and
+// `isAnimating` alone, which meant a third prop could never take — and the
+// reason it needed one, an `animated` object built inline on each render, is
+// fixed where that object is written instead.
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, plugins, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn('size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0', className)}
-      plugins={streamdownPlugins}
+      // Merged, not replaced. It used to sit ahead of the spread, so a caller
+      // wanting one more plugin silently dropped cjk, code and math instead.
+      plugins={{ ...streamdownPlugins, ...plugins }}
       {...props}
     />
   ),
-  (prevProps, nextProps) =>
-    prevProps.children === nextProps.children &&
-    nextProps.isAnimating === prevProps.isAnimating,
 )
 
 MessageResponse.displayName = 'MessageResponse'

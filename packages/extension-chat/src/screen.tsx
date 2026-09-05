@@ -6,9 +6,9 @@ import {
   ConversationScrollButton,
 } from '@tiny/ui/components/ai-elements/conversation'
 import { Message, MessageContent } from '@tiny/ui/components/ai-elements/message'
-import type { ChatAction, MessageAction, Registry, Tiny } from '@tiny/host'
+import type { ChatAction, MessageAction, Registry, Tiny, Viewed } from '@tiny/host'
 import { readModels, useProvider } from '@tiny/host/app'
-import { DirectChatTransport, type LanguageModel, type ToolSet } from 'ai'
+import { DirectChatTransport, type LanguageModel } from 'ai'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
 import { Composer } from './composer'
@@ -133,7 +133,7 @@ function Chat({
   name: string
   names: readonly string[]
   select: (name: string) => void
-  tools: ToolSet
+  tools: Readonly<Record<string, Viewed>>
   instructions?: string
   actions: readonly ChatAction[]
   messageActions: readonly MessageAction[]
@@ -216,7 +216,7 @@ function Chat({
                   data-testid={`message-${message.role}`}
                 >
                   <MessageContent>
-                    <MessageParts parts={message.parts} streaming={live} />
+                    <MessageParts parts={message.parts} streaming={live} tools={tools} />
                   </MessageContent>
                   {/* Not while it is still arriving: half a reply is not what
                       an action was written to be handed. */}

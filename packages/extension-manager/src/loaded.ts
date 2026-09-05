@@ -8,8 +8,9 @@ import {
   type Registry,
   type Screened,
   type Tiny,
+  type Viewed,
 } from '@tiny/host'
-import { asSchema, dynamicTool, type Tool, type ToolSet } from 'ai'
+import { asSchema, dynamicTool } from 'ai'
 import { useSyncExternalStore } from 'react'
 import {
   readInstalled,
@@ -40,7 +41,7 @@ export type Loaded = {
   /** Every live one, what ships first: the order every fold below ran in. */
   readonly extensions: readonly Extension[]
   readonly screens: readonly Screened[]
-  readonly tools: ToolSet
+  readonly tools: Readonly<Record<string, Viewed>>
   readonly providers: Registry
   readonly actions: readonly ChatAction[]
   readonly messageActions: readonly MessageAction[]
@@ -174,7 +175,7 @@ const build = (make: ExtensionModule, taken: readonly Extension[]): Extension =>
     if (taken.some((one) => kind in (one.providers ?? {})))
       throw new Error(`"${kind}" is a dialect this build already answers to.`)
 
-  for (const [name, tool] of Object.entries<Tool>(extension.tools ?? {})) {
+  for (const [name, tool] of Object.entries<Viewed>(extension.tools ?? {})) {
     if (!isToolName(name))
       throw new Error(`"${name}" is not a name a model is allowed to call.`)
     // Read the schema now: one the SDK can't convert should be an error here,
@@ -258,12 +259,19 @@ let loaded: Loaded | undefined
  * `dynamicTool` is for, and it renders as one part with the name on it — the
  * same path a tool you wrote yourself takes.
  */
-const wrap = (tool: Tool): Tool =>
-  dynamicTool({
+const wrap = (tool: Viewed): Viewed => ({
+  ...dynamicTool({
     description: tool.description,
     inputSchema: asSchema(tool.inputSchema),
     execute: async (input, options) => await tool.execute?.(input, options),
-  })
+  }),
+  // The two `dynamicTool` has no field for, carried across by hand. `View`
+  // rides on the tool so that whoever won the name won the drawing; and without
+  // `toModelOutput`, a payload written to be looked at is also spent in the
+  // model's context, in full, on every turn after this one.
+  View: tool.View,
+  toModelOutput: tool.toModelOutput,
+})
 
 /**
  * What we have for this extension *as it is now*. An answer from before it was
@@ -318,7 +326,7 @@ const collect = (): Loaded => {
     ),
     tools: first(
       live.flatMap(({ tools }) =>
-        Object.entries<Tool>(tools ?? {}).map(
+        Object.entries<Viewed>(tools ?? {}).map(
           ([name, tool]) => [name, wrap(tool)] as const,
         ),
       ),

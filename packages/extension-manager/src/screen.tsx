@@ -1,4 +1,4 @@
-import type { Extension } from '@tiny/host'
+import type { Extension, Viewed } from '@tiny/host'
 import { Button } from '@tiny/ui/components/button'
 import { CodeBlock } from '@tiny/ui/components/code-block'
 import { ConfirmDelete } from '@tiny/ui/components/confirm-delete'
@@ -502,10 +502,19 @@ function Detail() {
                       A screen at <code>/#/{extension.id}</code>
                     </li>
                   )}
-                  {Object.entries<Tool>(extension.tools ?? {}).map(([name, tool]) => (
+                  {Object.entries<Viewed>(extension.tools ?? {}).map(([name, tool]) => (
                     <li key={name} data-testid={`ext-tool-${name}`}>
                       <code>{name}</code> — {describe(tool)} Takes{' '}
                       {parameters(tool.inputSchema)}.
+                      {/* The one part of a tool that is a component rather than
+                          data, so it is called out the way the other slot that
+                          runs on your screen is. */}
+                      {tool.View && (
+                        <span data-testid={`ext-tool-view-${name}`}>
+                          {' '}
+                          Draws its own result in the reply — <em>runs its own code</em>
+                        </span>
+                      )}
                       {elsewhere.has(name) && (
                         <span
                           className="text-orange"

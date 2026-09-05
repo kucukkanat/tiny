@@ -30,7 +30,7 @@ export type Chat = {
   readonly id: string
   readonly title: string
   readonly updatedAt: number
-  /** Everything said in it, both sides, newline-separated. */
+  /** Everything said in it, both sides, a blank line between. */
   readonly text: string
 }
 

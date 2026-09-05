@@ -63,6 +63,9 @@ export default (tiny: Tiny): Extension => ({
 `Screen` is optional — a tools-only extension has no screen, and a
 sidebar-only one has no page worth showing.
 
+[Every slot](/extensions/slots) takes each one in turn, with a module you can
+paste into the editor and run.
+
 ## What the host hands you
 
 The platform you didn't bring, and the fold of what every extension did.
@@ -113,6 +116,9 @@ model is told. Everything else you bundle yourself, so the cost lands on whoever
 installs it rather than on every first visit.
 
 <CardGroup cols={2}>
+  <Card title="Every slot" icon="list" href="/extensions/slots">
+    All seven, with a runnable example each.
+  </Card>
   <Card title="Build one" icon="code" href="/extensions/building">
     In the app's editor, or with your own build.
   </Card>

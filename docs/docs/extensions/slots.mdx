@@ -1,0 +1,467 @@
+---
+title: Every slot
+description: The seven things an extension can add, with a runnable example of each.
+---
+
+`id` and `title` are required — the id is the route, the title is what the
+sidebar calls it. Everything else is optional, and each slot is a feature on its
+own: an extension with only `tools` never draws anything, and one with only a
+`Screen` never says a word to the model.
+
+| Slot           | What it adds                                    |
+| -------------- | ----------------------------------------------- |
+| `Screen`       | a route at `/#/<id>`, and everything under it   |
+| `Sidebar`      | your own section of the left rail               |
+| `tools`        | functions the model can call mid-answer         |
+| `providers`    | another model API, offered in Settings          |
+| `actions`      | a button on a highlighted passage of a reply    |
+| `instructions` | a line in the model's system prompt             |
+| `css`          | a stylesheet, adopted while the extension is on |
+
+Every example below is a whole module in the flavour you write in the app's own
+editor: JSX, no TypeScript, and nothing imported but the five specifiers on the
+map. Paste one into a blank extension and turn it on. `providers` is the
+exception, and its section says why.
+
+## Screen
+
+A page at `/#/<id>`. The shell matches `/<id>/*`, so everything under that
+segment is yours — render `<Routes>` and the paths inside are relative to your
+own route. It is rendered `<Screen />` with no props, inside an error boundary
+named after you, in a `<main>` that already supplies the page padding and the
+scroll container.
+
+```jsx
+import { Link, Navigate, Route, Routes, useParams } from 'react-router'
+
+export default () => ({
+  id: 'counter',
+  title: 'Counter',
+
+  // The shell matched /counter/*, so these paths hang off /#/counter.
+  Screen: () => (
+    <Routes>
+      <Route index element={<List />} />
+      <Route path=":n" element={<One />} />
+      <Route path="*" element={<Navigate to="/counter" replace />} />
+    </Routes>
+  ),
+})
+
+function List() {
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
+      {[1, 2, 3].map((n) => (
+        <Link
+          key={n}
+          to={String(n)}
+          data-testid={'counter-open-' + n}
+          className="bg-surface rounded-card p-3 text-sm"
+        >
+          Number {n}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+function One() {
+  const { n } = useParams()
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
+      <p data-testid="counter-value" className="text-sm">
+        Number {n}
+      </p>
+      <Link to="/counter" data-testid="counter-back" className="text-primary text-sm">
+        Back
+      </Link>
+    </div>
+  )
+}
+```
+
+:::danger
+Never mount a router of your own. There is exactly one `react-router` in the page
+and a second `<HashRouter>` is a second context — `useNavigate` throws.
+`<Routes>` on its own is the whole of it.
+:::
+
+Anything the screen needs from the host it closes over, because the component
+takes no arguments:
+
+```jsx
+export default (tiny) => ({
+  id: 'recap',
+  title: 'Recap',
+  Screen: () => <p className="text-sm">{tiny.useChats().length} conversations.</p>,
+})
+```
+
+Pick a width rather than filling the room: `max-w-2xl` for anything read or
+written, `max-w-5xl` for a grid of things, `max-w-6xl` for an editor beside what
+it produced. Measure with `@container` on your own root, never a `md:`
+breakpoint — the sidebar is 16rem wide and appears at 768px, so a screen has
+735px of room at a 767px window and 480px at 768px, and no viewport query can
+see that the sidebar is collapsed.
+
+## Sidebar
+
+Your own section of the left rail, under everyone else's. It is mounted for the
+whole session rather than only on your route, and it takes no props — read the
+current route with `useLocation`.
+
+Registering one **takes away your row in the sidebar footer**, on the grounds
+that a section is already a way in. If nothing in it links to your screen, there
+is no way to reach your screen.
+
+```jsx
+import { Link, useLocation, useParams } from 'react-router'
+
+// Thumb-sized where there is no cursor, tight where there is — the same
+// `h-11 md:h-8` the app's own rows use. The active state rides on `data-active`
+// because that is the form of `bg-sidebar-accent` the app already generates.
+const ROW =
+  'flex h-11 w-full items-center gap-2 rounded-md px-2 text-left text-sm' +
+  ' hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:font-medium md:h-8'
+
+// On a phone the rail is a drawer sitting over the thing you just picked.
+// `setOpenMobile` would shut it, but that lives in @tiny/ui, which is not on the
+// import map — so press the shell's own toggle, and only where there is a
+// drawer to shut.
+const closeDrawer = () => {
+  if (window.innerWidth >= 768) return
+  document.querySelector('[data-testid="sidebar-toggle"]')?.click()
+}
+
+// One path segment each: `pathname` is the encoded path, so a name with a
+// space in it would never match the comparison below.
+const NOTES = ['Groceries', 'Ideas', 'Reading']
+
+export default () => ({
+  id: 'notes',
+  title: 'Notes',
+
+  Sidebar: () => {
+    const { pathname } = useLocation()
+
+    return (
+      <div className="flex w-full min-w-0 flex-col p-2">
+        <div className="text-ink-3 flex h-8 items-center px-2 text-xs font-medium">
+          Notes
+        </div>
+        <ul>
+          {NOTES.map((name) => (
+            <li key={name}>
+              <Link
+                to={'/notes/' + name}
+                data-testid={'note-' + name}
+                data-active={pathname === '/notes/' + name}
+                onClick={closeDrawer}
+                className={ROW}
+              >
+                <span className="truncate">{name}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  },
+
+  // The shell routed /#/notes/*, so the tail is `useParams()['*']` — already
+  // decoded by the router.
+  Screen: () => (
+    <p className="text-ink-2 text-sm">{useParams()['*'] || 'Pick a note on the left.'}</p>
+  ),
+})
+```
+
+:::note
+Below 768px the rail is a drawer, and a closed drawer unmounts what is in it —
+`useState` in a sidebar section resets every time it opens. Anything worth
+keeping goes in the URL or in `localStorage`.
+:::
+
+A `Sidebar` with no `Screen` still gets a route; the shell fills it with a
+component that renders nothing, so `/#/<id>` exists and is blank.
+
+## tools
+
+Functions the model can call in the middle of an answer. `tool()` is the AI
+SDK's own, so what you put in `inputSchema` is both what `execute` is handed and
+what the model is told — `.describe()` on a field is the only documentation it
+gets, and one shared zod is what keeps that true across the import map.
+
+A name has to be something a provider will accept: `/^[a-zA-Z0-9_-]{1,64}$/`.
+
+```jsx
+import { tool } from 'ai'
+import { z } from 'zod'
+
+export default () => ({
+  id: 'timezones',
+  title: 'Timezones',
+
+  tools: {
+    time_in: tool({
+      description: 'The current local time in a given IANA timezone.',
+      inputSchema: z.object({
+        zone: z.string().describe('An IANA timezone, e.g. Europe/Istanbul'),
+        clock: z
+          .enum(['12', '24'])
+          .optional()
+          .describe('Which clock to read it on. 24 by default.'),
+      }),
+      // What arrives here is what the schema said, already validated. A zone
+      // that does not exist throws, and the throw goes back to the model to
+      // try again rather than taking the answer down.
+      execute: ({ zone, clock = '24' }) =>
+        new Intl.DateTimeFormat('en-GB', {
+          timeZone: zone,
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          hour12: clock === '12',
+        }).format(new Date()),
+    }),
+  },
+})
+```
+
+A tool can ask the person at the keyboard. `tiny.ask` puts the question in the
+chat and the call parks until it is answered — nothing times out, because the
+agent loop is running in this tab:
+
+```jsx
+import { tool } from 'ai'
+import { z } from 'zod'
+
+export default (tiny) => ({
+  id: 'confirm',
+  title: 'Confirm',
+  instructions: 'Before anything irreversible, call confirm_step and wait for it.',
+
+  tools: {
+    confirm_step: tool({
+      description: 'Ask the person at the keyboard to approve a step before taking it.',
+      inputSchema: z.object({
+        step: z.string().describe('What is about to happen, in one sentence'),
+        choices: z.array(z.string()).optional().describe('Buttons to offer'),
+      }),
+      execute: async ({ step, choices }) => {
+        const answer = await tiny.ask(step, choices?.length ? choices : ['Yes', 'No'])
+        // Skip answers with an empty string, and it is the only thing that
+        // does — Continue stays disabled until something is typed or picked.
+        // That is a refusal, not a failure.
+        if (answer === '') return { approved: false, answer: 'skipped' }
+        return { approved: answer.toLowerCase() === 'yes', answer }
+      },
+    }),
+  },
+})
+```
+
+The second argument to `execute` is the SDK's own, and `abortSignal` is the one
+worth knowing: it fires when the composer's **Stop** is pressed, so a tool that
+reaches the network should pass it on.
+
+```js
+execute: async ({ city }, { abortSignal }) => {
+  const url = 'https://wttr.in/' + encodeURIComponent(city) + '?format=j1'
+  const response = await fetch(url, { signal: abortSignal })
+  if (!response.ok) throw new Error('wttr.in said ' + response.status)
+  const now = (await response.json()).current_condition[0]
+  // Hand back what answers the question. The whole payload is 40 kB of noise.
+  return { celsius: now.temp_C, description: now.weatherDesc[0].value }
+}
+```
+
+:::warning
+A tool without an `execute` is not a human-in-the-loop tool here. The registry
+wraps every tool with one, so a missing `execute` resolves `undefined` and the
+model is handed `null`. Use `tiny.ask` for the question you meant to ask.
+:::
+
+`tiny.ask` only resolves while chat is on screen — it is chat that renders the
+question. Called from another extension's screen, or with no model configured,
+the promise simply waits.
+
+## providers
+
+Another model API, offered in Settings beside Anthropic and OpenAI. `label` is
+the row, `baseUrl` is where calls go when the endpoint field is left blank,
+`model` turns what the user configured into something the SDK can call, and
+`models` is what fills the model picker.
+
+**This is the one slot you cannot use from the app's editor.** Nothing on the
+import map builds a `LanguageModel` — the `ai` shim is `tool`, `generateText`,
+`dynamicTool`, `asSchema` and `jsonSchema`, and no `@ai-sdk/*` package resolves.
+A provider has to be bundled, either into the app or into an extension you build
+yourself:
+
+```ts
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import type { ExtensionModule } from '@tiny/host'
+import * as z from 'zod'
+
+const ModelList = z.object({ data: z.array(z.object({ id: z.string() })) })
+
+export default (() => ({
+  id: 'groq',
+  title: 'Groq',
+
+  providers: {
+    // Not `anthropic` or `openai`. Those belong to the build whether Settings
+    // is showing or not, and taking one fails the whole extension.
+    groq: {
+      label: 'Groq',
+      baseUrl: 'https://api.groq.com/openai/v1',
+
+      // Called during render, before there is necessarily a key. Build the
+      // client, never fetch, and don't throw on a blank key.
+      model: ({ baseUrl, apiKey, model }) =>
+        createOpenAICompatible({ name: 'groq', baseURL: baseUrl, apiKey })(model),
+
+      // Called only when Settings' Load button is pressed. Throw with something
+      // worth reading — the message is what appears under the model picker.
+      models: async ({ baseUrl, apiKey }) => {
+        const url = `${baseUrl.replace(/\/$/, '')}/models`
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        }).catch(() => null)
+        if (!response) throw new Error(`Could not reach ${url}. Wrong address, or CORS.`)
+        if (!response.ok)
+          throw new Error(`${url} answered ${response.status} ${response.statusText}`)
+
+        const body = ModelList.safeParse(await response.json().catch(() => null))
+        if (!body.success) throw new Error(`${url} did not answer with a model list`)
+        return body.data.data.map(({ id }) => id)
+      },
+    },
+  },
+})) satisfies ExtensionModule
+```
+
+Ship it in the build ([bundling](/extensions/bundling)) and it imports
+`@ai-sdk/openai-compatible` from the workspace. Build it with vite
+([building](/extensions/building)) and the same file bundles the provider
+package into itself — which is what `extension-starter` does for Gemini, and
+most of why its built file is 80 kB.
+
+## actions
+
+A button in the bar that appears when a passage of a reply is highlighted.
+Tapping one sends the ask straight away, with the passage quoted under it:
+`<ask>:\n\n> <the passage>`. Yours are appended after chat's built-in five.
+
+```jsx
+export default () => ({
+  id: 'plain-english',
+  title: 'Plain English',
+
+  actions: [
+    { label: 'Plainer', ask: 'Say this again in plain English' },
+    { label: 'Example', ask: 'Give one concrete example of this' },
+  ],
+})
+```
+
+Nothing is imported, because an action is plain data. The bar only appears on a
+reply — highlighting your own message offers nothing, since selecting what you
+wrote is copying, not asking for another go at it.
+
+## instructions
+
+One line added to the model's system prompt. Every live extension's is joined,
+blank line between, in fold order.
+
+```jsx
+export default () => ({
+  id: 'metric',
+  title: 'Metric',
+  instructions: 'Give measurements in metric units, with imperial in brackets after.',
+})
+```
+
+This is the one contribution that would otherwise appear nowhere — you would
+only ever meet it in the model's behaviour — so the Extensions screen prints it
+verbatim, before the switch is turned on.
+
+## css
+
+A stylesheet, adopted on the document while the extension is on and dropped
+again when it goes off. It is a real `CSSStyleSheet`, unlayered, so its rules
+beat the app's utilities at equal specificity — and it is global, not scoped, so
+prefix your selectors.
+
+Write real CSS on the app's own custom properties. Tailwind utilities are
+generated at build time by scanning the repo, and a module living in
+`localStorage` was never scanned, so a class the app does not already use
+produces no CSS at all.
+
+```jsx
+export default () => ({
+  id: 'ticker',
+  title: 'Ticker',
+
+  css: `
+    .ticker {
+      display: grid;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--elevation-card);
+    }
+    .ticker-note { color: var(--ink-2); font-size: 0.875rem; }
+    .ticker-go { background: var(--brand); color: oklch(100% 0 0); }
+  `,
+
+  Screen: () => (
+    <div className="ticker" data-testid="ticker">
+      <p className="ticker-note">Styled by the extension, in the app's colours.</p>
+      <button type="button" className="ticker-go" data-testid="ticker-go">
+        Go
+      </button>
+    </div>
+  ),
+})
+```
+
+Dark mode needs nothing: the theme toggles a class on `<html>` and every colour
+name above is redefined under it.
+
+:::warning
+Two names that look available and are not. `@import` is dropped — the sheet is
+built with `replaceSync`, which discards import rules. And the theme's own
+aliases (`--color-brand`, `--radius-card`, `--spacing-control`, `--shadow-card`)
+are inlined into utilities at build time and never emitted as custom properties.
+Use the palette underneath them: `--surface`, `--inset`, `--hover`, `--ink`,
+`--ink-2`, `--ink-3`, `--line`, `--brand`, `--green`, `--orange`, `--red`,
+`--radius`, `--elevation-card`, `--elevation-overlay`.
+:::
+
+## When two extensions want the same thing
+
+Everything is folded into one list, what ships first, and the rules differ by
+slot:
+
+| Both register            | What happens                                                   |
+| ------------------------ | -------------------------------------------------------------- |
+| the same `id`            | Refused: _"…is a name this build already answers to."_         |
+| the same tool name       | First folded wins, silently. Prefix yours.                     |
+| the same provider `kind` | Refused: _"…is a dialect this build already answers to."_      |
+| `actions`                | Both appear, in fold order.                                    |
+| `instructions`           | Both, joined with a blank line.                                |
+| `css`                    | Both sheets are adopted. The order between them is not stable. |
+
+A refusal takes the whole extension with it — an installed one shows the message
+on its row and everything else keeps loading; one in the build takes the app
+down at boot, which is what you want from a build error.
+
+Before the switch goes on, the Extensions screen shows the screen's route, every
+tool with its parameters read back out of the compiled schema, every provider,
+every action, and the `instructions` in full. `Sidebar` and `css` are not on that
+list — see [what an extension can do to you](/extensions/security).

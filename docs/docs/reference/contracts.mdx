@@ -41,11 +41,30 @@ type Tiny = {
   readonly useChats: () => readonly Chat[]
   readonly useModel: () => LanguageModel | undefined
   readonly ask: (question: string, options?: readonly string[]) => Promise<string>
+  readonly useTools: () => ToolSet
+  readonly useInstructions: () => string | undefined
+  readonly useActions: () => readonly ChatAction[]
+  readonly useProviders: () => Registry
 }
 ```
 
-What the app hands an extension. Three things, because everything else is
-already the platform.
+What the app hands an extension: the platform it didn't bring, and the fold of
+what every extension did. The first three are the platform — conversations, the
+configured model, and a question the person at the keyboard answers. The four
+below them are the fold, and they exist because the chat that ships is an
+extension like any other and had to read them through the same contract.
+
+They are hooks, and `tiny` is one object built once at the app's module scope,
+so calling `tiny.useChats()` in a component is as fixed as an import. The
+react-hooks lint rule cannot see that; a bundled extension disables it per line
+with a reason.
+
+:::note
+This type only ever grows. A module sitting in someone's `localStorage` is bound
+to the shape it was written against and there is no migration that reaches it —
+so `useModel` returns a `LanguageModel` and always will. Weigh an eighth member
+against that.
+:::
 
 ## Chat and ChatAction
 
@@ -54,7 +73,7 @@ type Chat = {
   readonly id: string
   readonly title: string
   readonly updatedAt: number
-  /** Everything said in it, both sides, newline-separated. */
+  /** Everything said in it, both sides, a blank line between. */
   readonly text: string
 }
 

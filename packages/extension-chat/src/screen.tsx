@@ -158,11 +158,25 @@ function Chat({
   // conversation as touched for being read, and give an untouched one a row in
   // the sidebar it hasn't earned.
   const written = useRef(messages)
+  const at = useRef(0)
   useEffect(() => {
     if (messages === written.current) return
-    written.current = messages
-    saveConversation(id, messages)
-  }, [id, messages])
+    // Ten saves a second stringify the whole conversation and publish into the
+    // store this screen subscribes to, so every tick renders the thread twice
+    // to draw what was already there. Nothing the sidebar shows can change
+    // mid-reply: the title is still the first thing you said, and the row went
+    // to the top on the turn's first save. Slower while it streams, at once
+    // when it stops.
+    const save = () => {
+      written.current = messages
+      at.current = Date.now()
+      saveConversation(id, messages)
+    }
+    const wait = status === 'streaming' ? at.current + 1000 - Date.now() : 0
+    if (wait <= 0) return save()
+    const later = setTimeout(save, wait)
+    return () => clearTimeout(later)
+  }, [id, messages, status])
 
   /**
    * `status` in a closure is a render behind, so it cannot see a request the

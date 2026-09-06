@@ -11,17 +11,36 @@ const show = (
   tools: Readonly<Record<string, Viewed>> = {},
 ) => render(<MessageParts parts={parts} streaming={streaming} tools={tools} />)
 
+// A shut expander has never built its rows, so what is inside one is only in
+// the document after the press that asks for it.
+const open = (element: HTMLElement) => {
+  fireEvent.click(element.querySelector('button') as HTMLElement)
+  return element
+}
+
+// A run that is done sits behind a shut row of its own, so a chip inside it
+// takes two presses to reach.
+const openTool = () => {
+  const run = screen.queryByTestId('message-tools')
+  if (run) open(run)
+  return open(screen.getByTestId('message-tool'))
+}
+
 test('text is rendered', () => {
   show([{ type: 'text', text: 'the answer' }])
   expect(document.body.textContent).toContain('the answer')
 })
 
-test('reasoning gets its own block, shut until you open it', () => {
+test('reasoning gets its own block, and opening it shows the thinking', () => {
   show([{ type: 'reasoning', text: 'first, consider', state: 'done' }])
 
   const block = screen.getByTestId('message-reasoning')
   expect(block.querySelector('button')?.getAttribute('aria-expanded')).toBe('false')
   expect(block.textContent).toContain('Thought it through')
+  expect(block.textContent).not.toContain('first, consider')
+
+  open(block)
+  expect(block.querySelector('button')?.getAttribute('aria-expanded')).toBe('true')
   expect(block.textContent).toContain('first, consider')
 })
 
@@ -279,7 +298,7 @@ test('a finished tool shows what went in and what came back', () => {
     },
   ])
 
-  const block = screen.getByTestId('message-tool')
+  const block = openTool()
   expect(block.textContent).toContain('Istanbul')
   expect(block.textContent).toContain('19')
 })
@@ -298,7 +317,7 @@ test('a tool that failed says so instead of swallowing it', () => {
 
   const block = screen.getByTestId('message-tool')
   expect(block.textContent).toContain('weather failed')
-  expect(block.textContent).toContain('wttr.in said 503')
+  expect(open(block).textContent).toContain('wttr.in said 503')
 })
 
 const call = (name: string, id: string) =>
@@ -316,6 +335,9 @@ test('a run of calls is one row, not one box each', () => {
 
   expect(screen.getAllByTestId('message-tools')).toHaveLength(1)
   expect(screen.getByTestId('message-tools').textContent).toContain('2 tool calls')
+  expect(screen.queryAllByTestId('message-tool')).toHaveLength(0)
+
+  open(screen.getByTestId('message-tools'))
   expect(screen.getAllByTestId('message-tool')).toHaveLength(2)
 })
 
@@ -337,6 +359,7 @@ test('what a tool was handed can be copied off the block showing it', () => {
   })
 
   show([call('weather', 'call-1')])
+  openTool()
   fireEvent.click(screen.getByTestId('code-copy-input'))
 
   expect(copied).toEqual([JSON.stringify({ city: 'Istanbul' }, null, 2)])
@@ -409,7 +432,9 @@ test('a call that failed keeps its own error rather than being drawn', () => {
   )
 
   expect(screen.queryByTestId('message-drawing')).toBeNull()
-  expect(screen.getByTestId('message-tool').textContent).toContain('wttr.in said 503')
+  expect(open(screen.getByTestId('message-tool')).textContent).toContain(
+    'wttr.in said 503',
+  )
 })
 
 test('a drawing that throws names its tool instead of taking the thread down', () => {

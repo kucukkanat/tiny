@@ -261,6 +261,20 @@ the same question. It is 67 lines on radix's `AlertDialog` directly, and it cost
 **+931 B gzipped of JS and +42 B of CSS on first paint**, because `Sheet` already
 brings radix's dialog in and `AlertDialog` is a thin layer over it.
 
+A reply that is still arriving re-renders ten times a second, and everything on
+that path is measured against the whole reply, not the new chunk. Four rules
+came out of measuring it, and none of them may be undone quietly: a tool chip is
+memoised on `(state, input, output, errorText)`, because the SDK hands back a
+fresh shallow copy of every part per tick and only those hold identity; a shut
+expander has not built its children, because a 200 kB tool result is 33,000
+nodes nobody asked to see; markdown is re-lexed from the last block rather than
+the top, because marked's block lexer rescans the tail once per block and that
+is cubic over a reply; and a growing code fence is highlighted 250 ms after it
+stops growing, because shiki keys its cache on length, so every prefix is a
+miss and re-tokenises the whole fence. The save is throttled to once a second
+while streaming for the same reason — it publishes into the store the screen
+subscribes to, so an unthrottled one commits the whole thread twice per tick.
+
 A registry component arrives whole and is used in part, so the parts nothing
 reaches get cut on the way in — `message`'s branch family and toolbar, which took
 `button-group` with them, `conversation`'s markdown download, `sidebar`'s nine

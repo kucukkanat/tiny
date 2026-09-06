@@ -238,14 +238,9 @@ export function MessageFooter({
   )
 }
 
-// Out here rather than inline: `MessageResponse` is memoised on its props, and
-// a fresh object every render is a prop that never compares equal.
-const FADE_IN = { animation: 'fadeIn', sep: 'word', duration: 260 } as const
-
-/** Words fade in as they land, and a caret sits where the next one will go. */
+/** The reply as it lands, with a caret sitting where the next word will go. */
 const Text = ({ text, streaming }: { text: string; streaming: boolean }) => (
   <MessageResponse
-    animated={FADE_IN}
     isAnimating={streaming}
     {...(streaming ? { caret: 'block' as const } : {})}
   >
@@ -254,8 +249,10 @@ const Text = ({ text, streaming }: { text: string; streaming: boolean }) => (
 )
 
 /**
- * A summary you can open. The rows stay in the tree while shut — grid tracks
- * animate from `0fr`, which a height can't do without measuring first.
+ * A summary you can open. The rows are built the first time it is opened and
+ * kept from then on — grid tracks animate from `0fr`, which needs the content
+ * mounted, but only from the press that asks for it. Text inside one that has
+ * never been opened is not in the document, so find-in-page won't reach it.
  */
 function Expander({
   summary,
@@ -271,13 +268,17 @@ function Expander({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(initially)
+  const [ever, setEver] = useState(initially)
 
   return (
     <div className="w-full" data-testid={testid}>
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open)
+          setEver(true)
+        }}
         className={`text-ink-2 hover:text-ink rounded-control flex w-fit max-w-full items-center gap-1.5 py-1 text-left text-sm transition-colors ${className}`}
       >
         <ChevronRightIcon
@@ -290,7 +291,7 @@ function Expander({
         style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-1.5 pt-1.5">{children}</div>
+          <div className="flex flex-col gap-1.5 pt-1.5">{ever && children}</div>
         </div>
       </div>
     </div>
@@ -309,6 +310,22 @@ const Reasoning = ({ text, streaming }: { text: string; streaming: boolean }) =>
 
 const json = (value: unknown) => JSON.stringify(value, null, 2) ?? 'undefined'
 
+/**
+ * On the fields and not the object: a reply lands ten times a second and the
+ * SDK hands back a fresh shallow copy of every part each time, so identity
+ * never holds — but what hangs off `input` and `output` is the same object
+ * throughout. Without this, every chip in every message re-stringifies its JSON
+ * and rebuilds a row per line, ten times a second, whether it is open or shut.
+ */
+const same = (
+  was: { part: DynamicToolUIPart },
+  now: { part: DynamicToolUIPart },
+): boolean =>
+  was.part.state === now.part.state &&
+  was.part.input === now.part.input &&
+  was.part.output === now.part.output &&
+  was.part.errorText === now.part.errorText
+
 // Green when it came back, red when it didn't, orange while it's still out.
 const DOT: Partial<Record<DynamicToolUIPart['state'], string>> = {
   'output-available': 'bg-green',
@@ -320,35 +337,38 @@ const DOT: Partial<Record<DynamicToolUIPart['state'], string>> = {
  * because you wrote the tool after the build — so there is one branch here and
  * not one per tool.
  */
-const ToolChip = ({ part }: { part: DynamicToolUIPart }) => (
-  <Expander
-    testid="message-tool"
-    className="border-line bg-inset hover:bg-hover rounded-chip border px-2"
-    summary={
-      <>
-        <span
-          className={`size-1.5 shrink-0 rounded-full ${DOT[part.state] ?? 'bg-orange'}`}
-        />
-        <span className="truncate">
-          {part.state === 'output-error' ? (
-            `${part.toolName} failed`
-          ) : part.state === 'output-available' ? (
-            part.toolName
-          ) : (
-            <Shimmer>{part.toolName}</Shimmer>
-          )}
-        </span>
-      </>
-    }
-  >
-    <CodeBlock label="Input" code={json(part.input)} />
-    {part.state === 'output-available' && (
-      <CodeBlock label="Output" code={json(part.output)} />
-    )}
-    {part.state === 'output-error' && (
-      <p className="text-destructive text-sm">{part.errorText}</p>
-    )}
-  </Expander>
+const ToolChip = memo(
+  ({ part }: { part: DynamicToolUIPart }) => (
+    <Expander
+      testid="message-tool"
+      className="border-line bg-inset hover:bg-hover rounded-chip border px-2"
+      summary={
+        <>
+          <span
+            className={`size-1.5 shrink-0 rounded-full ${DOT[part.state] ?? 'bg-orange'}`}
+          />
+          <span className="truncate">
+            {part.state === 'output-error' ? (
+              `${part.toolName} failed`
+            ) : part.state === 'output-available' ? (
+              part.toolName
+            ) : (
+              <Shimmer>{part.toolName}</Shimmer>
+            )}
+          </span>
+        </>
+      }
+    >
+      <CodeBlock label="Input" code={json(part.input)} />
+      {part.state === 'output-available' && (
+        <CodeBlock label="Output" code={json(part.output)} />
+      )}
+      {part.state === 'output-error' && (
+        <p className="text-destructive text-sm">{part.errorText}</p>
+      )}
+    </Expander>
+  ),
+  same,
 )
 
 /**
@@ -388,14 +408,8 @@ const Drawn = memo(
     ) : (
       <ToolChip part={part} />
     ),
-  // On the fields and not the object: a reply lands ten times a second and the
-  // SDK hands back a shallow copy of every part each time, so identity never
-  // holds — but what hangs off `output` is the same object throughout.
-  (was, now) =>
-    was.View === now.View &&
-    was.part.state === now.part.state &&
-    was.part.input === now.part.input &&
-    was.part.output === now.part.output,
+  // The chip's own rule, plus the component that draws on top of it.
+  (was, now) => was.View === now.View && same(was, now),
 )
 
 /** A run of calls as one line you can open, not a stack of boxes. */

@@ -14,7 +14,7 @@ import { math } from '@streamdown/math'
 import type { UIMessage } from 'ai'
 import type { ComponentProps, HTMLAttributes } from 'react'
 import { memo } from 'react'
-import { Streamdown } from 'streamdown'
+import { Streamdown, parseMarkdownIntoBlocks } from 'streamdown'
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage['role']
@@ -104,10 +104,48 @@ export const MessageAction = ({
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>
 
+// A fence that is still arriving is a different string every 100ms, and shiki
+// has no incremental mode — it keys its cache on the length, so every prefix
+// misses and re-tokenises the whole block. At 9 kB that is 128ms of work per
+// 100ms tick. Wait for the fence to stop moving; streamdown draws the plain
+// block until colour arrives, which is what was on screen in the meantime.
+let pending: ReturnType<typeof setTimeout> | undefined
+const settled: typeof code = {
+  ...code,
+  highlight: (options, notify) => {
+    const hit = code.highlight(options, notify)
+    if (hit || !notify) return hit
+    clearTimeout(pending)
+    pending = setTimeout(() => code.highlight(options, notify), 250)
+    return null
+  },
+}
+
 // No mermaid: it is a static import, so its core, d3 and rough land in the
 // first paint whether or not a reply ever draws a diagram — 16 extra requests
 // and a quarter of the payload. Mermaid fences render as code blocks.
-const streamdownPlugins = { cjk, code, math }
+const streamdownPlugins = { cjk, code: settled, math }
+
+// A reply only ever appends, so every block but the last is already settled —
+// but streamdown re-lexes the whole string on every tick, and marked's block
+// lexer rescans the tail once per block, so that is quadratic in blocks and
+// cubic over a reply. Re-lex from the last block's start instead. Module-level
+// because it sits in a `useMemo` dep array; a miss falls back to a full lex, so
+// a shared one-entry cache is self-correcting.
+let seen: { text: string; blocks: readonly string[] } = { text: '', blocks: [] }
+
+// Two blocks kept back, not one: a boundary can change retroactively — a setext
+// underline, a link-reference definition — one block after it was written.
+export const splitBlocks = (text: string): string[] => {
+  if (text === seen.text) return [...seen.blocks]
+  const keep =
+    text.startsWith(seen.text) && seen.blocks.length > 2 ? seen.blocks.length - 2 : 0
+  const head = seen.blocks.slice(0, keep)
+  const at = head.reduce((n, block) => n + block.length, 0)
+  const blocks = [...head, ...parseMarkdownIntoBlocks(text.slice(at))]
+  seen = { text, blocks }
+  return blocks
+}
 
 // Plain `memo`, so every prop counts. It was a comparator on `children` and
 // `isAnimating` alone, which meant a third prop could never take — and the
@@ -120,6 +158,7 @@ export const MessageResponse = memo(
       // Merged, not replaced. It used to sit ahead of the spread, so a caller
       // wanting one more plugin silently dropped cjk, code and math instead.
       plugins={{ ...streamdownPlugins, ...plugins }}
+      parseMarkdownIntoBlocksFn={splitBlocks}
       {...props}
     />
   ),

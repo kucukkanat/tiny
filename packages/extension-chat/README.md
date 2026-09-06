@@ -49,11 +49,17 @@ candidate is open.
 
 ## What a message is made of
 
-`parts.tsx` renders a message part by part. Text fades in a word at a time with
-a caret at the end while it streams — Streamdown's own animation, not a
-hand-rolled one. Reasoning gets a `<details>` block, shut until you open it,
+`parts.tsx` renders a message part by part. A caret sits at the end of the text
+while it streams. There is no word-by-word fade: Streamdown's animation leaves
+one `<span>` per word in the document forever, and at 20 kB of reply that is
+3,873 elements against 257. Reasoning gets a block, shut until you open it,
 labelled "Thinking" while it arrives and "Thought it through" once it's done.
 `Thinking` covers the gap between sending and the first token.
+
+A block that has never been opened has not built its contents — that is what
+keeps a 200 kB tool result off the tick it lands on. Once opened, it stays
+built, so the grid-track animation still has something to reveal. The cost is
+that find-in-page will not reach text inside a block nobody has opened yet.
 
 ```tsx
 <MessageParts parts={message.parts} streaming={message === messages.at(-1)} />

@@ -162,13 +162,45 @@ job; it is gone, and what it stored is carried across on first boot by
 `migrate.ts`, which can be deleted once nobody is upgrading from a build that had
 it.
 
-Five ways to install: a URL, a file off the disk, a blank one, one of three
-premades in `templates.ts`, or text typed into an editor already open. The last
-four are kept as source and run from a `blob:` minted per version — so they work
+Six ways to install: a URL, a file off the disk, a blank one, one of three
+premades in `templates.ts`, text typed into an editor already open, or the model
+writing one. The last five are kept as source and run from a `blob:` minted per version — so they work
 offline, survive a reload, and can be edited in place. JSX works; it is compiled
 on the way to the blob by `jsx.ts`. TypeScript does not. Editing saves but does
 not run: importing a module executes it, and a loop you are halfway through
 writing would take the tab with it, so Run is a button.
+
+`extension-author` is the sixth, and it is the same five verbs the Extensions
+screen has minus the one it hasn't: list, read, write, delete, and no way to
+switch a row on. What the model writes lands off, with a card in the reply
+linking to the switch, because the whole security model here is that you see
+what an extension does before it runs — a model that could write code and start
+it removes the only place that is visible. `write_extension` compiles through
+`transformJsx` before it saves, so a stray tag is `unclosed <div> (3:4)` in the
+same turn rather than a broken row nobody notices, and nothing is stored when it
+fails. It refuses to write source onto a row installed from a URL: that row would
+then carry both an address and a body, which is a shape the store drops on the
+next read, so it would vanish rather than fail.
+
+Its own package rather than five more exports on `extension-manager`, because the
+manager is the one extension `off.ts` will not let you switch off — five tools
+and their instructions would then be in context on every turn of every
+conversation, forever. That is also why `installed.ts` and `jsx.ts` are in
+`packages/host` now: `extensions.test.ts` fails the build if one `extension-*`
+package imports another, and the shape of a stored row and the one compile step
+between text and blob were always contract rather than manager. The host's
+dependencies went from `['ai']` to `['ai', 'zod']` with them, which is still
+nothing an extension cannot already see — both are on the import map.
+
+The whole of it is **+2,879 B raw / +1,177 B gzipped of JS on first paint, and
++87 B raw / +13 B gzipped of CSS**. `extension_docs` is not in that number: the
+guide is four kilobytes of prose that most visits never read, so it is
+`import()`ed on the first ask — **4,458 B raw / 2,216 B gzipped when it arrives**.
+It is built from tables typed `Record<keyof Tiny, string>` and
+`Record<keyof Extension, string>`, so a ninth member of the contract fails the
+build until the guide catches up. That is `complete.ts`'s trick, and it is worth
+having twice: both are promises made to a module already in someone's storage,
+and one of them going stale is a model writing against a world that moved.
 
 Blank exists so that code on the clipboard is one paste from installed. It is a
 button rather than a fourth `TEMPLATES` row, because a template is a premade

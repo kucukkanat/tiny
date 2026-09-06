@@ -105,6 +105,14 @@ write('tiny.thing', json) // false when storage is full, never a throw
 isToolName(name) // what a provider will accept, and a model call
 ```
 
+Two more, for the state an extension is in before it is one: the row it sits in
+(`readInstalled`, `saveInstalled`, `removeInstalled`, `useInstalled`, `newSource`,
+`newInstall`, `titleIn`) and the one compile step between text and a `blob:`
+(`transformJsx` — JSX yes, TypeScript no). They are here rather than with the
+screen that edits a row because two features read them now: that screen, and the
+tools the model writes one with. Both are contract, and no feature is behind
+them.
+
 `Safely` is the shell's error boundary. React unmounts the entire root on an
 uncaught render error, so without it one bad screen takes the sidebar and every
 other feature with it — and since the route is in the hash, reloading lands right

@@ -1,4 +1,14 @@
-import type { Extension, Viewed } from '@tiny/host'
+import {
+  newInstall,
+  newSource,
+  removeInstalled,
+  saveInstalled,
+  titleIn,
+  useInstalled,
+  type Extension,
+  type Installed,
+  type Viewed,
+} from '@tiny/host'
 import { Button } from '@tiny/ui/components/button'
 import { CodeBlock } from '@tiny/ui/components/code-block'
 import { ConfirmDelete } from '@tiny/ui/components/confirm-delete'
@@ -19,15 +29,6 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router'
-import {
-  newInstall,
-  newSource,
-  removeInstalled,
-  saveInstalled,
-  titleIn,
-  useInstalled,
-  type Installed,
-} from './installed'
 import { runningSource, ships, useExtensions, type Entry } from './loaded'
 import { MANAGER, setOff, useOff } from './off'
 import { prettify } from './pretty'

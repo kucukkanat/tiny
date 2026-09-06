@@ -184,3 +184,20 @@ export type ExtensionModule = (tiny: Tiny) => Extension
 
 export { Safely } from './safely'
 export { isExtensionId, isToolName, write } from './storage'
+
+// What an extension is before it runs: the row it sits in, and the one compile
+// step between the text and the module. Both are the contract rather than the
+// manager's own — the screen that edits a row and the tools that write one are
+// two features reading the same shape.
+export {
+  newInstall,
+  newSource,
+  readInstalled,
+  removeInstalled,
+  saveInstalled,
+  subscribeInstalled,
+  titleIn,
+  useInstalled,
+  type Installed,
+} from './installed'
+export { transformJsx } from './jsx'

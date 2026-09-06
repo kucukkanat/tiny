@@ -1,6 +1,11 @@
-import { isExtensionId, isToolName } from '@tiny/host'
+import {
+  isExtensionId,
+  isToolName,
+  newSource,
+  saveInstalled,
+  type Installed,
+} from '@tiny/host'
 import { z } from 'zod'
-import { newSource, saveInstalled, type Installed } from './installed'
 
 // Where tools lived when they were their own feature, before extensions could
 // carry them. This whole file exists to empty that drawer, and can go once

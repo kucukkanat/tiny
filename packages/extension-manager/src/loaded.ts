@@ -1,9 +1,14 @@
 import {
   isExtensionId,
   isToolName,
+  readInstalled,
+  saveInstalled,
+  subscribeInstalled,
+  transformJsx,
   type ChatAction,
   type Extension,
   type ExtensionModule,
+  type Installed,
   type MessageAction,
   type Registry,
   type Screened,
@@ -12,13 +17,6 @@ import {
 } from '@tiny/host'
 import { asSchema, dynamicTool } from 'ai'
 import { useSyncExternalStore } from 'react'
-import {
-  readInstalled,
-  saveInstalled,
-  subscribeInstalled,
-  type Installed,
-} from './installed'
-import { transformJsx } from './jsx'
 import { readOff, subscribeOff } from './off'
 
 /** Where one installed extension has got to. */

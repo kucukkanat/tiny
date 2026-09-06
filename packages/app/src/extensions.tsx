@@ -1,3 +1,4 @@
+import author from '@tiny/extension-author'
 import chat, { textOf, useConversations } from '@tiny/extension-chat'
 import charts from '@tiny/extension-charts'
 import manager, { useExtensions } from '@tiny/extension-manager'
@@ -64,4 +65,5 @@ export const BUNDLED = [
   settings,
   manager,
   charts,
+  author,
 ] as const satisfies readonly ExtensionModule[]

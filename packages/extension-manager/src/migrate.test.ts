@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { SHARED } from '../../app/src/sdk/shared'
-import { useInstalled } from './installed'
+import { useInstalled } from '@tiny/host'
 import { migrateTools } from './migrate'
 
 // Read through the hook, so the store's cache is dropped between tests the way

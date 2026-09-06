@@ -1,4 +1,4 @@
-import { write } from '@tiny/host'
+import { write } from './storage'
 import { useSyncExternalStore } from 'react'
 import { z } from 'zod'
 

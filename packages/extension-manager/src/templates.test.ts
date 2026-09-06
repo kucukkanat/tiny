@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { SHARED } from '../../app/src/sdk/shared'
-import { transformJsx } from './jsx'
+import { transformJsx } from '@tiny/host'
 import { TEMPLATES } from './templates'
 
 // A template can't be checked by importing it: bare specifiers resolve through

@@ -10,6 +10,7 @@
     "measure": "node measure.mjs"
   },
   "dependencies": {
+    "@tiny/extension-author": "workspace:*",
     "@tiny/extension-chat": "workspace:*",
     "@tiny/extension-charts": "workspace:*",
     "@tiny/extension-manager": "workspace:*",

@@ -164,6 +164,10 @@ claim to. The store is `localStorage`; there is no bin to fish it out of.
 
 ## Storage
 
+The store itself is `@tiny/host`, along with the JSX transform — two features
+read them now, this screen and the tools the model writes an extension with, and
+an extension may not import another extension. What follows is what they hold.
+
 One `localStorage` key per extension, `tiny.extension.<id>`, holding
 `{ id, title, version, enabled }` and then either a `url` or a `source` — one or
 the other, never both, which is the only thing every reader has to know. `title`

@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ExtensionModule } from '@tiny/host'
 import { expect, test } from 'bun:test'
 import type { LanguageModel } from 'ai'
-import { saveInstalled } from './installed'
+import { saveInstalled } from '@tiny/host'
 import { attach, runningSource, useExtensions } from './loaded'
 
 /**

@@ -50,6 +50,8 @@ test('nothing an extension is handed comes from a feature it cannot see', () => 
   const contract = manifest('host').dependencies ?? {}
 
   // The host is where the contract lives, so it must stay the one package with
-  // no feature behind it.
-  expect(Object.keys(contract)).toEqual(['ai'])
+  // no feature behind it. Both of these are already on the import map, so an
+  // extension can see them either way; a name that is not on that list would be
+  // the host handing over something written here.
+  expect(Object.keys(contract)).toEqual(['ai', 'zod'])
 })

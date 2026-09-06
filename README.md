@@ -26,11 +26,12 @@ build and ship one either way. `cd docs && bun dev`.
 | -------------------------- | --------------------------------------------------- |
 | `@tiny/app`                | The shell: routing, layout, the list of what ships  |
 | `@tiny/ui`                 | Design tokens and components (shadcn + AI Elements) |
-| `@tiny/host`               | The `Extension` contract, and little else           |
+| `@tiny/host`               | The `Extension` contract, the row it lives in, JSX  |
 | `@tiny/extension-chat`     | Chat and its history, straight from the tab         |
 | `@tiny/extension-settings` | Model endpoint, API key and theme, kept on device   |
 | `@tiny/extension-manager`  | The registry, and the screen you install one on     |
 | `@tiny/extension-charts`   | One tool that draws its own result, as an example   |
+| `@tiny/extension-author`   | The model writes extensions; you turn them on       |
 | `@tiny/extension-starter`  | A working extension, and the one to copy            |
 
 ## Look

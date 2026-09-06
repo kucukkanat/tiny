@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test } from 'bun:test'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { useInstalled } from './installed'
+import { useInstalled } from '@tiny/host'
 import { attach } from './loaded'
 import { ExtensionsScreen } from './screen'
 import { TEMPLATES } from './templates'

@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "tiny \u2014 How an Extension Gets In",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "installed",
+        "label": "Installed at runtime",
+        "focus": ["author", "cdn", "manager", "registry", "shell"],
+        "note": "A pinned ESM URL is fetched in the tab, turned into a blob and import()ed."
+      },
+      {
+        "id": "bundled",
+        "label": "Shipped in the build",
+        "focus": ["bundled", "registry", "shell"],
+        "note": "A bundled module is listed in extensions.tsx and never loads at all."
+      },
+      {
+        "id": "contract",
+        "label": "The contract",
+        "focus": ["host", "author", "tiny", "registry", "importmap"],
+        "note": "Extension is what a module hands over; Tiny is everything it gets back."
+      }
+    ],
+    "repository": {
+      "url": "https://github.com/kucukkanat/tiny",
+      "revision": "fceaea5092828c21568ab73827ca3b4339f8bb05"
+    }
+  },
+  "components": [
+    {
+      "id": "host",
+      "type": "backend",
+      "label": "@tiny/host",
+      "sublabel": "Extension + Tiny",
+      "pos": [40, 140],
+      "size": [150, 64],
+      "sources": [
+        {
+          "path": "packages/host/src/index.ts",
+          "line": 54,
+          "end_line": 100,
+          "label": "Tiny, Extension, ExtensionModule"
+        }
+      ]
+    },
+    {
+      "id": "bundled",
+      "type": "frontend",
+      "label": "Bundled Extensions",
+      "sublabel": "chat \u00b7 settings \u00b7 manager",
+      "pos": [880, 140],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "packages/app/src/extensions.tsx",
+          "line": 60,
+          "end_line": 64,
+          "label": "BUNDLED"
+        }
+      ]
+    },
+    {
+      "id": "author",
+      "type": "external",
+      "label": "Extension Author",
+      "sublabel": "Writes a module",
+      "pos": [40, 340],
+      "size": [130, 64],
+      "sources": [
+        {
+          "path": "packages/extension-starter/src/index.tsx",
+          "line": 5,
+          "label": "export default ((tiny) => ...)"
+        }
+      ]
+    },
+    {
+      "id": "cdn",
+      "type": "external",
+      "label": "jsDelivr / Pages",
+      "sublabel": "Pinned tag or commit",
+      "pos": [270, 340],
+      "size": [140, 64],
+      "sources": [
+        {
+          "path": "packages/extension-manager/src/url.ts",
+          "line": 6,
+          "label": "refuse() \u2014 why an address won\u2019t work"
+        }
+      ]
+    },
+    {
+      "id": "manager",
+      "type": "frontend",
+      "label": "extension-manager",
+      "sublabel": "Install \u00b7 edit \u00b7 JSX \u2192 blob:",
+      "pos": [560, 340],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "packages/extension-manager/src/loaded.ts",
+          "line": 108,
+          "end_line": 135,
+          "label": "blobFor() \u2014 source to blob: url"
+        },
+        {
+          "path": "packages/extension-manager/src/jsx.ts",
+          "line": 61,
+          "label": "transformJsx()"
+        },
+        {
+          "path": "packages/extension-manager/src/loaded.ts",
+          "line": 202,
+          "label": "import() of the module"
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "type": "backend",
+      "label": "Registry",
+      "sublabel": "loaded.ts \u00b7 one fold",
+      "pos": [880, 340],
+      "size": [150, 64],
+      "sources": [
+        {
+          "path": "packages/extension-manager/src/loaded.ts",
+          "line": 313,
+          "end_line": 324,
+          "label": "the fold: extensions, tools, providers"
+        },
+        {
+          "path": "packages/extension-manager/src/loaded.ts",
+          "line": 406,
+          "label": "useExtensions()"
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "type": "frontend",
+      "label": "App Shell",
+      "sublabel": "/#/<id> \u00b7 sidebar",
+      "pos": [1140, 340],
+      "size": [140, 64],
+      "sources": [
+        {
+          "path": "packages/app/src/app.tsx",
+          "line": 112,
+          "end_line": 137,
+          "label": "<Routes> \u2014 a Screen per /#/<id>"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "database",
+      "label": "localStorage",
+      "sublabel": "Installed list",
+      "pos": [270, 540],
+      "size": [140, 64],
+      "sources": [
+        {
+          "path": "packages/extension-manager/src/installed.ts",
+          "line": 91,
+          "end_line": 112,
+          "label": "readInstalled / saveInstalled"
+        }
+      ]
+    },
+    {
+      "id": "importmap",
+      "type": "cloud",
+      "label": "Import Map",
+      "sublabel": "react \u00b7 router \u00b7 zod \u00b7 ai",
+      "pos": [560, 540],
+      "size": [170, 64],
+      "sources": [
+        {
+          "path": "packages/app/src/sdk/shared.ts",
+          "line": 7,
+          "end_line": 26,
+          "label": "SHARED + importmap()"
+        }
+      ]
+    },
+    {
+      "id": "tiny",
+      "type": "security",
+      "label": "tiny",
+      "sublabel": "What it didn't bring",
+      "pos": [880, 540],
+      "size": [150, 64],
+      "sources": [
+        {
+          "path": "packages/app/src/extensions.tsx",
+          "line": 44,
+          "label": "export const tiny: Tiny"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Browser tab \u2014 no build step, no server",
+      "wraps": ["bundled", "manager", "registry", "shell", "storage", "importmap", "tiny"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "host-types",
+      "from": "host",
+      "to": "author",
+      "label": "types the module",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 64
+    },
+    {
+      "id": "publish",
+      "from": "author",
+      "to": "cdn",
+      "label": "publishes ESM"
+    },
+    {
+      "id": "load",
+      "from": "cdn",
+      "to": "manager",
+      "label": "fetch + import()",
+      "variant": "emphasis"
+    },
+    {
+      "id": "register",
+      "from": "manager",
+      "to": "registry",
+      "label": "ExtensionModule",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ships",
+      "from": "bundled",
+      "to": "registry",
+      "label": "listed in extensions.tsx",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 64
+    },
+    {
+      "id": "fold",
+      "from": "registry",
+      "to": "shell",
+      "label": "screens + tools",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist",
+      "from": "manager",
+      "to": "storage",
+      "label": "survives reload",
+      "variant": "dashed"
+    },
+    {
+      "id": "bare-imports",
+      "from": "importmap",
+      "to": "manager",
+      "label": "resolves bare specifiers",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "shell-builds-tiny",
+      "from": "shell",
+      "to": "tiny",
+      "label": "builds it once",
+      "variant": "dashed"
+    },
+    {
+      "id": "handed-over",
+      "from": "tiny",
+      "to": "registry",
+      "label": "handed to every module",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two deliveries, one kind",
+      "items": [
+        "Bundled: listed in extensions.tsx, in the module graph",
+        "Installed: a pinned URL fetched and import()ed in the tab",
+        "The registry calls both the same way, with the same tiny"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The contract",
+      "items": [
+        "Extension is id, title, Screen, Sidebar, tools, providers",
+        "Tiny is what it gets back \u2014 and it only ever grows",
+        "An extension never imports a sibling; the test fails the build"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What a runtime module may reach",
+      "items": [
+        "react, react/jsx-runtime, react-router, zod, ai",
+        "Nothing relative: a blob has no base to resolve against",
+        "The map ships hashed inside index.html, so it can't go stale"
+      ]
+    }
+  ]
+}

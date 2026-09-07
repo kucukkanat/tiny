@@ -195,7 +195,7 @@ nothing an extension cannot already see — both are on the import map.
 The whole of it is **+2,879 B raw / +1,177 B gzipped of JS on first paint, and
 +87 B raw / +13 B gzipped of CSS**. `extension_docs` is not in that number: the
 guide is four kilobytes of prose that most visits never read, so it is
-`import()`ed on the first ask — **4,458 B raw / 2,216 B gzipped when it arrives**.
+`import()`ed on the first ask — **4,770 B raw / 2,330 B gzipped when it arrives**.
 It is built from tables typed `Record<keyof Tiny, string>` and
 `Record<keyof Extension, string>`, so a ninth member of the contract fails the
 build until the guide catches up. That is `complete.ts`'s trick, and it is worth

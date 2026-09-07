@@ -113,7 +113,11 @@ Two extras ride on a tool:
   handed; it came back through \`JSON.stringify\`.
 - \`toModelOutput\` — what the model is told, as against what \`View\` is drawn
   from. Without it a payload written to be looked at is also spent in the
-  model's context, in full, on every turn after this one.
+  model's context, in full, on every turn after this one. It is handed
+  \`{ toolCallId, input, output }\`, not the output — take the output off it. A
+  summary built from the whole argument describes the wrapper instead, so a call
+  that worked reports nothing drawn and the model retries a tool that cannot
+  succeed.
 
 \`\`\`jsx
 tools: {
@@ -122,7 +126,8 @@ tools: {
       description: 'Draw labelled numbers.',
       inputSchema: Rows,
       execute: (input) => input,
-      toModelOutput: () => ({ type: 'text', value: 'Drawn.' }),
+      toModelOutput: ({ output }) =>
+        ({ type: 'text', value: 'Drew ' + output.rows.length + ' values.' }),
     }),
     View: Bars,
   },

@@ -158,6 +158,35 @@ slot is taught now, which costs a first visit nothing.
 at is also spent in the model's context in full, on every turn after the one
 that drew it.
 
+`extension-fetch` is the one bundled tool, and it exists because reading a URL is
+the thing a model cannot do for itself and every conversation eventually wants.
+Two decisions in it are not defaults and should not be quietly reversed.
+
+It does not proxy. A cross-origin read from a tab works only where the site
+sends `Access-Control-Allow-Origin`, which most APIs do and most pages do not,
+and the tempting fix is to route the miss through `r.jina.ai` or similar. That
+would put every URL the model reads, and every response, through a host the user
+never picked and cannot be told about afterwards. So a blocked read fails — and
+the wording is the feature, because `fetch` rejects with a bare `TypeError:
+Failed to fetch` for a blocked read, a dead host and a refused connection alike,
+and a model given only that retries the same URL until it gives up. It is told
+instead that this is CORS, that there is no proxy, and that retrying will fail
+the same way.
+
+It sends every method, and asks first about none of them. `instructions` tell
+the model to confirm a write in the conversation, which is guidance rather than
+a gate: a permission this app cannot enforce is theatre, same as everywhere else
+here, and the real control is the switch on the Extensions screen.
+
+The body is capped at 40,000 characters — about 10k tokens — because a reply is
+spent in the model's context on every turn after the one that fetched it, and
+`bytes` still reports what arrived so the gap is visible. HTML is stripped to
+its readable text through `DOMParser`, which the browser gives away free and
+which is most of what this is worth over the model guessing. The header map and
+the timing are drawn in the reply and never sent: that is what `toModelOutput`
+is for. The whole of it is **+4,487 B raw / +1,898 B gzipped of JS on first
+paint, and +159 B raw / +32 B gzipped of CSS**.
+
 There is no other way to give the model a tool. There used to be a `plugin-tools`
 that let you write one in a textarea, which was a second mechanism for the same
 job; it is gone, and what it stored is carried across on first boot by

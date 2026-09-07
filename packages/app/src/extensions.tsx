@@ -1,5 +1,6 @@
 import author from '@tiny/extension-author'
 import chat, { textOf, useConversations } from '@tiny/extension-chat'
+import fetcher from '@tiny/extension-fetch'
 import manager, { useExtensions } from '@tiny/extension-manager'
 import settings from '@tiny/extension-settings'
 import type { Chat, ExtensionModule, Tiny } from '@tiny/host'
@@ -63,5 +64,6 @@ export const BUNDLED = [
   chat,
   settings,
   manager,
+  fetcher,
   author,
 ] as const satisfies readonly ExtensionModule[]

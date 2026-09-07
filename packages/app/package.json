@@ -12,6 +12,7 @@
   "dependencies": {
     "@tiny/extension-author": "workspace:*",
     "@tiny/extension-chat": "workspace:*",
+    "@tiny/extension-fetch": "workspace:*",
     "@tiny/extension-manager": "workspace:*",
     "@tiny/host": "workspace:*",
     "@tiny/extension-settings": "workspace:*",

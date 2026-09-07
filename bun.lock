@@ -21,7 +21,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@tiny/extension-author": "workspace:*",
-        "@tiny/extension-charts": "workspace:*",
         "@tiny/extension-chat": "workspace:*",
         "@tiny/extension-manager": "workspace:*",
         "@tiny/extension-settings": "workspace:*",
@@ -50,18 +49,6 @@
         "@tiny/host": "workspace:*",
         "ai": "^7.0.77",
         "react-router": "^7.13.0",
-        "zod": "^4.4.3",
-      },
-      "peerDependencies": {
-        "react": "^19",
-      },
-    },
-    "packages/extension-charts": {
-      "name": "@tiny/extension-charts",
-      "version": "0.0.0",
-      "dependencies": {
-        "@tiny/host": "workspace:*",
-        "ai": "^7.0.77",
         "zod": "^4.4.3",
       },
       "peerDependencies": {
@@ -833,8 +820,6 @@
     "@tiny/app": ["@tiny/app@workspace:packages/app"],
 
     "@tiny/extension-author": ["@tiny/extension-author@workspace:packages/extension-author"],
-
-    "@tiny/extension-charts": ["@tiny/extension-charts@workspace:packages/extension-charts"],
 
     "@tiny/extension-chat": ["@tiny/extension-chat@workspace:packages/extension-chat"],
 

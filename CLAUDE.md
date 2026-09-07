@@ -142,14 +142,16 @@ and a drawing with no way to read the input and output it came from removes the
 last place that is visible. One collapsed line per drawing buys the ability to
 catch a `View` that misreports its own tool.
 
-The slot is **+1,178 B raw / +392 B gzipped of JS on first paint**;
-`extension-charts`, the bundled example, is **+1,478 B raw / +456 B gzipped**
-on top, and together they moved CSS by +331 B raw / +78 B gzipped. The CSS can't
-be split between them, because `@source` scans `packages/*/src` off disk whether
-or not a package is listed in `extensions.tsx`. Everything expensive about a
-picture — a charting library, `mermaid`, a calendar — belongs in the extension
-that wants one, bundled into it or `import()`ed from a CDN inside the component,
-so it lands on whoever installed it and on nobody else's first visit.
+The slot is **+1,178 B raw / +392 B gzipped of JS on first paint**. There was a
+bundled `extension-charts` demonstrating it; it is gone, because a slot does not
+need an example in the build to exist, and an example that ships is paid for by
+every first visit whether or not a reply ever draws. Deleting it took
+**1,714 B raw / 609 B gzipped of JS and 208 B raw / 53 B gzipped of CSS** back
+off first paint. Everything expensive about a picture — a charting library,
+`mermaid`, a calendar — belongs in the extension that wants one, bundled into it
+or `import()`ed from a CDN inside the component, so it lands on whoever
+installed it and on nobody else's first visit. `extension_docs` is where the
+slot is taught now, which costs a first visit nothing.
 
 `wrap()` carries two properties across that `dynamicTool` has no field for:
 `View`, and `toModelOutput`. Without the second, a payload written to be looked
